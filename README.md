@@ -5,9 +5,9 @@ safe and compiled systems programming language
 ## Features
 - fast as C. low-level memeory control
 - safe as Rust. compile time lifetime check
-- powerful as C++. support inheritance and polymorphisn
-- easy as Java
-- interoperate with C++. compile to C++ code
+- powerful as C++. support object-oriented inheritance and polymorphisn
+- easy as Java. less features than C++
+- interoperate with existing code. compile to C++ code
 - familiar C-like syntax
 
 
