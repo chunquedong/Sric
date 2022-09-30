@@ -1,6 +1,6 @@
 # safeC
 
-safe and compiled systems programming language
+memory safe and compiled systems programming language
 
 ## Features
 - fast as C. low-level memeory control
@@ -20,7 +20,8 @@ shared int* p; //reference count pointer
 uniuqe int* p; //unique reference pointer
 weak int* p;   //weak pointer for beak cycle reference
 unsafe int* p; //unsafe raw pointer
-int* p;        //temporary local pointer
+int& p;        //temporary local pointer
+int* p;        //default is unique pointer
 ```
 
 ### Pointer safe
@@ -29,7 +30,7 @@ unique pointer and temporary work like Rust, but no lifetime annotations.
 
 - other pointers can implicit convert to temporary pointer.
 - temporary pointer can't convert to others.
-- short liftime pointer can't reference to long lifetime.
+- short liftime object can't be referenced by long lifetime.
 
 ### Copy and Move
 
@@ -48,7 +49,7 @@ right-value move by default.
 struct A {
   unique int* i;
   A copy() {...}
-  void move_to(A *a) {...}
+  void move_to(A &a) {...}
 }
 A getA() { ... }
 A b = getA();  //call move_to
@@ -58,7 +59,7 @@ left-value copy by default.
 ```
 struct A {
   unique int* i;
-  void move_to(A *a) {...}
+  void move_to(A &a) {...}
 }
 A a;
 A b = move a;
@@ -76,7 +77,7 @@ unsafe {
 }
 ```
 
-### Inheritance and Polymorphisn
+### Inheritance
 
 ```
 interface I {
