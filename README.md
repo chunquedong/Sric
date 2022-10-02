@@ -3,7 +3,7 @@
 memory safe and compiled systems programming language
 
 ## Features
-- fast as C. low-level memeory control
+- fast as C. low-level memeory access
 - safe as Rust. compile time lifetime check
 - powerful as C++. support object-oriented inheritance and polymorphisn
 - simple as Java. less features than C++
@@ -80,7 +80,7 @@ unsafe {
 ### Inheritance
 
 ```
-interface I {
+mixin I {
   virtual void foo() { ... }
 }
 
