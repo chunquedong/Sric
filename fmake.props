@@ -1,0 +1,6 @@
+name = safec
+summary = safec compiler
+outType = exe
+version = 1.0
+srcDirs = src/*
+incDir = src/

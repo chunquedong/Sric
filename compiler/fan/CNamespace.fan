@@ -30,7 +30,7 @@ class CNamespace
 
   private TypeDef sysType(Str name)
   {
-    return sysPod.resolveType(name, true)
+    return sysPod.findSymbol(name)
   }
 
   private TypeRef makeTypeRef(Str podName, Str name) {
@@ -41,8 +41,8 @@ class CNamespace
 
   private MethodDef sysMethod(TypeRef t, Str name)
   {
-    m := t.slots[name] as MethodDef
-    if (m == null) throw Err("Cannot resolve '${t.qname}.$name' method in namespace")
+    m := t.typeDef.findSymbol(name) as MethodDef
+    if (m == null) throw Err("Cannot resolve '${t.signature}.$name' method in namespace")
     return m
   }
 
@@ -70,14 +70,14 @@ class CNamespace
     return pod
   }
   private Str:PodDef podCache := [Str:PodDef][:]  // keyed by pod name
-  Void addCurPod(Str name, PodDef pod) { podCache[name] = pod }
+  Void addPod(Str name, PodDef pod) { podCache[name] = pod }
 
   **
   ** Subclass hook to resolve a pod name to a PodDef implementation.
   ** Return null if not found.
   **
   protected PodDef? findPod(Str podName) {
-    return context.loadDepends(podName)
+    return IncCompiler.resolveDependPod(podName, this, context.log)
   }
 
   **
@@ -120,7 +120,7 @@ class CNamespace
     if (pos != null) {
       parentName := typeName[0..<pos]
       name := typeName[pos+1..-1]
-      parent := pod.resolveType(parentName, true)
+      parent := pod.findSymbol(parentName) as TypeDef
       gptype := parent.getGeneriParamDefeter(name)
       return typeRef.resolveTo(gptype)
     }
@@ -130,7 +130,7 @@ class CNamespace
         resolveTypeRef(it, loc)
       }
     }
-    typeDef := pod.resolveType(typeName, false)
+    typeDef := pod.findSymbol(typeName) as TypeDef
     if (typeDef == null) {
       throw CompilerErr("Type not found '$typeName'", loc)
     }
@@ -144,7 +144,7 @@ class CNamespace
   SlotDef resolveSlot(Str qname)
   {
     dot := qname.indexr(".")
-    slot := resolveType(qname[0..<dot]).slot(qname[dot+1..-1])
+    slot := resolveType(qname[0..<dot]).typeDef.findSymbol(qname[dot+1..-1])
     if (slot == null) throw Err("Cannot resolve slot: $qname")
     return slot
   }
@@ -161,72 +161,15 @@ class CNamespace
   // place holder type used to indicate nothing (like throw expr)
   once TypeRef? nothingType() { TypeDef.makePlaceHolder("Nothing").asRef }
 
-  once TypeRef? objType              () { makeTypeRef("sys", "Obj") }
-  once TypeRef? boolType             () { makeTypeRef("sys", "Bool") }
-  once TypeRef? enumType             () { makeTypeRef("sys", "Enum") }
-  once TypeRef? facetType            () { makeTypeRef("sys", "Facet") }
+  once TypeRef? objType              () { makeTypeRef("sys", "any") }
+  once TypeRef? boolType             () { makeTypeRef("sys", "bool") }
   once TypeRef? intType              () { makeTypeRef("sys", "int") }
-  once TypeRef? floatType            () { makeTypeRef("sys", "Float") }
-  once TypeRef? strType              () { makeTypeRef("sys", "Str") }
-  once TypeRef? strBufType           () { makeTypeRef("sys", "StrBuf") }
-  once TypeRef? listType             () { makeTypeRef("sys", "List") }
-  once TypeRef? funcType             () { makeTypeRef("sys", "Func") }
-  once TypeRef? errType              () { makeTypeRef("sys", "Err") }
-  once TypeRef? typeType             () { makeTypeRef("std", "Type") }
-  once TypeRef? ptrType              () { makeTypeRef("sys", "Ptr") }
-  once TypeRef? rangeType            () { makeTypeRef("sys", "Range") }
+  once TypeRef? floatType            () { makeTypeRef("sys", "float") }
+  once TypeRef? strType              () { makeTypeRef("sys", "string") }
+  once TypeRef? listType             () { makeTypeRef("sys", "array") }
+  once TypeRef? funcType             () { makeTypeRef("sys", "function") }
+  once TypeRef? errType              () { makeTypeRef("sys", "exception") }
+  once TypeRef? pointerType          () { makeTypeRef("sys", "pointer") }
   once TypeRef? voidType             () { makeTypeRef("sys", "void") }
-  once TypeRef? fieldNotSetErrType   () { makeTypeRef("sys", "FieldNotSetErr") }
-  once TypeRef? notImmutableErrType  () { makeTypeRef("sys", "NotImmutableErr") }
-  once TypeRef? thisType             () { makeTypeRef("sys", "This") }
-
-  once TypeRef? decimalType() { makeTypeRef("std", "Decimal") }
-  once TypeRef? durationType() { makeTypeRef("std", "Duration") }
-  once TypeRef? mapType() { makeTypeRef("std", "Map") }
-  once TypeRef? podType() { makeTypeRef("std", "Pod") }
-  once TypeRef? slotType() { makeTypeRef("std", "Slot") }
-  once TypeRef? fieldType() { makeTypeRef("std", "Field") }
-  once TypeRef? methodType() { makeTypeRef("std", "Method") }
-  once TypeRef? testType() { makeTypeRef("std", "Test") }
-  once TypeRef? uriType() { makeTypeRef("std", "Uri") }
-  once TypeRef? asyncType() { makeTypeRef("concurrent", "Async") }
-  once TypeRef? promiseType() { makeTypeRef("concurrent", "Promise") }
-
-  once MethodDef? objTrap            () { sysMethod(objType,    "trap") }
-  once MethodDef? objWith            () { sysMethod(objType,    "with") }
-  once MethodDef? objToImmutable     () { sysMethod(objType,    "toImmutable") }
-  once MethodDef? boolNot            () { sysMethod(boolType,    "not") }
-  once MethodDef? intIncrement       () { sysMethod(intType,    "increment") }
-  once MethodDef? intDecrement       () { sysMethod(intType,    "decrement") }
-  once MethodDef? intPlus            () { sysMethod(intType,    "plus") }
-  once MethodDef? floatPlus          () { sysMethod(floatType,    "plus") }
-  once MethodDef? floatMinus         () { sysMethod(floatType,    "minus") }
-  once MethodDef? strPlus            () { sysMethod(strType,    "plus") }
-  once MethodDef? strBufMake         () { sysMethod(strBufType,    "make") }
-  once MethodDef? strBufAdd          () { sysMethod(strBufType,    "add") }
-  once MethodDef? strBufToStr        () { sysMethod(strBufType,    "toStr") }
-  once MethodDef? listMake           () { sysMethod(listType,    "make") }
-  once MethodDef? listMakeObj        () { sysMethod(listType,    "makeObj") }
-  once MethodDef? listAdd            () { sysMethod(listType,    "add") }
-  once MethodDef? listToNullable     () { sysMethod(listType,    "toNullable") }
-  once MethodDef? mapMake            () { sysMethod(mapType,    "make") }
-  once MethodDef? mapSet             () { sysMethod(mapType,    "set") }
-  once MethodDef? enumOrdinal        () { sysMethod(enumType,    "ordinal") }
-  once MethodDef? funcBind           () { sysMethod(funcType,    "bind") }
-  once MethodDef? rangeMakeInclusive () { sysMethod(rangeType,    "makeInclusive") }
-  once MethodDef? rangeMakeExclusive () { sysMethod(rangeType,    "makeExclusive") }
-  once MethodDef? slotFindMethod     () { sysMethod(slotType,    "findMethod") }
-  once MethodDef? slotFindFunc       () { sysMethod(slotType,    "findFunc") }
-  once MethodDef? podFind            () { sysMethod(podType,    "find") }
-  once MethodDef? podLocale          () { sysMethod(podType,    "locale") }
-  once MethodDef? typePod            () { sysMethod(typeType,    "pod") }
-  once MethodDef? typeField          () { sysMethod(typeType,    "field") }
-  once MethodDef? typeMethod         () { sysMethod(typeType,    "method") }
-  once MethodDef? funcCall           () { sysMethod(funcType,    "call") }
-  once MethodDef? fieldNotSetErrMake () { sysMethod(fieldNotSetErrType,    "make") }
-  once MethodDef? notImmutableErrMake() { sysMethod(notImmutableErrType,    "make") }
-  once MethodDef decimalMakeMethod   () { sysMethod(decimalType,  "fromStr") }
-  once MethodDef uriMakeMethod       () { sysMethod(uriType,  "fromStr") }
-  once MethodDef durationMakeMethod  () { sysMethod(durationType,  "fromTicks") }
 
 }

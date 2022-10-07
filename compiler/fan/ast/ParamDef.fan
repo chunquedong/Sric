@@ -47,7 +47,9 @@ class ParamDef : MethodVar
 
   override Void print(AstWriter out)
   {
-    out.w(name).w(" : ").w(paramType)
+    paramType.print(out)
+    out.w(" ")
+    out.w(name)
     if (def != null) { out.w(" = "); def.print(out) }
   }
   

@@ -16,7 +16,7 @@ class COperators
   new make(TypeDef parent)
   {
     this.parent = parent
-    parent.slots.each |slot|
+    parent.slotDefs.each |slot|
     {
       if (slot is MethodDef && slot.isOperator)
       {

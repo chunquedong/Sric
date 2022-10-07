@@ -20,7 +20,6 @@ class PodDef : Node
     : super(loc)
   {
     this.name = name
-    this.defineDefs = [:]
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -35,43 +34,14 @@ class PodDef : Node
   ** Map of dependencies keyed by pod name set in ResolveDepends.
   **
   [Str:PodDef]? resolvedDepends
-
-  TypeDef? resolveType(Str name, Bool checked)
-  {
-    t := defineDefs[name]
-    if (t != null && t is TypeDef) return t
-    if (checked) throw UnknownTypeErr("${this.name}::${name}")
-    return null
-  }
-  
-  **
-  ** Add a synthetic type
-  **
-  Void addDef(DefNode t)
-  {
-    t.unit.addDef(t)
-    this.defineDefs.add(t.name, t)
-    this.defines.add(t)
-  }
   
   Void updateCompilationUnit(CompilationUnit? unit, CompilationUnit? old, CompilerLog log) {
     if (old != null) {
-      old.defines.each |t| {
-        this.defineDefs.remove(t.name)
-        this.defines.remove(t)
-        //this.closures.removeAll(t.closures)
-      }
+      cunits.remove(old)
     }
     
     if (unit == null) return
-    unit.defines.each |t| {
-      if (this.defineDefs.containsKey(t.name)) {
-        log.err("Duplicate type name '$t.name'", unit.loc)
-      }
-      this.defineDefs[t.name] = t
-      this.defines.add(t)
-      //this.closures.addAll(t.closures)
-    }
+    cunits.add(unit)
   }
   
   **
@@ -80,6 +50,20 @@ class PodDef : Node
   override final Str toStr()
   {
     return name
+  }
+  
+  Symbol? findSymbol(Str name) {
+    cunits.eachWhile |unit| {
+        unit.doFindSymbol(name)
+    }
+  }
+  
+  once DefNode[] defines() {
+    list := DefNode[,]
+    cunits.each {
+        list.addAll(it.defines)
+    }
+    return list
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -92,8 +76,7 @@ class PodDef : Node
     out.w("//======================================").nl
     out.w("// pod $name").nl
     out.w("//======================================").nl
-    //units.each |CompilationUnit unit| { unit.print(out) }
-    defines.each |t| { t.print(out) }
+    cunits.each |CompilationUnit unit| { unit.print(out) }
     out.nl
   }
 
@@ -105,11 +88,7 @@ class PodDef : Node
   const Str name           // simple pod name
   Str:Str meta := [Str:Str][:]        // pod meta-data props
   //Str:Obj index := [Str:Obj][:]       // pod index props (vals are Str or Str[])
-  //[Str:CompilationUnit] units := [:]           // Tokenize
-  [Str:DefNode] defineDefs           // ScanForUsingsAndTypes
-  //ClosureExpr[]? closures := [,]           // Parse
-//  TypeDef[]? orderedTypeDefs
-  DefNode[] defines := [,] { private set }
+  CompilationUnit[] cunits := [,]           // Tokenize
 
   Str? summary
 }

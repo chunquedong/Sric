@@ -442,7 +442,7 @@ public class Parser
         case Token.publicKeyword:    flags = flags.or(FConst.Public);    protection = true
         case Token.staticKeyword:    flags = flags.or(FConst.Static)
         case Token.virtualKeyword:   flags = flags.or(FConst.Virtual)
-        case Token.rtconstKeyword:   flags = flags.or(FConst.RuntimeConst)
+        //case Token.rtconstKeyword:   flags = flags.or(FConst.RuntimeConst)
         case Token.asyncKeyword:     flags = flags.or(FConst.Async)
         default:                     done = true
       }
@@ -573,16 +573,16 @@ public class Parser
       case Token.identifier:
       case Token.intLiteral:
       case Token.strLiteral:
-      case Token.durationLiteral:
+//      case Token.durationLiteral:
       case Token.floatLiteral:
       case Token.trueKeyword:
       case Token.falseKeyword:
       case Token.thisKeyword:
       case Token.superKeyword:
       case Token.itKeyword:
-      case Token.dsl:
-      case Token.uriLiteral:
-      case Token.decimalLiteral:
+//      case Token.dsl:
+//      case Token.uriLiteral:
+//      case Token.decimalLiteral:
       case Token.nullKeyword:
         return true
     }
@@ -719,12 +719,6 @@ public class Parser
     field.unit = unit
     field.pod = unit.pod
 
-    // const always has storage, otherwise assume no storage
-    // until proved otherwise in ResolveExpr step or we
-    // auto-generate getters/setters
-    if (field.isConst || field.isReadonly)
-      field.flags = field.flags.or(FConst.Storage)
-
     // field initializer
 //    if (curt === Token.defAssign || curt === Token.assign)
 //    {
@@ -840,7 +834,7 @@ public class Parser
   {
     if (curt === Token.dotDotDot) {
         consume
-        param := ParamDef(cur.loc, TypeRef.voidType(cur.loc), "...")
+        param := ParamDef(cur.loc, TypeRef.objType(cur.loc), "...")
         endLoc(param)
         return param
     }
@@ -925,10 +919,10 @@ public class Parser
         //Int.super
         type = atype
       }
-      else if (curt === Token.dsl) {
-        //Int<|..|>
-        type = atype
-      }
+//      else if (curt === Token.dsl) {
+//        //Int<|..|>
+//        type = atype
+//      }
       else if (curt === Token.lbracket && !cur.newline
         //distinguish from slot[a]
         && atype.name[0].isUpper) {
@@ -964,12 +958,36 @@ public class Parser
   ** Type signature:
   **   <type>      :=  <simpleType> | <listType> | <mapType> | <funcType>
   **   <listType>  :=  <type> "[]"
-  **   <mapType>   :=  ["["] <type> ":" <type> ["]"]
+  **   <pointerType>   := [shared|unique|weak] (<type> "*" | <type> "&")
   **
   protected TypeRef ctype(Bool isTypeRef := false)
   {
     TypeRef? t := null
     loc := cur.loc
+    
+    if (curt == Token.sharedKeyword || curt === Token.weakKeyword || curt === Token.uniqueKeyword || curt === Token.unsafeKeyword) {
+        if (curt === Token.sharedKeyword) {
+            consume(Token.sharedKeyword)
+            t = ctype(isTypeRef)
+            t.ptrType = PtrType.shared_ptr
+            return t
+        }
+        if (curt === Token.weakKeyword) {
+            consume(Token.weakKeyword)
+            t = ctype(isTypeRef)
+            t.ptrType = PtrType.weak_ptr
+            return t
+        }
+        if (curt === Token.unsafeKeyword) {
+            consume(Token.unsafeKeyword)
+            t = ctype(isTypeRef)
+            t.ptrType = PtrType.unsafe_ptr
+            return t
+        }
+        if (curt === Token.uniqueKeyword) {
+            consume(Token.uniqueKeyword)
+        }
+    }
 
     // Types can begin with:
     //   - id
@@ -990,16 +1008,16 @@ public class Parser
         }
 
         // check for ":" for map type
-        if (curt === Token.colon)
-        {
-          if (t.isNullable) err("Map type cannot have nullable key type")
-          consume(Token.colon)
-          key := t
-          val := ctype(isTypeRef)
-          //throw err("temp test")
-        //      t = MapType(key, val)
-          t = TypeRef.mapType(loc, key, val)
-        }
+//        if (curt === Token.colon)
+//        {
+//          if (t.isNullable) err("Map type cannot have nullable key type")
+//          consume(Token.colon)
+//          key := t
+//          val := ctype(isTypeRef)
+//          //throw err("temp test")
+//        //      t = MapType(key, val)
+//          t = TypeRef.mapType(loc, key, val)
+//        }
         consume(Token.rbracket)
         //if (!(t is MapType)) err("Invalid map type", loc)
     }
@@ -1039,33 +1057,14 @@ public class Parser
       }
     }
     
-    if (isTypeRef || t.name[0].isUpper) {
-        // check for type?:type map (illegal)
-        if (curt === Token.elvis && !cur.whitespace)
+    if (curt === Token.star || curt === Token.amp) {
+        t = TypeRef.pointerType(loc, t, curt === Token.star ? PtrType.unique_ptr : PtrType.temp_ptr)
+        consume()
+        if (curt === Token.question && !cur.whitespace)
         {
-          err("Map type cannot have nullable key type")
+          consume(Token.question)
+          t = t.toNullable
         }
-
-        // check for ":" for map type
-        if (curt === Token.colon)
-        {
-          if (t.isNullable) err("Map type cannot have nullable key type")
-          consume(Token.colon)
-          key := t
-          val := ctype(isTypeRef)
-          //throw err("temp test")
-    //      t = MapType(key, val)
-          t = TypeRef.mapType(loc, key, val)
-        }
-    }
-
-    // check for ? nullable
-    if (curt === Token.question && !cur.whitespace)
-    {
-      consume(Token.question)
-      t = t.toNullable
-      if (curt === Token.question && !cur.whitespace)
-        throw err("Type cannot have multiple '?'")
     }
 
     endLoc(t)

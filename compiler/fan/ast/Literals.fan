@@ -64,24 +64,6 @@ class LiteralExpr : Expr
     return val as Int
   }
 
-  override Str serialize()
-  {
-    switch (id)
-    {
-      case ExprId.nullLiteral:     return "null"
-      case ExprId.falseLiteral:    return "false"
-      case ExprId.trueLiteral:     return "true"
-      case ExprId.intLiteral:      return val.toStr
-      case ExprId.floatLiteral:    return val.toStr + "f"
-      case ExprId.decimalLiteral:  return val.toStr + "d"
-      case ExprId.strLiteral:      return val.toStr.toCode
-      case ExprId.uriLiteral:      return val.toStr.toCode('`')
-      case ExprId.typeLiteral:     return "${val->signature}#"
-      case ExprId.durationLiteral: return val.toStr
-      default:                     return super.serialize
-    }
-  }
-
   override Str toStr()
   {
     switch (id)
@@ -89,49 +71,12 @@ class LiteralExpr : Expr
       case ExprId.nullLiteral: return "null"
       case ExprId.strLiteral:  return "\"" + val.toStr.replace("\n", "\\n") + "\""
       case ExprId.typeLiteral: return "${val}#"
-      case ExprId.uriLiteral:  return "`$val`"
+      //case ExprId.uriLiteral:  return "`$val`"
       default: return val.toStr
     }
   }
 
   Obj? val // Bool, Int, Float, Str (for Str/Uri), Duration, TypeRef, or null
-}
-
-**************************************************************************
-** LocaleLiteralExpr
-**************************************************************************
-
-**
-** LocaleLiteralExpr: podName::key=defVal
-**
-class LocaleLiteralExpr: Expr
-{
-  new make(Loc loc, Str pattern)
-    : super(loc, ExprId.localeLiteral)
-  {
-    this.pattern = pattern
-    this.key = pattern
-    eq := pattern.index("=")
-    if (eq != null)
-    {
-      this.key = pattern[0..<eq]
-      this.def = pattern[eq+1..-1]
-    }
-
-    colons := key.index("::")
-    if (colons != null)
-    {
-      this.podName = key[0..<colons]
-      this.key     = key[colons+2..-1]
-    }
-  }
-
-  override Str toStr() { "<${pattern}>" }
-
-  Str pattern
-  Str key
-  Str? podName
-  Str? def
 }
 
 **************************************************************************
@@ -150,50 +95,11 @@ class SlotLiteralExpr : Expr
     this.name = name
   }
 
-  override Str serialize() { "$parent.signature#${name}" }
-
   override Str toStr() { "$parent#${name}" }
 
   TypeRef parent
   Str name
   SlotDef? slot
-}
-
-**************************************************************************
-** RangeLiteralExpr
-**************************************************************************
-
-**
-** RangeLiteralExpr creates a Range instance
-**
-class RangeLiteralExpr : Expr
-{
-  new make(Loc loc, Expr start, Expr end, Bool exclusive)
-    : super(loc, ExprId.rangeLiteral)
-  {
-//    this.ctype = ctype
-    this.start = start
-    this.end   = end
-    this.exclusive = exclusive
-  }
-
-  override Void walkChildren(Visitor v)
-  {
-    start = start.walk(v)
-    end   = end.walk(v)
-  }
-
-  override Str toStr()
-  {
-    if (exclusive)
-      return "${start}...${end}"
-    else
-      return "${start}..${end}"
-  }
-
-  Expr start
-  Expr end
-  Bool exclusive
 }
 
 **************************************************************************
@@ -223,11 +129,6 @@ class ListLiteralExpr : Expr
     vals = walkExprs(v, vals)
   }
 
-  override Str serialize()
-  {
-    return format |Expr e->Str| { e.serialize }
-  }
-
   override Str toStr()
   {
     return format |Expr e->Str| { e.toStr }
@@ -249,59 +150,5 @@ class ListLiteralExpr : Expr
   }
 
   TypeRef? explicitType
-  Expr[] vals := Expr[,]
-}
-
-**************************************************************************
-** MapLiteralExpr
-**************************************************************************
-
-**
-** MapLiteralExpr creates a List instance
-**
-class MapLiteralExpr : Expr
-{
-  new make(Loc loc, TypeRef? explicitType := null)
-    : super(loc, ExprId.mapLiteral)
-  {
-    this.explicitType = explicitType
-  }
-
-  override Void walkChildren(Visitor v)
-  {
-    keys = walkExprs(v, keys)
-    vals = walkExprs(v, vals)
-  }
-
-  override Str serialize()
-  {
-    return format |Expr e->Str| { e.serialize }
-  }
-
-  override Str toStr()
-  {
-    return format |Expr e->Str| { e.toStr }
-  }
-
-  Str format(|Expr e->Str| f)
-  {
-    s := StrBuf.make
-    if (explicitType != null) s.add(explicitType)
-    s.add("[")
-    if (vals.isEmpty) s.add(":")
-    else
-    {
-      keys.size.times |Int i|
-      {
-        if (i > 0) s.add(",")
-        s.add(f(keys[i])).add(":").add(f(vals[i]))
-      }
-    }
-    s.add("]")
-    return s.toStr
-  }
-
-  TypeRef? explicitType
-  Expr[] keys := Expr[,]
   Expr[] vals := Expr[,]
 }

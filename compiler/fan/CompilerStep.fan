@@ -13,7 +13,7 @@
 **
 abstract class CompilerStep : Visitor
 {
-  CompilerContext compiler
+  private CompilerContext compiler
 
 //////////////////////////////////////////////////////////////////////////
 // Construction
@@ -25,6 +25,7 @@ abstract class CompilerStep : Visitor
   new make(CompilerContext compiler)
   {
     this.compiler = compiler
+    this.curPod = compiler.pod
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -37,13 +38,13 @@ abstract class CompilerStep : Visitor
   virtual Void run() { throw Err("unsupport") }
   
   protected Void walkUnits(VisitDepth depth) {
-    walk(compiler.cunits, depth)
+    walk(curPod.cunits, depth)
   }
   
   **
   ** current pod name
   **
-  Str podName() { compiler.pod.name }
+  Str podName() { curPod.name }
   
 //////////////////////////////////////////////////////////////////////////
 // Convenience
@@ -134,5 +135,5 @@ abstract class CompilerStep : Visitor
   TypeDef? curType
   MethodDef? curMethod
   CompilationUnit? curUnit
-
+  PodDef? curPod
 }

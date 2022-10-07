@@ -34,29 +34,18 @@ class ResolveExpr : CompilerStep
   override Void run()
   {
     //log.debug("ResolveExpr")
-    walk(compiler.cunits, VisitDepth.expr)
+    walkUnits(VisitDepth.expr)
     bombIfErr
   }
 
-//////////////////////////////////////////////////////////////////////////
-// Method
-//////////////////////////////////////////////////////////////////////////
-
-  override Void enterMethodDef(MethodDef m)
-  {
-    super.enterMethodDef(m)
-    initMethodVars
-  }
 
 //////////////////////////////////////////////////////////////////////////
 // Stmt
 //////////////////////////////////////////////////////////////////////////
 
-  override Void enterStmt(Stmt stmt) { stmtStack.push(stmt) }
 
   override Stmt[]? visitStmt(Stmt stmt)
   {
-    stmtStack.pop
     switch (stmt.id)
     {
       case StmtId.expr:         resolveExprStmt((ExprStmt)stmt)
@@ -157,29 +146,19 @@ class ResolveExpr : CompilerStep
         expr.ctype = ns.intType
       case ExprId.floatLiteral:
         expr.ctype = ns.floatType
-      case ExprId.decimalLiteral:
-        expr.ctype = ns.decimalType
       case ExprId.strLiteral:
         expr.ctype = ns.strType
-      case ExprId.durationLiteral:
-        expr.ctype = ns.durationType
-      case ExprId.uriLiteral:
-        expr.ctype = ns.uriType
       case ExprId.typeLiteral:
-        expr.ctype = ns.typeType
-        LiteralExpr e := expr
-        TypeRef t := e.val
-        ResolveType.doResolveType(this, t)
-      case ExprId.localeLiteral:    // LocaleLiteralExpr
-        expr = resolveLocaleLiteral(expr)
-      case ExprId.slotLiteral:      // SlotLiteralExpr
-        expr = resolveSlotLiteral(expr)
-      case ExprId.rangeLiteral:     // RangeLiteralExpr
-        expr.ctype = ns.rangeType
+//        expr.ctype = ns.typeType
+//        LiteralExpr e := expr
+//        TypeRef t := e.val
+//        ResolveType.doResolveType(this, t)
+//      case ExprId.localeLiteral:    // LocaleLiteralExpr
+//        expr = resolveLocaleLiteral(expr)
+//      case ExprId.slotLiteral:      // SlotLiteralExpr
+//        expr = resolveSlotLiteral(expr)
       case ExprId.listLiteral:      // ListLiteralExpr
         expr = resolveList(expr)
-      case ExprId.mapLiteral:       // MapLiteralExpr
-        expr = resolveMap(expr)
 
       case ExprId.boolNot:          // UnaryExpr
       case ExprId.cmpNull:
@@ -198,7 +177,7 @@ class ResolveExpr : CompilerStep
         expr.ctype = ns.boolType
       
       case ExprId.isExpr:           // TypeCheckExpr
-      case ExprId.isnotExpr:
+      //case ExprId.isnotExpr:
       case ExprId.asExpr:
       case ExprId.coerce:
         expr = resolveTypeCheck(expr)
@@ -206,8 +185,8 @@ class ResolveExpr : CompilerStep
       case ExprId.call:             // CallExpr
         expr = resolveCall(expr)
 
-      case ExprId.construction:
-        expr = resolveConstruction(expr)
+      //case ExprId.construction:
+      //  expr = resolveConstruction(expr)
       case ExprId.shortcut:         // ShortcutExpr (has ShortcutOp)
         expr = resolveShortcut(expr)
 
@@ -226,8 +205,8 @@ class ResolveExpr : CompilerStep
         expr.ctype = ((StaticTargetExpr)expr).target
       case ExprId.unknownVar:       // UnknownVarExpr
         expr = resolveVar(expr)
-      case ExprId.storage:
-        expr = resolveStorage(expr)
+//      case ExprId.storage:
+//        expr = resolveStorage(expr)
       case ExprId.ternary:          // TernaryExpr
         expr = resolveTernary(expr)
       case ExprId.complexLiteral:   // ComplexLiteral
@@ -238,8 +217,8 @@ class ResolveExpr : CompilerStep
         //expr = resolveDsl(expr)
       case ExprId.throwExpr:        // ThrowExpr
         expr.ctype = ns.nothingType
-      case ExprId.awaitExpr:
-        expr = resolveAwait(expr)
+//      case ExprId.awaitExpr:
+//        expr = resolveAwait(expr)
       case ExprId.sizeOfExpr:
         expr.ctype = ns.intType
       case ExprId.addressOfExpr:
@@ -254,7 +233,7 @@ class ResolveExpr : CompilerStep
     ResolveType.doResolveType(this, expr.check)
     switch (expr.id) {
       case ExprId.isExpr:           // TypeCheckExpr
-      case ExprId.isnotExpr:
+      //case ExprId.isnotExpr:
         expr.ctype = ns.boolType
 
       case ExprId.asExpr:
@@ -266,7 +245,7 @@ class ResolveExpr : CompilerStep
   }
   
   private Expr resolveField(FieldExpr expr) {
-    expr.field = expr.target.ctype.field(expr.name)
+    expr.field = expr.target.ctype.typeDef.slot(expr.name)
     if (expr.field == null) {
       expr.ctype = ns.error
     }
@@ -285,16 +264,16 @@ class ResolveExpr : CompilerStep
   {
     if (expr.target == null)
     {
-      stypes := curType.unit.imported[expr.name]
+      stypes := curUnit.imported[expr.name]
 
       // if more then, one first try to exclude those internal to other pods
       if (stypes != null && stypes.size > 1)
-        stypes = stypes.exclude |t| { t.isInternal && t.podName != compiler.pod.name }
+        stypes = stypes.exclude |t| { t.isInternal && t.podName != this.podName }
 
       if (stypes != null && !stypes.isEmpty)
       {
         if (stypes.size > 1)
-          compiler.log.err("Ambiguous type: " + stypes.join(", "), expr.loc)
+          log.err("Ambiguous type: " + stypes.join(", "), expr.loc)
         
         typeDef := stypes.first as TypeDef
         if (typeDef != null) {
@@ -319,107 +298,61 @@ class ResolveExpr : CompilerStep
     return null
   }
 
-  private Expr resolveAwait(AwaitExpr yexpr) {
-    //yexpr.expr = resolveExpr(yexpr.expr)
-    if (yexpr.expr.ctype.fits(ns.promiseType)) {
-      awaitType := (yexpr.expr.ctype).genericArgs.first
-      if (awaitType != null) {
-        yexpr.ctype = awaitType.toNullable
-      } else {
-        yexpr.ctype = ns.objType.toNullable
-      }
-    }
-    else {
-      yexpr.ctype = yexpr.expr.ctype
-    }
-    return yexpr
-  }
+//  private Expr resolveAwait(AwaitExpr yexpr) {
+//    //yexpr.expr = resolveExpr(yexpr.expr)
+//    if (yexpr.expr.ctype.fits(ns.promiseType)) {
+//      awaitType := (yexpr.expr.ctype).genericArgs.first
+//      if (awaitType != null) {
+//        yexpr.ctype = awaitType.toNullable
+//      } else {
+//        yexpr.ctype = ns.objType.toNullable
+//      }
+//    }
+//    else {
+//      yexpr.ctype = yexpr.expr.ctype
+//    }
+//    return yexpr
+//  }
 
   private Expr resolveAddressOf(AddressOfExpr expr) {
     //expr.var_v = resolveExpr(expr.var_v)
-    expr.ctype = ns.ptrType
+    expr.ctype = ns.pointerType
     return expr
-  }
-
-  **
-  ** Resolve locale literal '$<pod::key=def>'
-  **
-  private Expr resolveLocaleLiteral(LocaleLiteralExpr expr)
-  {
-    loc := expr.loc
-
-    // cannot define def with explicit podName
-    if (expr.podName != null && expr.def != null)
-      err("Locale literal cannot specify both qualified pod and default value", loc)
-
-    // if we have a def, then add to compiler to merge into locale/en.props
-    if (expr.def != null) compiler.localeDefs.add(expr)
-
-    // Pod.find(podName) or inType#.pod
-    inType := this.curType
-    if (inType.isClosure) inType = inType.closure.enclosingType
-    podTarget := expr.podName != null ?
-      CallExpr.makeWithMethod(loc, null, ns.podFind, [LiteralExpr.makeType(loc, ExprId.strLiteral, ns.strType, expr.podName)]) :
-      CallExpr.makeWithMethod(loc, LiteralExpr(loc, ExprId.typeLiteral, ns.typeType, inType.asRef), ns.typePod)
-
-    // podTarget.locale(key [, def])
-    args := [LiteralExpr.makeType(loc, ExprId.strLiteral, ns.strType, expr.key)]
-    if (expr.def != null) args.add(LiteralExpr.makeType(loc, ExprId.strLiteral, ns.strType, expr.def))
-    return CallExpr.makeWithMethod(loc, podTarget, ns.podLocale, args)
   }
 
   **
   ** Resolve slot literal
   **
-  private Expr resolveSlotLiteral(SlotLiteralExpr expr)
-  {
-    ResolveType.doResolveType(this, expr.parent)
-    slot := expr.parent.slot(expr.name)
-    if (slot == null)
-    {
-      err("Unknown slot literal '${expr.parent.signature}.${expr.name}'", expr.loc)
-      expr.ctype = ns.error
-      return expr
-    }
-    expr.ctype = slot is FieldDef ? ns.fieldType : ns.methodType
-    expr.slot = slot
-    return expr
-  }
+//  private Expr resolveSlotLiteral(SlotLiteralExpr expr)
+//  {
+//    ResolveType.doResolveType(this, expr.parent)
+//    slot := expr.parent.slot(expr.name)
+//    if (slot == null)
+//    {
+//      err("Unknown slot literal '${expr.parent.signature}.${expr.name}'", expr.loc)
+//      expr.ctype = ns.error
+//      return expr
+//    }
+//    expr.ctype = slot is FieldDef ? ns.fieldType : ns.methodType
+//    expr.slot = slot
+//    return expr
+//  }
 
   **
   ** Resolve list literal
   **
   private Expr resolveList(ListLiteralExpr expr)
   {
-    if (expr.explicitType != null)
-    {
+//    if (expr.explicitType != null)
+//    {
       expr.ctype = expr.explicitType
-    }
-    else
-    {
-      // infer from list item expressions
-      v := CommonType.commonType(ns, expr.vals)
-      expr.ctype = TypeRef.listType(expr.loc, v)
-    }
-    return expr
-  }
-
-  **
-  ** Resolve map literal
-  **
-  private Expr resolveMap(MapLiteralExpr expr)
-  {
-    if (expr.explicitType != null)
-    {
-      expr.ctype = expr.explicitType
-    }
-    else
-    {
-      // infer from key/val expressions
-      k := CommonType.commonType(ns, expr.keys).toNonNullable
-      v := CommonType.commonType(ns, expr.vals)
-      expr.ctype = TypeRef.mapType(expr.loc, k, v)
-    }
+//    }
+//    else
+//    {
+//      // infer from list item expressions
+//      v := CommonType.commonType(ns, expr.vals)
+//      expr.ctype = TypeRef.listType(expr.loc, v)
+//    }
     return expr
   }
 
@@ -428,23 +361,10 @@ class ResolveExpr : CompilerStep
   **
   private Expr resolveThis(ThisExpr expr)
   {
-    if (inClosure)
-    {
-      loc := expr.loc
-      closure := curType.closure
-
-      // if the closure is in a static slot, report an error
-      if (closure.enclosingSlot.isStatic)
-      {
-        expr.ctype = ns.error
-        err("Cannot access 'this' within closure of static context", loc)
-        return expr
-      }
-
-      // otherwise replace this with $this field access
-      return closure.outerThisField
+    if (curType == null || curMethod == null || curMethod.isStatic) {
+        err("Cannot access 'this' in static context", expr.loc)
     }
-
+    
     expr.ctype = curType.asRef
     return expr
   }
@@ -480,7 +400,7 @@ class ResolveExpr : CompilerStep
   private Expr resolveIt(ItExpr expr)
   {
     // can't use it keyword outside of an it-block
-    if (!inClosure || !curType.closure.isItBlock)
+    if (!inClosure)
     {
       err("Invalid use of 'it' outside of it-block", expr.loc)
       expr.ctype = ns.error
@@ -488,7 +408,7 @@ class ResolveExpr : CompilerStep
     }
 
     // closure's itType should be defined at this point
-    expr.ctype = curType.closure.itType
+    //expr.ctype = curType.itType
     return expr
   }
 
@@ -542,67 +462,46 @@ class ResolveExpr : CompilerStep
   **
   private Expr resolveVar(UnknownVarExpr var_v)
   {
-    // if there is no target, attempt to bind to local variable
-    if (var_v.target == null)
-    {
-      // attempt to a name in the current scope
-      binding := resolveLocal(var_v.name, var_v.loc)
-      if (binding != null) {
-        res := LocalVarExpr(var_v.loc, binding)
-        res.len = var_v.len
-        return res
-      }
+    if (var_v.target == null) {
+        binding := resolveSymbol(var_v.name, var_v.loc)
+        if (binding != null) {
+          if (binding is MethodVar) {
+            res := LocalVarExpr(var_v.loc, binding)
+            res.len = var_v.len
+            return res
+          }
+          else if (binding is FieldDef) {
+            f := binding as FieldDef
+            Expr? res
+            if (f.isStatic || curType == null) {
+                res = FieldExpr(var_v.loc, null, f)
+            }
+            else {
+                thisExpr := ThisExpr(var_v.loc, curType.asRef)
+                res = FieldExpr(var_v.loc, thisExpr, f)
+            }
+            res.len = var_v.len
+            return res
+          }
+          else if (binding is MethodDef) {
+            f := binding as MethodDef
+            Expr? res
+            if (f.isStatic || curType == null) {
+                res = CallExpr(var_v.loc, null, f)
+            }
+            else {
+                thisExpr := ThisExpr(var_v.loc, curType.asRef)
+                res = CallExpr(var_v.loc, thisExpr, f)
+            }
+            res.len = var_v.len
+            return res
+          }
+        }
     }
-    
-    //static slot: Int.max
-    res := resolveStaticTypeTarget(var_v)
-    if (res != null) {
-      return res
+    else {
+        //TODO
     }
-
-    // at this point it can't be a local variable, so it must be
-    // a slot on either myself or the variable's target
-    return CallResolver(compiler, curType, curMethod, var_v, curType.closure).resolve
-  }
-
-  **
-  ** Resolve storage operator
-  **
-  private Expr resolveStorage(UnknownVarExpr var_v)
-  {
-    // resolve as normal unknown variable
-    resolved := resolveVar(var_v)
-
-    // handle case where we have a local variable hiding a
-    // field since the *x is assumed to be this.*x
-    if (resolved.id === ExprId.localVar)
-    {
-      field := curType.fieldDef(var_v.name)
-      if (field != null) {
-        fieldExpr := FieldExpr(var_v.loc, ThisExpr(var_v.loc), field.name)
-        fieldExpr.len = var_v.len
-        fieldExpr.field = field
-        fieldExpr.ctype = field.fieldType
-        resolved = fieldExpr
-      }
-    }
-
-    // is we can't resolve as field, then this is an error
-    if (resolved.id !== ExprId.field)
-    {
-      if (resolved.ctype !== ns.error)
-        err("Invalid use of field storage operator '&'", var_v.loc)
-      return resolved
-    }
-
-    f := resolved as FieldExpr
-    f.useAccessor = false
-    if (f.field is FieldDef)
-    {
-      fd := (FieldDef)f.field
-      fd.flags = fd.flags.or(FConst.Storage)
-    }
-    return f
+    return var_v
   }
 
   **
@@ -610,7 +509,10 @@ class ResolveExpr : CompilerStep
   **
   private Expr resolveElvis(BinaryExpr expr)
   {
-    expr.ctype = CommonType.common(ns, [expr.lhs.ctype, expr.rhs.ctype]).toNullable
+    if (expr.lhs.ctype != expr.rhs.ctype) {
+        err("invalid elvis expr")
+    }
+    expr.ctype = expr.lhs.ctype
     return expr
   }
 
@@ -618,13 +520,17 @@ class ResolveExpr : CompilerStep
   ** Resolve "x ? y : z" ternary expression
   **
   private Expr resolveTernary(TernaryExpr expr)
-  {
+  { 
     if (expr.trueExpr.id === ExprId.nullLiteral)
       expr.ctype = expr.falseExpr.ctype.toNullable
     else if (expr.falseExpr.id === ExprId.nullLiteral)
       expr.ctype = expr.trueExpr.ctype.toNullable
-    else
-      expr.ctype = CommonType.common(ns, [expr.trueExpr.ctype, expr.falseExpr.ctype])
+    else {
+        if (expr.trueExpr.ctype != expr.falseExpr.ctype) {
+            err("invalid ternary expr")
+        }
+        expr.ctype = expr.trueExpr.ctype
+    }
     return expr
   }
 
@@ -633,173 +539,43 @@ class ResolveExpr : CompilerStep
   **
   private Expr resolveCall(CallExpr call)
   {
-    // dynamic calls are just syntactic sugar for Obj.trap
-    if (call.isDynamic && !call.isCheckedCall)
-    {
-      call.method = ns.objTrap
-      call.ctype = ns.objType.toNullable
-      return call
-    }
-
-    // if there is no target, attempt to bind to local variable
+    //if there is no target, attempt to bind to local variable
     if (call.target == null)
     {
       // attempt to a name in the current scope
-      binding := resolveLocal(call.name, call.loc)
-      if (binding != null)
-        return resolveCallOnLocalVar(call, LocalVarExpr(call.loc, binding))
+      binding := resolveSymbol(call.name, call.loc)
+      if (binding != null) {
+        if (binding is MethodDef) {
+            f := binding as MethodDef
+            call.method = f
+            call.ctype = f.ret
+            
+            if (!f.isStatic && curType != null) {
+                thisExpr := ThisExpr(call.loc, curType.asRef)
+                call.target = thisExpr
+            }
+            return call
+        }
+        else {
+            
+        }
+      }
     }
     
     //maybe ctor
-    ctor := resolveStaticTypeTarget(call)
-    if (ctor != null) {
-      return this.resolveConstruction(ctor)
-    }
-
-    res := CallResolver(compiler, curType, curMethod, call, curType.closure).resolve
-    if (call.isDynamic) {
-      res.ctype = ns.objType.toNullable
-    }
-    return res
-  }
-
-  **
-  ** Resolve the () operator on a local variable - if the local
-  ** is a Method, then () is syntactic sugar for Method.callx()
-  **
-  private Expr resolveCallOnLocalVar(CallExpr call, LocalVarExpr binding)
-  {
-    // if the call was generated as an it-block on local
-    if (call.noParens && call.args.size == 1)
-    {
-      closure:= call.args.last as ClosureExpr
-      if (closure != null && closure.isItBlock) {
-        expr := closure.toWith(binding, ns.objWith, ns)
-        //ns.resolveTypeRef(closure.ctype, closure.loc)
-        return expr
-      }
-    }
-
-    // can only handle zero to eight arguments; I could wrap up the
-    // arguments into a List and use call(List) - but methods with
-    // that many arguments are just inane so tough luck
-    if (call.args.size > 8)
-    {
-      err("Tough luck - cannot use () operator with more than 8 arguments, use call(List)", call.loc)
-      call.ctype = ns.error
-      return call
-    }
-
-    // invoking the () operator on a sys::Func is syntactic
-    // sugar for invoking one of the Func.call methods
-    callMethod := binding.ctype.method("call")
-    if (callMethod == null)
-    {
-      if (binding.ctype != ns.error)
-        err("Cannot use () call operator on non-func type '$binding.ctype'", call.loc)
-      call.ctype = ns.error
-      return call
-    }
-    ncall := CallExpr.makeWithMethod(call.loc, binding, callMethod, call.args)
-    ncall.len = call.len
-    ncall.isCallOp = true
-    return ncall
-  }
-
-  **
-  ** Resolve a construction call Type(args)
-  **
-  private Expr resolveConstruction(CallExpr call)
-  {
-    base := call.target.ctype
-    call.ctype = base  // fallback in case of errors
-
-    // get all constructors that might match this call
-    matches := [Str:MethodDef][:]
-    //findCtorMatches(matches, base, call.args)
-
-    // check if our last argument is an it-block, then check
-    // for constructors without that arg:
-    //    make(...).with(lastArg)
-    itBlock := (call.args.last as ClosureExpr)?.isItBlock ?: false
-    //if (itBlock) findCtorMatches(matches, base, call.args[0..-2])
-
-    // if no matches bail
-    if (matches.isEmpty)
-    {
-      args := call.args.join(", ") |arg| { arg.ctype.toStr }
-      err("No constructor found: ${base.name}($args)", call.loc)
-      return call
-    }
-
-    // if we have multiple matches, we have ambiguous constructor
-    if (matches.size > 1)
-    {
-      args := call.args.join(", ") |arg| { arg.ctype.toStr }
-      names := matches.map |m| { m.name }.vals.sort.join(", ")
-      err("Ambiguous constructor: ${base.name}($args) [$names]", call.loc)
-      return call
-    }
-
-    // we have our resolved match
-    match := matches.vals.first
-    call.method = match
-    call.ctype = match.isStatic ? match.returnType : base
-
-    // hook to infer closure type from call or to
-    // translateinto an implicit call to Obj.with
-    return CallResolver.inferClosureTypeFromCall(this.compiler, call, base)
-  }
-
-  **
-  ** Walk all the slots in 'base' and match any constructor
-  ** that could be called using the given arguments.
-  **
-//  private Void findCtorMatches([Str:MethodDef] matches, TypeRef base, Expr[] args)
-//  {
-//    base.slots.each |slot|
-//    {
-//      // if not a visibile constructor, then not a match
-//      //if (!isCtorMethod(slot)) return
-//      if (!CheckErrors.isSlotVisible(curType, slot)) return
-//
-//      // don't match any inherited methods
-//      if (slot.parent != base.typeDef) {
-////        if (base.typeDef is ParameterizedType) {
-////          if (slot.parent != (base.typeDef as ParameterizedType).root) {
-////            return
-////          }
-////        }
-////        else {
-////          return
-////        }
-//        return
-//      }
-//
-//      // check argument/parameter counts to see if we can disqualify it
-//      ctor := (MethodDef)slot
-//      params := ctor.params
-//      if (params.size < args.size) return
-//      if (params.size > args.size && !params[args.size].hasDefault) return
-//
-//      // check that each parameter fits
-//      for (i:=0; i<args.size; ++i)
-//        if (!Coerce.canCoerce(args[i], params[i].paramType))
-//          return
-//
-//      // its a match!
-//      matches[ctor.name] = ctor
+//    ctor := resolveStaticTypeTarget(call)
+//    if (ctor != null) {
+//      return this.resolveConstruction(ctor)
 //    }
-//  }
 
-//  private Bool isCtorMethod(SlotDef slot)
-//  {
-//    if (slot.isCtor) return true
-//    if (slot isnot MethodDef) return false
-//    // TODO let static "make" or "fromStr" pass
-//    if (slot.isStatic && (slot.name == "make" || slot.name == "fromStr")) return true
-//    return false
-//  }
+    //TODO
+//    res := CallResolver(compiler, curType, curMethod, call, null).resolve
+//    if (call.isDynamic) {
+//      res.ctype = ns.objType.toNullable
+//    }
+//    return res
+    return call
+  }
 
   **
   ** Resolve ShortcutExpr.
@@ -807,17 +583,17 @@ class ResolveExpr : CompilerStep
   private Expr resolveShortcut(ShortcutExpr expr)
   {
     // if this is an indexed assigment such as x[y] += z
-    if (expr.isAssign && expr.target.id === ExprId.shortcut)
-      return resolveIndexedAssign(expr)
+//    if (expr.isAssign && expr.target.id === ExprId.shortcut)
+//      return resolveIndexedAssign(expr)
 
     // string concat is always optimized, and performs a bit
     // different since a non-string can be used as the lhs
-    if (expr.isStrConcat)
-    {
-      expr.ctype  = ns.strType
-      expr.method = ns.strPlus
-      return ConstantFolder(compiler).fold(expr)
-    }
+//    if (expr.isStrConcat)
+//    {
+//      expr.ctype  = ns.strType
+//      expr.method = ns.strPlus
+//      return ConstantFolder(compiler).fold(expr)
+//    }
 
     // if a binary operation
     if (expr.args.size == 1 && expr.op.isOperator)
@@ -899,50 +675,6 @@ class ResolveExpr : CompilerStep
   }
 
   **
-  ** If we have an assignment against an indexed shortcut
-  ** such as x[y] += z, then process specially to return
-  ** a IndexedAssignExpr subclass of ShortcutExpr.
-  **
-  private Expr resolveIndexedAssign(ShortcutExpr orig)
-  {
-    // if target is in error, don't bother
-    if (orig.target.ctype === ns.error)
-    {
-      orig.ctype = ns.error
-      return orig
-    }
-
-    // we better have a x[y] indexed get expression
-    if (orig.target.id != ExprId.shortcut && orig.target->op === ShortcutOp.get)
-    {
-      err("Expected indexed expression", orig.loc)
-      return orig
-    }
-
-    // wrap the shorcut as an IndexedAssignExpr
-    expr := IndexedAssignExpr.makeFrom(orig)
-
-    // resolve it normally - if the orig is "x[y] += z" then we
-    // are resolving Int.plus here - the target is "x[y]" and should
-    // already be resolved
-    resolveCall(expr)
-
-    // resolve the set method which matches
-    // the get method on the target
-    get := ((ShortcutExpr)expr.target).method
-    set := get.parent.slots.get("set") as MethodDef
-    if (set == null || set.params.size != 2 || set.isStatic ||
-        set.params[0].paramType.toNonNullable != get.params[0].paramType.toNonNullable ||
-        set.params[1].paramType.toNonNullable != get.returnType.toNonNullable)
-      err("No matching 'set' method for '$get.qname'", orig.loc)
-    else
-      expr.setMethod = set
-
-    // return the new IndexedAssignExpr
-    return expr
-  }
-
-  **
   ** ClosureExpr will just output its substitute expression.  But we take
   ** this opportunity to capture the local variables in the closure's scope
   ** and cache them on the ClosureExpr.  We also do variable name checking.
@@ -951,15 +683,15 @@ class ResolveExpr : CompilerStep
   {
     this.inClosure = true
     // save away current locals in scope
-    expr.enclosingVars = localsInScope
+    //expr.enclosingVars = localsInScope
 
     // make sure none of the closure's parameters
     // conflict with the locals in scope
-    expr.doCall.paramDefs.each |ParamDef p|
-    {
-      if (expr.enclosingVars.containsKey(p.name) && p.name != "it")
-        err("Closure parameter '$p.name' is already defined in current block", p.loc)
-    }
+//    expr.doCall.paramDefs.each |ParamDef p|
+//    {
+//      if (expr.enclosingVars.containsKey(p.name) && p.name != "it")
+//        err("Closure parameter '$p.name' is already defined in current block", p.loc)
+//    }
     
     expr.signature.params.each |p| { ResolveType.doResolveType(this, p) }
     
@@ -974,33 +706,17 @@ class ResolveExpr : CompilerStep
 //////////////////////////////////////////////////////////////////////////
 
   **
-  ** Setup the MethodVars for the parameters.
-  **
-  private Void initMethodVars()
-  {
-    m := curMethod
-    //reg := m.isStatic ?  0 : 1
-
-    m.paramDefs.each |ParamDef p|
-    {
-      //var_v := MethodVar.makeForParam(m, reg++, p, p.paramType.parameterizeThis(curType))
-      //m.vars.add(var_v)
-      p.method = m
-    }
-  }
-
-  **
   ** Bind the specified local variable definition to a
   ** MethodVar (and register number).
   **
   private Void bindToMethodVar(LocalDefStmt def)
   {
     // make sure it doesn't exist in the current scope
-    if (resolveLocal(def.name, def.loc) != null)
+    if (curScope.doFindSymbol(def.name) != null)
       err("Variable '$def.name' is already defined in current block", def.loc)
 
     // create and add it
-    def.var_v = curMethod.addLocalVarForDef(def, currentBlock)
+    def.var_v = curMethod.addLocalVarForDef(def, curScope as Block)
     
     if (def.var_v.ctype != null) {
       ResolveType.doResolveType(this, def.var_v.ctype)
@@ -1011,143 +727,14 @@ class ResolveExpr : CompilerStep
   ** Resolve a local variable using current scope based on
   ** the block stack and possibly the scope of a closure.
   **
-  private MethodVar? resolveLocal(Str name, Loc loc)
+  private Symbol? resolveSymbol(Str name, Loc loc)
   {
-    // if not in method, then we can't have a local
-    if (curMethod == null) return null
-
-    MethodVar? binding
-    
-    if (stmtStack.peek is ForStmt) {
-      block := ((ForStmt)stmtStack.peek).block
-      binding = block.vars.find |MethodVar var_v->Bool| {
-        return var_v.name == name
-      }
+    sym := curScope.findSymbol(name)
+    if (sym == null) {
+        err("Unknow symbol: $name", loc)
     }
-    
-    if (binding == null) {
-        for (i:=this.blockStack.size -1; i >=0 ; --i) {
-          b := blockStack[i]
-          binding = b.vars.find |MethodVar var_v->Bool| {
-            return var_v.name == name
-          }
-          if (binding != null) break
-        }
-    }
-    
-    if (binding == null) {
-        binding = curMethod.paramDefs.find |MethodVar var_v->Bool| {
-            return var_v.name == name
-        }
-    }
-    
-    if (binding != null) return binding
-
-    // if a closure, check parent scope
-    if (inClosure)
-    {
-      closure := curType.closure
-      binding = closure.enclosingVars[name]
-      if (binding != null)
-      {
-        // mark the enclosing method and var as being used in a closure
-        binding.method.usesCvars = true
-        binding.usedInClosure = true
-
-        // create new "shadow" local var in closure body which
-        // shadows the enclosed variable from parent scope,
-        // we'll do further processing in ClosureVars
-        shadow := curMethod.addLocalVar(binding.loc, binding.ctype, binding.name, currentBlock)
-        shadow.usedInClosure = true
-        shadow.shadows = binding
-
-        // if there are intervening closure scopes between
-        // the original scope and current scope, then we need to
-        // add a pass-thru variable in each scope
-        last := shadow
-        for (p := closure.enclosingClosure; p != null; p = p.enclosingClosure)
-        {
-          if (binding.method === p.doCall) break
-          passThru := p.doCall.addLocalVar(binding.loc, binding.ctype, binding.name, p.doCall.code)
-          passThru.usedInClosure = true
-          passThru.shadows = binding
-          passThru.usedInClosure = true
-          last.shadows = passThru
-          last = passThru
-        }
-
-        return shadow
-      }
-    }
-
-    // not found
-    return null
+    return sym
   }
-
-  **
-  ** Get a list of all the local method variables that
-  ** are currently in scope.
-  **
-  private Str:MethodVar localsInScope()
-  {
-    [Str:MethodVar] acc := inClosure ?
-      curType.closure.enclosingVars.dup :
-      [Str:MethodVar][:]
-
-    if (curMethod == null) return acc
-
-    if (stmtStack.peek is ForStmt) {
-      block := ((ForStmt)stmtStack.peek).block
-      block.vars.each |MethodVar var_v| {
-        acc[var_v.name] = var_v
-      }
-    }
-    
-    for (i:=this.blockStack.size -1; i >=0 ; --i) {
-      b := blockStack[i]
-      b.vars.each |MethodVar var_v| {
-        acc[var_v.name] = var_v
-      }
-    }
-    
-    curMethod.paramDefs.each |MethodVar var_v| {
-        acc[var_v.name] = var_v
-    }
-
-    return acc
-  }
-
-  **
-  ** Get the current block which defines our scope.  We make
-  ** a special case for "for" loops which can declare variables.
-  **
-  private Block currentBlock()
-  {
-    if (stmtStack.peek is ForStmt)
-      return ((ForStmt)stmtStack.peek).block
-    else
-      return blockStack.peek
-  }
-
-//  **
-//  ** Check if the specified block is currently in scope.  We make
-//  ** a specialcase for "for" loops which can declare variables.
-//  **
-//  private Bool isBlockInScope(Block? block)
-//  {
-//    // the null block within the whole method (ctorChains or defaultParams)
-//    if (block == null) return true
-//
-//    // special case for "for" loops
-//    if (stmtStack.peek is ForStmt)
-//    {
-//      if (((ForStmt)stmtStack.peek).block === block)
-//        return true
-//    }
-//
-//    // look in block stack which models scope chain
-//    return blockStack.any |Block b->Bool| { b === block }
-//  }
 
 //////////////////////////////////////////////////////////////////////////
 // StmtStack
@@ -1163,19 +750,62 @@ class ResolveExpr : CompilerStep
     }
     return null
   }
+  
+  override Void enterStmt(Stmt stmt) {
+    super.enterStmt(stmt);
+    stmtStack.push(stmt)
+    if (stmt.id === StmtId.forStmt) {
+        s := stmt as ForStmt
+        s.block.parent = curScope; curScope = s.block
+    }
+  }
+  
+  override Void exitStmt(Stmt stmt) {
+    super.exitStmt(stmt);
+    stmtStack.pop
+    if (stmt.id === StmtId.forStmt) {
+        s := stmt as ForStmt
+        curScope = curScope.parentScope
+    }
+  }
 
 //////////////////////////////////////////////////////////////////////////
-// BlockStack
+// Scope
 //////////////////////////////////////////////////////////////////////////
 
-  override Void enterBlock(Block block) { blockStack.push(block) }
-  override Void exitBlock(Block block)  { blockStack.pop }
+  override Void enterBlock(Block block) {
+    super.enterBlock(block); 
+    if (curScope === block) return
+    block.parent = curScope; curScope = block
+  }
+  override Void exitBlock(Block block)  {
+    super.exitBlock(block); 
+    if (curScope !== block) return
+    curScope = curScope.parentScope
+  }
+  
+  virtual Void enterUnit(CompilationUnit unit) { super.enterUnit(unit); curScope = unit }
+  virtual Void exitUnit(CompilationUnit unit) { super.exitUnit(unit); curScope = null }
+
+  virtual Void enterTypeDef(TypeDef def) {
+    super.enterTypeDef(def); 
+    curScope = def
+  }
+  virtual Void exitTypeDef(TypeDef def) { super.exitTypeDef(def); curScope = curScope.parentScope }
+
+  virtual Void enterMethodDef(MethodDef def) {
+    super.enterMethodDef(def);
+    def.parent = curScope
+    curScope = def
+  }
+  virtual Void exitMethodDef(MethodDef def) { super.exitMethodDef(def); curScope = curScope.parentScope }
 
 //////////////////////////////////////////////////////////////////////////
 // Fields
 //////////////////////////////////////////////////////////////////////////
 
   Stmt[] stmtStack  := Stmt[,]    // statement stack
-  Block[] blockStack := Block[,]  // block stack used for scoping
+  //Block[] blockStack := Block[,]  // block stack used for scoping
+  Scope? curScope
   Bool inClosure := false         // are we inside a closure's block
 }

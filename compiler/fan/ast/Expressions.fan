@@ -96,14 +96,6 @@ class BinaryExpr : Expr
     list.add(rhs)
   }
 
-  override Str serialize()
-  {
-    if (id === ExprId.assign)
-      return "${lhs.serialize}=${rhs.serialize}"
-    else
-      return super.serialize
-  }
-
   override Str toStr()
   {
     return "($lhs $opToken $rhs)"
@@ -283,16 +275,6 @@ class CallExpr : NameExpr
     args.each |e| {
       list.add(e)
     }
-  }
-
-  override Str serialize()
-  {
-    // only serialize a true Type("xx") expr which maps to Type.fromStr
-    if (id != ExprId.construction || method.name != "fromStr")
-      return super.serialize
-
-    argSer := args.join(",") |Expr e->Str| { e.serialize }
-    return "$method.parent($argSer)"
   }
 
   override Void print(AstWriter out)
@@ -509,34 +491,13 @@ class FieldExpr : NameExpr
   override Int? asTableSwitchCase()
   {
     // TODO - this should probably be tightened up if we switch to const
-    if (field.isStatic && field.parent.isEnum && ctype.isEnum)
+    if (field.isStatic && field.parentDef.isEnum && ctype.isEnum)
     {
       ordinal := field.enumOrdinal
       if (ordinal == -1) throw Err("Invalid field for tableswitch: $field.typeof $loc.toLocStr")
       return ordinal
     }
     return null
-  }
-
-  override Str serialize()
-  {
-    if (field.isStatic)
-    {
-      if (field.parent.isFloat)
-      {
-        switch (name)
-        {
-          case "nan":    return "sys::Float(\"NaN\")"
-          case "posInf": return "sys::Float(\"INF\")"
-          case "negInf": return "sys::Float(\"-INF\")"
-        }
-      }
-
-      if (field.isEnum)
-        return "${field.parent.qname}(\"$name\")"
-    }
-
-    return super.serialize
   }
 
   override Str toStr()
@@ -773,20 +734,12 @@ class TypeCheckExpr : Expr
 
   override Bool isDefiniteAssign(|Expr lhs->Bool| f) { target.isDefiniteAssign(f) }
 
-  override Str serialize()
-  {
-    if (id == ExprId.coerce)
-      return target.serialize
-    else
-      return super.serialize
-  }
-
   Str opStr()
   {
     switch (id)
     {
       case ExprId.isExpr:    return "is"
-      case ExprId.isnotExpr: return "isnot"
+      //case ExprId.isnotExpr: return "isnot"
       case ExprId.asExpr:    return "as"
       default:               throw Err(id.toStr)
     }
@@ -797,7 +750,7 @@ class TypeCheckExpr : Expr
     switch (id)
     {
       case ExprId.isExpr:    return "($target is $check)"
-      case ExprId.isnotExpr: return "($target isnot $check)"
+      //case ExprId.isnotExpr: return "($target isnot $check)"
       case ExprId.asExpr:    return "($target as $check)"
       case ExprId.coerce:    return "(($check)$target)"
       default:               throw Err(id.toStr)
@@ -884,9 +837,7 @@ class ComplexLiteral : Expr
   }
 
   override Str toStr() { doToStr |expr| { expr.toStr } }
-
-  override Str serialize() { doToStr |expr| { expr.serialize } }
-
+  
   Str doToStr(|Expr->Str| f)
   {
     s := StrBuf()
@@ -901,44 +852,6 @@ class ComplexLiteral : Expr
   Expr[] vals
 }
 
-**************************************************************************
-** DslExpr
-**************************************************************************
-
-**
-** DslExpr is an embedded Domain Specific Language which
-** is parsed by a DslPlugin.
-**
-class DslExpr : Expr
-{
-  new make(Loc loc, TypeRef anchorType, Loc srcLoc, Str src)
-    : super(loc, ExprId.dsl)
-  {
-    this.anchorType = anchorType
-    this.src        = src
-    this.srcLoc     = srcLoc
-  }
-
-  override Str toStr()
-  {
-    return "$anchorType <|$src|>"
-  }
-
-  override Void print(AstWriter out)
-  {
-    out.w(toStr)
-  }
-  
-  override Void getChildren(Node[] list, [Str:Obj]? options) {
-    list.add(anchorType)
-  }
-
-  TypeRef anchorType  // anchorType <|src|>
-  Str src           // anchorType <|src|>
-  Loc srcLoc        // location of first char of src
-  Int leadingTabs   // number of leading tabs on original Fantom line
-  Int leadingSpaces // number of leading non-tab chars on original Fantom line
-}
 
 **************************************************************************
 ** ThrowExpr
@@ -1089,7 +1002,7 @@ class AddressOfExpr : Expr
 
   override Str toStr()
   {
-    return "addressof($var_v)"
+    return "&($var_v)"
   }
 
   Expr var_v

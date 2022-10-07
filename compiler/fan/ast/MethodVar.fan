@@ -10,7 +10,7 @@
 **
 ** MethodVar is a variable used in a method - either param or local.
 **
-class MethodVar : Node
+class MethodVar : Node, Symbol
 {
 
   new make(Loc loc, TypeRef? ctype, Str name) : super(loc)
@@ -24,7 +24,9 @@ class MethodVar : Node
   }
   
   override Void print(AstWriter out) {
-    if (ctype != null) out.w("$ctype")
+    if (ctype != null) {
+        ctype.print(out)
+    }
     else out.w("auto")
     out.w(" ").w(name)
   }
@@ -41,7 +43,7 @@ class MethodVar : Node
 
   Bool isParam() { flags.and(FConst.Param) != 0 }
 
-  Bool isWrapped() { wrapField != null }
+  //Bool isWrapped() { wrapField != null }
 
   override Str toStr() { "$register  $name: $ctype" }
 
@@ -69,8 +71,8 @@ class MethodVar : Node
   //used by closure
   Bool usedInClosure  // local used by closure within containing method
   MethodVar? shadows  // if closure var, this is the variable in parent scope we shadow
-  FieldDef? wrapField   // if wrapped onto heap this is 'Wrapper.val' field
+  //FieldDef? wrapField   // if wrapped onto heap this is 'Wrapper.val' field
   Bool isReassigned   // keeps track of reassigment assignment (we don't count initial local assign)
-  MethodVar? paramWrapper  // wrapper local var if param has to be wrapped
+  //MethodVar? paramWrapper  // wrapper local var if param has to be wrapped
 
 }

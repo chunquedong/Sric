@@ -40,6 +40,9 @@ mixin Coerce {
 
     // if actual type is nothing, then its of no matter
     if (actual.isNothing) return expr
+    
+    //any type
+    if (expected.isObj) return expr
 
     // we can never use a void expression
     if (actual.isVoid || expected.isVoid)
@@ -130,10 +133,6 @@ mixin Coerce {
   {
     //always cast for generic
     if (from.isParameterized || to.isParameterized) return true
-
-    // if either side is a value type and we got past
-    // the equals check then we definitely need a coercion
-    if (from.isVal || to.isVal) return true
 
     // if going from Obj? -> Obj we need a nullable coercion
     if (!to.isNullable) return from.isNullable

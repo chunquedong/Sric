@@ -24,7 +24,7 @@ class CheckParamDefs : CompilerStep
   override Void run()
   {
     //debug("CheckParamDefs")
-    walk(compiler.cunits, VisitDepth.slotDef)
+    walkUnits(VisitDepth.slotDef)
   }
 
   override Void visitMethodDef(MethodDef m)

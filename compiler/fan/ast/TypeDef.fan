@@ -11,7 +11,7 @@
 **
 ** TypeDef models a type definition for a class, mixin or enum
 **
-class TypeDef : DefNode, TypeMixin
+class TypeDef : DefNode, Scope
 {
 
 //////////////////////////////////////////////////////////////////////////
@@ -33,7 +33,7 @@ class TypeDef : DefNode, TypeMixin
 //    this.slotMap     = Str:SlotDef[:]
 //    this.slotDefMap  = Str:SlotDef[:]
     this.slotDefList = SlotDef[,]
-    this.closures    = ClosureExpr[,]
+    //this.closures    = ClosureExpr[,]
   }
   
   new makePlaceHolder(Str name)  : super.make(loc) {
@@ -50,7 +50,7 @@ class TypeDef : DefNode, TypeMixin
 //    this.slotMap     = Str:SlotDef[:]
 //    this.slotDefMap  = Str:SlotDef[:]
     this.slotDefList = SlotDef[,]
-    this.closures    = ClosureExpr[,]
+    //this.closures    = ClosureExpr[,]
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -58,19 +58,25 @@ class TypeDef : DefNode, TypeMixin
 //////////////////////////////////////////////////////////////////////////
 
   **
-  ** Return if this type is the anonymous class of a closure
+  ** Return if this Type is a class (as opposed to enum or mixin)
   **
-  Bool isClosure()
-  {
-    return closure != null
-  }
+  Bool isClass() { !isMixin && flags.and(FConst.Enum) == 0 }
 
-  virtual Str extName() { "" }
+  **
+  ** Return if this Type is a mixin type and cannot be instantiated.
+  **
+  Bool isMixin() { flags.and(FConst.Mixin) != 0 }
+
+  **
+  ** Return if this Type is final and cannot be subclassed.
+  **
+  Bool isFinal() { flags.and(FConst.Final) != 0 ||
+       (flags.and(FConst.Virtual) == 0  && flags.and(FConst.Abstract) == 0) }
 
   **
   ** This is the full signature of the type.
   **
-  Str signature() { "$qname$extName" }
+  Str signature() { qname }
 
   **
   ** Return signature
@@ -91,11 +97,7 @@ class TypeDef : DefNode, TypeMixin
     tr.resolveTo(this, false)
     return tr
   }
-  
-  virtual Bool isVal() {
-    return flags.and(FConst.Struct) != 0
-  }
-  
+
 //////////////////////////////////////////////////////////////////////////
 // Generics
 //////////////////////////////////////////////////////////////////////////
@@ -152,169 +154,19 @@ class TypeDef : DefNode, TypeMixin
 // Slots
 //////////////////////////////////////////////////////////////////////////
   
-  protected [Str:SlotDef]? slotDefMapCache
-  protected [Str:SlotDef] slotDefMap() {
-    if (slotDefMapCache != null) return slotDefMapCache
-    map := [Str:SlotDef][:]
-    slotDefs.each |s|{
-      if (s.isOverload) return
-      map[s.name] = s
+  
+  override Scope? parentScope() { unit }
+  override Symbol? doFindSymbol(Str name) {
+    if (symbolTable == null) {
+        symbolTable = [:]
+        slotDefList.each { symbolTable[it.name] = it }
     }
-    slotDefMapCache = map
-    return slotDefMapCache
-  }
-  
-  **
-  ** Return if this class has a slot definition for specified name.
-  **
-  Bool hasSlotDef(Str name)
-  {
-    return slotDefMap.containsKey(name)
-  }
-
-  **
-  ** Return SlotDef for specified name or null.
-  **
-  SlotDef? slotDef(Str name)
-  {
-    return slotDefMap[name]
-  }
-
-  **
-  ** Return FieldDef for specified name or null.
-  **
-  FieldDef? fieldDef (Str name)
-  {
-    return slotDefMap[name] as FieldDef
-  }
-
-  **
-  ** Return MethodDef for specified name or null.
-  **
-  MethodDef? methodDef(Str name)
-  {
-    return slotDefMap[name] as MethodDef
-  }
-
-  **
-  ** Get the FieldDefs declared within this TypeDef.
-  **
-  FieldDef[] fieldDefs()
-  {
-    return (FieldDef[])slotDefs.findType(FieldDef#)
-  }
-
-  **
-  ** Get the static FieldDefs declared within this TypeDef.
-  **
-  FieldDef[] statiFieldDefDefs()
-  {
-    return fieldDefs.findAll |FieldDef f->Bool| { f.isStatic }
-  }
-
-  **
-  ** Get the instance FieldDefs declared within this TypeDef.
-  **
-  FieldDef[] instanceFieldDefs()
-  {
-    return fieldDefs.findAll |FieldDef f->Bool| { !f.isStatic }
-  }
-
-  **
-  ** Get the MethodDefs declared within this TypeDef.
-  **
-  MethodDef[] methodDefs()
-  {
-    return (MethodDef[])slotDefs.findType(MethodDef#)
-  }
-
-  **
-  ** Get the constructor MethodDefs declared within this TypeDef.
-  **
-//  MethodDef[] ctorDefs()
-//  {
-//    return methodDefs.findAll |MethodDef m->Bool| { m.isCtor }
-//  }
-  
-  **
-  ** Map of the all defined slots, both fields and
-  ** methods (including inherited slots).
-  **
-  private [Str:SlotDef]? slotsMapCache
-  
-  virtual Str:SlotDef slots() {
-    if (slotsMapCache != null) return slotsMapCache
-    
-    [Str:SlotDef] slotsMap := OrderedMap(64)
-    slotsMapCache = slotsMap
-    
-    slotDefs.each |s| {
-      if (s.isOverload) return
-      slotsMap[s.name] = s
+    sym := symbolTable[name]
+    if (sym == null) {
+        return inheritances.eachWhile { typeDef.doFindSymbol(name) }
     }
-    
-    this.inheritances.each |t| {
-      inherit(slotsMap, this, t)
-    }
-    
-    return slotsMapCache
+    return sym
   }
-  
-  **
-  ** Lookup a slot by name.  If the slot doesn't exist then return null.
-  **
-  virtual SlotDef? slot(Str name) { slots[name] }
-  
-  private static Void inherit([Str:SlotDef] slotsCached, TypeDef def, TypeRef inheritance)
-  {
-    closure := |SlotDef newSlot|
-    {
-      //already inherit by base
-      if (inheritance.isMixin && newSlot.parent.isObj) return
-      
-      // we never inherit constructors, private slots,
-      // or internal slots outside of the pod
-      if (newSlot.isPrivate || newSlot.isStatic ||
-          (newSlot.isInternal && newSlot.parent.podName != inheritance.typeDef.podName))
-        return
-      
-      oldSlot := slotsCached[newSlot.name]
-      if (oldSlot != null) {
-        // if we've inherited the exact same slot from two different
-        // class hiearchies, then no need to continue
-        if (newSlot === oldSlot) return
-        
-        // if this is one of the type's slot definitions
-        if (oldSlot.parent === def) return
-        
-        kp := keep(oldSlot, newSlot)
-        if (kp != newSlot) return
-      }
-
-      // inherit it
-      slotsCached[newSlot.name] = newSlot
-    }
-    //inheritance.slots.vals.sort(|SlotDef a, SlotDef b->Int| {return a.name <=> b.name}).each(closure)
-    inheritance.slots.each(closure)
-  }
-  
-  **
-  ** Return if there is a clear keeper between a and b - if so
-  ** return the one to keep otherwise return null.
-  **
-  static SlotDef? keep(SlotDef a, SlotDef b)
-  {
-    // if one is abstract and one concrete we keep the concrete one
-    if (a.isAbstract && !b.isAbstract) return b
-    if (!a.isAbstract && b.isAbstract) return a
-
-    // keep one if it is a clear override from the other
-    if (a.parent.asRef.fits(b.parent.asRef)) return a
-    if (b.parent.asRef.fits(a.parent.asRef)) return b
-
-    return null
-  }
-
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -325,106 +177,22 @@ class TypeDef : DefNode, TypeMixin
   ** SlotDefs declared by this type as well as slots inherited by
   ** this type.
   **
-  Void addSlot(SlotDef s, Int? slotDefIndex := null)
+  Void addSlot(SlotDef def, Int? slotDefIndex := null)
   {
-    // if MethodDef
-    m := s as MethodDef
-    if (m != null)
-    {
-      // static initializes are just temporarily added to the
-      // slotDefList but never into the name map - we just need
-      // to keep them in declared order until they get collapsed
-      // and removed in the Normalize step
-//      if (m.isStaticInit)
-//      {
-//        slotDefList.add(m)
-//        return
-//      }
-
-      // field accessors are added only to slotDefList,
-      // name lookup is always the field itself
-//      if (m.isFieldAccessor)
-//      {
-//        slotDefList.add(m)
-//        return
-//      }
-
-      if (m.isOverload) {
-        slotDefList.add(m)
-        return
-      }
-    }
-
-    // sanity check
-    name := s.name
-//    if (slotDefMap.containsKey(name))
-//      throw Err("Internal error: duplicate slot $name [$loc.toLocStr]")
-
-    // if my own SlotDef
-    def := s as SlotDef
-    if (def != null && def.parent === this)
-    {
-      // add to my slot definitions
-      if (slotDefMapCache != null)
-        slotDefMapCache[name] = def
-      
       if (slotDefIndex == null)
         slotDefList.add(def)
       else
         slotDefList.insert(slotDefIndex, def)
-
-      // if non-const FieldDef, then add getter/setter methods
-//      if (s is FieldDef)
-//      {
-//        f := (FieldDef)s
-//        if (f.get != null) addSlot(f.get)
-//        if (f.set != null) addSlot(f.set)
-//      }
-    }
   }
-
-//  **
-//  ** Replace oldSlot with newSlot in my slot tables.
-//  **
-//  Void replaceSlot(SlotDef oldSlot, SlotDef newSlot)
-//  {
-//    // sanity checks
-//    if (oldSlot.name != newSlot.name)
-//      throw Err("Internal error: not same names: $oldSlot != $newSlot [$loc.toLocStr]")
-//    if (slotMap[oldSlot.name] !== oldSlot)
-//      throw Err("Internal error: old slot not mapped: $oldSlot [$loc.toLocStr]")
-//
-//    // remap in slotMap table
-//    name := oldSlot.name
-//    slotMap[name] = newSlot
-//
-//    // if old is SlotDef
-//    oldDef := oldSlot as SlotDef
-//    if (oldDef != null && oldDef.parent === this)
-//    {
-//      slotDefMap[name] = oldDef
-//      slotDefList.remove(oldDef)
-//    }
-//
-//    // if new is SlotDef
-//    newDef := newSlot as SlotDef
-//    if (newDef != null && newDef.parent === this)
-//    {
-//      slotDefMap[name] = newDef
-//      slotDefList.add(newDef)
-//    }
-//  }
-
-//////////////////////////////////////////////////////////////////////////
-// SlotDefs
-//////////////////////////////////////////////////////////////////////////
-
-  **
-  ** Get the SlotDefs declared within this TypeDef.
-  **
-  SlotDef[] slotDefs()
-  {
-    return slotDefList
+  
+  SlotDef[] slotDefs() { slotDefList }
+  
+  FieldDef[] fieldDefs() {
+    slotDefList.findAll { it is FieldDef }
+  }
+  
+  SlotDef? slot(Str name) {
+    slotDefList.find { it.name == name }
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -520,15 +288,16 @@ class TypeDef : DefNode, TypeMixin
   override const Str name          // simple class name
   override const Str qname         // podName::name
   //override const Bool isVal        // is this a value type (Bool, Int, etc)
-  Bool baseSpecified := true       // was base assigned from source code
+  //Bool baseSpecified := true       // was base assigned from source code
 //  TypeRef? base             // extends class
 //  TypeRef[] mixins          // mixin types
   
   virtual TypeRef[] inheritances
   
   EnumDef[] enumDefs               // declared enumerated pairs (only if enum)
-  ClosureExpr[] closures           // closures where I am enclosing type (Parse)
-  ClosureExpr? closure             // if I am a closure anonymous class
+  //ClosureExpr[] closures           // closures where I am enclosing type (Parse)
+  //ClosureExpr? closure             // if I am a closure anonymous class
   private SlotDef[] slotDefList    // declared slot definitions
-  FacetDef[]? indexedFacets        // used by WritePod
+  private [Str:Symbol]? symbolTable
+  
 }

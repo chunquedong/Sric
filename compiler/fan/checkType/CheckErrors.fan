@@ -82,8 +82,8 @@ class CheckErrors : CompilerStep, Coerce
     //checkResConflicts(t)
 
     // check some knuckle head doesn't override type
-    if (t.slotDef("typeof") != null && t.qname != "sys::Obj" && t.qname != "std::Type" /*&& !isSys*/)
-      err("Cannot override Obj.typeof()", t.slotDef("typeof").loc)
+//    if (t.slotDef("typeof") != null && t.qname != "sys::Obj" && t.qname != "std::Type" /*&& !isSys*/)
+//      err("Cannot override Obj.typeof()", t.slotDef("typeof").loc)
 
     // check inheritance
     if (t.base != null) checkBase(t, t.base)
@@ -105,7 +105,7 @@ class CheckErrors : CompilerStep, Coerce
     loc := t.loc
 
     // these modifiers are never allowed on a type
-    if (flags.and(FConst.Ctor) != 0)      err("Cannot use 'new' modifier on type", loc)
+    //if (flags.and(FConst.Ctor) != 0)      err("Cannot use 'new' modifier on type", loc)
     if (flags.and(FConst.Once) != 0)      err("Cannot use 'once' modifier on type", loc)
     if (flags.and(FConst.Override) != 0)  err("Cannot use 'override' modifier on type", loc)
     if (flags.and(FConst.Private) != 0)   err("Cannot use 'private' modifier on type", loc)
@@ -131,7 +131,7 @@ class CheckErrors : CompilerStep, Coerce
     closure := |SlotDef slot|
     {
       if (!slot.isAbstract) return
-      if (slot.parent === t)
+      if (slot.parentDef === t)
       {
         if (!errForDef)
         {
@@ -145,7 +145,7 @@ class CheckErrors : CompilerStep, Coerce
       }
     }
 
-    t.slots.each(closure)
+    t.slotDefs.each(closure)
   }
   
   private Void checkVirtualSlots(TypeDef t)
@@ -170,12 +170,12 @@ class CheckErrors : CompilerStep, Coerce
 
   private Void checkConstType(TypeDef t)
   {
-    if ((t.flags.and(FConst.Struct)) != 0) {
-      t.fieldDefs.each |FieldDef f| {
-        if (!f.isConst && !f.isStatic && !f.isReadonly)
-          err("Struct type '$t.name' cannot contain non-readonly field '$f.name'", f.loc)
-      }
-    }
+//    if ((t.flags.and(FConst.Struct)) != 0) {
+//      t.fieldDefs.each |FieldDef f| {
+//        if (!f.isConst && !f.isStatic && !f.isReadonly)
+//          err("Struct type '$t.name' cannot contain non-readonly field '$f.name'", f.loc)
+//      }
+//    }
 
     // if not const then nothing to check
     if (!t.isConst) return
@@ -227,11 +227,6 @@ class CheckErrors : CompilerStep, Coerce
 
   override Void visitFieldDef(FieldDef f)
   {
-    // if this field overrides a concrete field,
-    // then it never gets its own storage
-    if (f.concreteBase != null)
-      f.flags = f.flags.and(FConst.Storage.not)
-
     // check for invalid flags
     checkFieldFlags(f)
 
@@ -254,7 +249,7 @@ class CheckErrors : CompilerStep, Coerce
     loc   := f.loc
 
     // these modifiers are never allowed on a field
-    if (flags.and(FConst.Ctor) != 0)    err("Cannot use 'new' modifier on field", loc)
+    //if (flags.and(FConst.Ctor) != 0)    err("Cannot use 'new' modifier on field", loc)
     if (flags.and(FConst.Final) != 0)   err("Cannot use 'final' modifier on field", loc)
     if (flags.and(FConst.Once) != 0 && flags.and(FConst.Synthetic) == 0) err("Cannot use 'once' modifier on field", loc)
 
@@ -276,8 +271,8 @@ class CheckErrors : CompilerStep, Coerce
       if (flags.and(FConst.Abstract) != 0) err("Invalid combination of 'const' and 'abstract' modifiers", loc)
       else if (flags.and(FConst.Virtual) != 0 && flags.and(FConst.Override) == 0) err("Invalid combination of 'const' and 'virtual' modifiers", loc)
       // invalid type
-      if (!f.fieldType.isConstFieldType)
-        err("Const field '$f.name' has non-const type '$f.fieldType'", loc)
+//      if (!f.fieldType.isConstFieldType)
+//        err("Const field '$f.name' has non-const type '$f.fieldType'", loc)
     }
     else
     {
@@ -344,14 +339,14 @@ class CheckErrors : CompilerStep, Coerce
     checkProtectionFlags(flags, loc)
 
     // check invalid constructor flags
-    if (flags.and(FConst.Ctor) != 0)
-    {
-      if (flags.and(FConst.Abstract) != 0) err("Invalid combination of 'new' and 'abstract' modifiers", loc)
-      else if (flags.and(FConst.Override) != 0) err("Invalid combination of 'new' and 'override' modifiers", loc)
-      else if (flags.and(FConst.Virtual) != 0) err("Invalid combination of 'new' and 'virtual' modifiers", loc)
-      if (flags.and(FConst.Once) != 0)     err("Invalid combination of 'new' and 'once' modifiers", loc)
-      if (flags.and(FConst.Native) != 0 && flags.and(FConst.Static) == 0) err("Invalid combination of 'new' and 'native' modifiers", loc)
-    }
+//    if (flags.and(FConst.Ctor) != 0)
+//    {
+//      if (flags.and(FConst.Abstract) != 0) err("Invalid combination of 'new' and 'abstract' modifiers", loc)
+//      else if (flags.and(FConst.Override) != 0) err("Invalid combination of 'new' and 'override' modifiers", loc)
+//      else if (flags.and(FConst.Virtual) != 0) err("Invalid combination of 'new' and 'virtual' modifiers", loc)
+//      if (flags.and(FConst.Once) != 0)     err("Invalid combination of 'new' and 'once' modifiers", loc)
+//      if (flags.and(FConst.Native) != 0 && flags.and(FConst.Static) == 0) err("Invalid combination of 'new' and 'native' modifiers", loc)
+//    }
 
     // check invalid static flags
     if (flags.and(FConst.Static) != 0)
@@ -385,8 +380,8 @@ class CheckErrors : CompilerStep, Coerce
     }
 
     // normalize method flags after checking
-    if (m.flags.and(FConst.Static) != 0)
-      m.flags = flags.or(FConst.Const);
+//    if (m.flags.and(FConst.Static) != 0)
+//      m.flags = flags.or(FConst.Const);
   }
 
   private Void checkParams(MethodDef m)
@@ -413,7 +408,7 @@ class CheckErrors : CompilerStep, Coerce
     // check type
     t := p.paramType
     if (t.isVoid) { err("Cannot use Void as parameter type", p.loc); return }
-    if (t.isThis)  { err("Cannot use This as parameter type", p.loc); return }
+    //if (t.isThis)  { err("Cannot use This as parameter type", p.loc); return }
     if (t.toNonNullable.signature != "sys::Func<sys::Void,sys::This>") {
       checkValidType(p.loc, t)
     }
@@ -429,17 +424,6 @@ class CheckErrors : CompilerStep, Coerce
 
   private Void checkMethodReturn(MethodDef m)
   {
-    if (m.ret.isThis)
-    {
-      if (m.isStatic)
-        err("Cannot return This from static method", m.loc)
-
-      if (m.ret.isNullable)
-        err("This type cannot be nullable", m.loc)
-    }
-
-    if (!m.ret.isThis && !m.ret.isVoid)
-      checkValidType(m.loc, m.ret)
   }
 
 //  private Void checkInstanceCtor(MethodDef m)
@@ -476,7 +460,7 @@ class CheckErrors : CompilerStep, Coerce
     {
       f.isStatic == isStaticInit &&
       !f.isAbstract && !f.isNative &&
-      (!f.isOverride || f.concreteBase == null) &&
+      (!f.isOverride) &&
       !f.fieldType.isNullable
     }
     if (fields.isEmpty) return
@@ -528,9 +512,6 @@ class CheckErrors : CompilerStep, Coerce
     prefix := COperators.toPrefix(m.name)
     if (prefix == null) { err("Operator method '$m.name' has invalid name", m.loc); return }
     op := ShortcutOp.fromPrefix(prefix)
-
-    if (m.name == "add" && !m.returnType.isThis /*&& !isSys*/)
-      err("Operator method '$m.name' must return This", m.loc)
 
     if (m.returnType.isVoid && op !== ShortcutOp.set)
       err("Operator method '$m.name' cannot return Void", m.loc)
@@ -593,7 +574,7 @@ class CheckErrors : CompilerStep, Coerce
     // check not Void
     t := stmt.ctype
     if (t.isVoid) { err("Cannot use Void as local variable type", stmt.loc); return }
-    if (t.isThis) { err("Cannot use This as local variable type", stmt.loc); return }
+    //if (t.isThis) { err("Cannot use This as local variable type", stmt.loc); return }
     
     conflict := curUnit.imported[stmt.var_v.name]
     if (conflict != null && conflict.size > 0)
@@ -681,13 +662,6 @@ class CheckErrors : CompilerStep, Coerce
         err("Cannot return a value from Void method", stmt.loc)
       }
     }
-    else if (ret.isThis)
-    {
-      stmt.expr = coerce(stmt.expr, curType.asRef) |->|
-      {
-        err("Cannot return '$stmt.expr.toTypeStr' as $curType This", stmt.expr.loc)
-      }
-    }
     else
     {
       stmt.expr = coerce(stmt.expr, ret) |->|
@@ -695,10 +669,6 @@ class CheckErrors : CompilerStep, Coerce
         err("Cannot return '$stmt.expr.toTypeStr' as '$ret'", stmt.expr.loc)
       }
     }
-
-    // can't use return inside an it-block (might be confusing)
-    if (!stmt.isSynthetic && curType.isClosure && curType.closure.isItBlock && !stmt.isLocal)
-      warn("Cannot use return inside it-block", stmt.loc)
 
     // can't leave control of a finally block
     if (finallyDepth > 0)
@@ -773,8 +743,8 @@ class CheckErrors : CompilerStep, Coerce
       case ExprId.typeLiteral:    checkTypeLiteral(expr)
       case ExprId.slotLiteral:    checkSlotLiteral(expr)
       case ExprId.listLiteral:    checkListLiteral(expr)
-      case ExprId.mapLiteral:     checkMapLiteral(expr)
-      case ExprId.rangeLiteral:   checkRangeLiteral(expr)
+      //case ExprId.mapLiteral:     checkMapLiteral(expr)
+      //case ExprId.rangeLiteral:   checkRangeLiteral(expr)
       case ExprId.boolNot:        checkBool(expr)
       case ExprId.cmpNull:
       case ExprId.cmpNotNull:     checkCompareNull(expr)
@@ -791,7 +761,7 @@ class CheckErrors : CompilerStep, Coerce
       case ExprId.thisExpr:       checkThis(expr)
       case ExprId.superExpr:      checkSuper(expr)
       case ExprId.isExpr:
-      case ExprId.isnotExpr:
+      //case ExprId.isnotExpr:
       case ExprId.asExpr:
       case ExprId.coerce:         checkTypeCheck(expr)
       case ExprId.ternary:        checkTernary(expr)
@@ -823,43 +793,10 @@ class CheckErrors : CompilerStep, Coerce
     valType := listType.genericArgs.first
     expr.vals.each |Expr val, Int i|
     {
-      expr.vals[i] = coerceBoxed(val, valType) |->|
+      expr.vals[i] = coerce(val, valType) |->|
       {
         err("Invalid value type '$val.toTypeStr' for list of '$valType'", val.loc)
       }
-    }
-  }
-
-  private Void checkMapLiteral(MapLiteralExpr expr)
-  {
-    // check the types and ensure that everything gets boxed
-    mapType := expr.ctype
-    keyType := mapType.genericArgs[0]
-    valType := mapType.genericArgs[1]
-    expr.keys.each |Expr key, Int i|
-    {
-      expr.keys[i] = coerceBoxed(key, keyType) |->|
-      {
-        err("Invalid key type '$key.toTypeStr' for map type '$mapType'", key.loc)
-      }
-
-      val := expr.vals[i]
-      expr.vals[i] = coerceBoxed(val, valType) |->|
-      {
-        err("Invalid value type '$val.toTypeStr' for map type '$mapType'", val.loc)
-      }
-    }
-  }
-
-  private Void checkRangeLiteral(RangeLiteralExpr range)
-  {
-    range.start = coerce(range.start, ns.intType) |->|
-    {
-      err("Range must be Int..Int, not '${range.start.ctype}..${range.end.ctype}'", range.loc)
-    }
-    range.end = coerce(range.end, ns.intType) |->|
-    {
-      err("Range must be Int..Int, not '${range.start.ctype}..${range.end.ctype}'", range.loc)
     }
   }
 
@@ -906,10 +843,10 @@ class CheckErrors : CompilerStep, Coerce
   private Void checkSame(BinaryExpr expr)
   {
     checkCompare(expr.lhs, expr.rhs)
-
-    // don't allow for value types
-    if (expr.lhs.ctype.isVal || expr.rhs.ctype.isVal)
-      err("Cannot use '$expr.opToken.symbol' operator with value types", expr.loc)
+//
+//    // don't allow for value types
+//    if (expr.lhs.ctype.isVal || expr.rhs.ctype.isVal)
+//      err("Cannot use '$expr.opToken.symbol' operator with value types", expr.loc)
   }
 
   private Bool checkCompare(Expr lhs, Expr rhs)
@@ -993,10 +930,6 @@ class CheckErrors : CompilerStep, Coerce
       if (!lhs.isAssignable)
         err("Target is not assignable", lhs.loc)
 
-      // if the expression fits to type (no coercion supported)
-      if (!ret.isThis && !lhs.ctype.fits(ret))
-        err("'$ret' is not assignable to '$lhs.ctype'", lhs.loc)
-
       // check left hand side field (common code with checkAssign)
       if (lhs.id === ExprId.field)
         checkAssignField((FieldExpr)lhs, shortcut.args.first)
@@ -1038,12 +971,6 @@ class CheckErrors : CompilerStep, Coerce
     // inside a constructor or static initializer to be ok
     inType := curType
     inMethod := curMethod
-    if (inType.isClosure)
-    {
-      //curType.closure.setsConst = true
-      inType = inType.closure.enclosingType
-      inMethod = (curType.closure.enclosingSlot as MethodDef) ?: curMethod
-    }
 
     // check attempt to set static field outside of static initializer
     if (field.isStatic)
@@ -1054,21 +981,21 @@ class CheckErrors : CompilerStep, Coerce
 
     // we allow setting an instance ctor field in an
     // it-block, otherwise dive in for further checking
-    if (curType.isClosure && curType.closure.isItBlock && 
-      lhs.target is ItExpr &&
-      curType.closure.followCtorType == curType.closure.itType &&
-      curType.closure.followCtorType.fits(field.parent.asRef)) {
-      //pass
-    }
-    else
+//    if (curType.isClosure && curType.closure.isItBlock && 
+//      lhs.target is ItExpr &&
+//      curType.closure.followCtorType == curType.closure.itType &&
+//      curType.closure.followCtorType.fits(field.parent.asRef)) {
+//      //pass
+//    }
+//    else
+    if (true)
     {
       // check attempt to set field outside of owning class or subclass
-      if (inType != field.parent)
+      if (inType != field.parentDef)
       {
-        if (!inType.asRef().fits(field.parent.asRef))
+        if (!inType.asRef().fits(field.parentDef.asRef))
         {
-          if (field.parent.isVal) err("Cannot set struct field '$field.qname'", lhs.loc)
-          else err("Cannot set const field '$field.qname'", lhs.loc)
+          err("Cannot set const field '$field.qname'", lhs.loc)
           return rhs
         }
       }
@@ -1076,8 +1003,7 @@ class CheckErrors : CompilerStep, Coerce
       // check attempt to set instance field outside of ctor
       if (!field.isStatic)
       {
-        if (field.parent.isVal) err("Cannot set struct field '$field.qname'", lhs.loc)
-        else err("Cannot set const field '$field.name' outside of constructor", lhs.loc)
+        err("Cannot set const field '$field.name' outside of constructor", lhs.loc)
         return rhs
       }
     }
@@ -1089,21 +1015,9 @@ class CheckErrors : CompilerStep, Coerce
       if (ftype.isConst)
         return rhs
       else
-        return implicitToImmutable(ftype, rhs)
+        err("Cannot set const field '$field.qname'", rhs.loc)
     }
     return rhs
-  }
-
-  private Expr implicitToImmutable(TypeRef fieldType, Expr rhs)
-  {
-    // leave null literal as is
-    if (rhs.id == ExprId.nullLiteral) return rhs
-
-    // wrap existing assigned with call toImmutable
-    call := CallExpr.makeWithMethod(rhs.loc, rhs, ns.objToImmutable) { isSafe = true }
-    if (fieldType.toNonNullable.isObj) return call
-    return TypeCheckExpr.coerce(call, fieldType)
-
   }
 
   private Void checkConstruction(CallExpr call)
@@ -1150,11 +1064,11 @@ class CheckErrors : CompilerStep, Coerce
       checkArgs(call)
     }
     
-    if (call.isDynamic)
-    {
-      // if dynamic all ensure all the args are boxed
-      call.args.each |Expr arg, Int i| { call.args[i] = box(call.args[i]) }
-    }
+//    if (call.isDynamic)
+//    {
+//      // if dynamic all ensure all the args are boxed
+//      call.args.each |Expr arg, Int i| { call.args[i] = box(call.args[i]) }
+//    }
 
     // ensure we aren't calling static methods on an instance
     if (m.isStatic)
@@ -1202,17 +1116,17 @@ class CheckErrors : CompilerStep, Coerce
     // if calling a method on a value-type, ensure target is
     // coerced to non-null; we don't do this for comparisons
     // and safe calls since they are handled specially
-    if (call.target != null && !call.isCompare && !call.isSafe && !call.method.isStatic)
-    {
-      if (call.target.ctype.isVal || call.method.parent.isVal)
-      {
-        if (name == "with") { err("Cannot call 'Obj.with' on value type", call.target.loc); return }
-        call.target = coerce(call.target, call.method.parent.asRef) |->|
-        {
-          err("Cannot coerce '$call.target.ctype' to '$call.method.parent'", call.target.loc)
-        }
-      }
-    }
+//    if (call.target != null && !call.isCompare && !call.isSafe && !call.method.isStatic)
+//    {
+//      if (call.target.ctype.isVal || call.method.parent.isVal)
+//      {
+//        if (name == "with") { err("Cannot call 'Obj.with' on value type", call.target.loc); return }
+//        call.target = coerce(call.target, call.method.parent.asRef) |->|
+//        {
+//          err("Cannot coerce '$call.target.ctype' to '$call.method.parent'", call.target.loc)
+//        }
+//      }
+//    }
 
     // ensure call operator target() not used on non-function types
     if (call.isCallOp && !call.target.ctype.isFunc)
@@ -1266,9 +1180,9 @@ class CheckErrors : CompilerStep, Coerce
       // check that the current class gets access to direct
       // field storage (only defining class gets it); allow closures
       // same scope priviledges as enclosing class
-      enclosing := curType.isClosure ? curType.closure.enclosingType : curType
-      if (!field.isConst && !field.isReadonly && field.parent.qname != curType.qname &&
-         field.parent.qname != enclosing.qname)
+      enclosing := curType
+      if (!field.isConst && !field.isReadonly && field.parentDef.qname != curType.qname &&
+         field.parentDef.qname != enclosing.qname)
       {
         err("Field storage for '$field.qname' not accessible", f.loc)
         return
@@ -1340,10 +1254,6 @@ class CheckErrors : CompilerStep, Coerce
     target := expr.target.ctype
     if (!check.fits(target) && !target.fits(check) && !check.isMixin && !target.isMixin)
       err("Inconvertible types '$target' and '$check'", expr.loc)
-
-    // box value types for is, as, isnot (everything but coerce)
-    if (expr.id != ExprId.coerce && target.isVal)
-      expr.target = box(expr.target)
       
     if (expr.id === ExprId.isExpr && check.isNullable)
       err("Cannot use 'is' operator with nullable type '$check'", expr.loc)
@@ -1372,19 +1282,22 @@ class CheckErrors : CompilerStep, Coerce
   private Void checkArgs(CallExpr call)
   {
     method := call.method
-    base := call.target == null ? method.parent.asRef : call.target.ctype
+    TypeRef? base := null
+    if (call.target != null) {
+        base = call.target.ctype
+    }
     name := call.name
     args := call.args
     newArgs := args.dup
     isErr := false
     params := method.params
-    generiParamDefs := method.generic.params
+    //generiParamDefs := method.generic.params
 
     // if we are calling call(A, B...) on a FuncType, then
     // use the first class Func signature rather than the
     // version of call which got picked because we might have
     // picked the wrong call version
-    if (base.isFunc && name == "call")
+    if (base != null && base.isFunc && name == "call")
     {
       if (base.genericArgs == null || base.genericArgs.size-1 != args.size)
       {
@@ -1393,7 +1306,7 @@ class CheckErrors : CompilerStep, Coerce
         if (base.defaultParameterized || base.typeDef.isGeneric) {
           objType := ns.objType.toNullable
           args.size.times |i| {
-            newArgs[i] = coerceBoxed(args[i], objType) |->| { isErr = true }
+            newArgs[i] = coerce(args[i], objType) |->| { isErr = true }
           }
         }
         else
@@ -1404,7 +1317,7 @@ class CheckErrors : CompilerStep, Coerce
         base.genericArgs[1..-1].each |TypeRef p, Int i|
         {
           // check each argument and ensure boxed
-          newArgs[i] = coerceBoxed(args[i], p) |->| { isErr = true }
+          newArgs[i] = coerce(args[i], p) |->| { isErr = true }
         }
       }
     }
@@ -1428,7 +1341,7 @@ class CheckErrors : CompilerStep, Coerce
         else
         {
           // ensure arg fits parameter type (or auto-cast)
-          pt := p.paramType.parameterizeThis(base)
+          pt := p.paramType
           newArgs[i] = coerce(args[i], pt) |->|
           {
             isErr = name != "compare" // TODO let anything slide for Obj.compare
@@ -1438,8 +1351,8 @@ class CheckErrors : CompilerStep, Coerce
           // if this a parameterized generic, then we need to box
           // even if the expected type is a value-type (since the
           // actual implementation methods are all Obj based)
-          if (!isErr && generiParamDefs[i].paramType.isGeneriParamDefeter)
-            newArgs[i] = box(newArgs[i])
+          //if (!isErr && generiParamDefs[i].paramType.isGeneriParamDefeter)
+          //  newArgs[i] = box(newArgs[i])
         }
       }
     }
@@ -1457,10 +1370,10 @@ class CheckErrors : CompilerStep, Coerce
     err(msg, call.loc)
   }
 
-  internal static Str paramTypeStr(TypeRef base, ParamDef param)
+  internal static Str paramTypeStr(TypeRef? base, ParamDef param)
   {
     //return param.paramType.parameterizeThis(base).inferredAs.signature
-    return param.paramType.parameterizeThis(base).toStr
+    return param.paramType.toStr
   }
 
   private Void checkNamedParam(CallExpr call)
@@ -1481,7 +1394,6 @@ class CheckErrors : CompilerStep, Coerce
 
   private Void checkValidType(Loc loc, TypeRef t)
   {
-    if (!t.isValid) err("Invalid type '$t'", loc)
     checkParameterizedType(loc, t)
   }
 
@@ -1535,8 +1447,6 @@ class CheckErrors : CompilerStep, Coerce
 //      x := (ParameterizedType)t.typeDef
 //      x.genericArgs.each |p| { checkTypeProtection(p, loc) }
     }
-    else if (t.isThis) {
-    }
     else
     {
       if (t.isInternal && t.podName != curType.podName)
@@ -1548,35 +1458,36 @@ class CheckErrors : CompilerStep, Coerce
 
   private Void checkSlotProtection(SlotDef slot, Loc loc, Bool setter := false)
   {
-    errMsg := slotProtectionErr(curType, slot, setter)
-    if (errMsg != null) err(errMsg, loc)
-
+    if (curType != null) {
+        errMsg := slotProtectionErr(curType, slot, setter)
+        if (errMsg != null) err(errMsg, loc)
+    }
     checkDeprecated(slot, loc)
   }
 
-  static Bool isSlotVisible(TypeDef curType, SlotDef slot) { slotProtectionErr(curType, slot) == null }
+  //static Bool isSlotVisible(TypeDef curType, SlotDef slot) { slotProtectionErr(curType, slot) == null }
 
   private static Str? slotProtectionErr(TypeDef curType, SlotDef slot, Bool setter := false)
   {
     msg := setter ? "setter of field" : (slot is MethodDef ? "method" : "field")
 
     // short circuit if method on myself
-    if (curType == slot.parent)
+    if (curType == slot.parentDef)
       return null
 
     // allow closures same scope priviledges as enclosing class
-    if (curType.isClosure) curType = curType.closure.enclosingType
+    //if (curType.isClosure) curType = curType.closure.enclosingType
 
     // consider the slot internal if its parent is internal
-    isInternal := slot.isInternal || (slot.parent.isInternal)
+    isInternal := slot.isInternal || (slot.parentDef.isInternal)
 
-    if (slot.isPrivate && curType != slot.parent && curType.qname != slot.parent.qname)
+    if (slot.isPrivate && curType != slot.parentDef && curType.qname != slot.parentDef.qname)
       return "Private $msg '$slot.qname' not accessible"
 
-    else if (slot.isProtected && !curType.asRef.fits(slot.parent.asRef) && curType.podName != slot.parent.podName)
+    else if (slot.isProtected && !curType.asRef.fits(slot.parentDef.asRef) && curType.podName != slot.parentDef.podName)
       return "Protected $msg '$slot.qname' not accessible"
 
-    else if (isInternal && curType.pod != slot.parent.pod) {
+    else if (isInternal && curType.pod != slot.parentDef.pod) {
       return "Internal $msg '$slot.qname' not accessible"
     }
     else
@@ -1623,25 +1534,6 @@ class CheckErrors : CompilerStep, Coerce
 //      warn("Deprecated $kind '$qname' - $msg", loc)
 //    else
 //      warn("Deprecated $kind '$qname'", loc)
-  }
-
-  **
-  ** Ensure the specified expression is boxed to an object reference.
-  **
-  private Expr box(Expr expr)
-  {
-    if (expr.ctype.isVal)
-      return TypeCheckExpr.coerce(expr, ns.objType.toNullable)
-    else
-      return expr
-  }
-
-  **
-  ** Run the standard coerce method and ensure the result is boxed.
-  **
-  private Expr coerceBoxed(Expr expr, TypeRef expected, |->| onErr)
-  {
-    return box(coerce(expr, expected, onErr))
   }
 
 //////////////////////////////////////////////////////////////////////////

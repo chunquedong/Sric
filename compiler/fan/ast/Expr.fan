@@ -189,15 +189,6 @@ abstract class Expr : Node
   }
 
   **
-  ** Return this expression as serialization text or
-  ** throw exception if not serializable.
-  **
-  virtual Str serialize()
-  {
-    throw CompilerErr("'$id' not serializable", loc)
-  }
-
-  **
   ** Make an Expr which will serialize the given literal.
   **
   static Expr makeForLiteral(Loc loc, Obj val)
@@ -387,16 +378,16 @@ enum class ExprId
   falseLiteral,
   intLiteral,
   floatLiteral,
-  decimalLiteral,
+  //decimalLiteral,
   strLiteral,
-  durationLiteral,
-  uriLiteral,
+  //durationLiteral,
+  //uriLiteral,
   typeLiteral,
-  localeLiteral,    // LocaleLiteralExpr
+  //localeLiteral,    // LocaleLiteralExpr
   slotLiteral,      // SlotLiteralExpr
-  rangeLiteral,     // RangeLiteralExpr
+  //rangeLiteral,     // RangeLiteralExpr
   listLiteral,      // ListLiteralExpr
-  mapLiteral,       // MapLiteralExpr
+  //mapLiteral,       // MapLiteralExpr
   boolNot,          // UnaryExpr
   cmpNull,
   cmpNotNull,
@@ -407,7 +398,7 @@ enum class ExprId
   boolOr,           // CondExpr
   boolAnd,
   isExpr,           // TypeCheckExpr
-  isnotExpr,
+  //isnotExpr,
   asExpr,
   coerce,
   call,             // CallExpr
@@ -420,11 +411,11 @@ enum class ExprId
   itExpr,           // ItExpr
   staticTarget,     // StaticTargetExpr
   unknownVar,       // UnknownVarExpr
-  storage,
+  //storage,
   ternary,          // TernaryExpr
   complexLiteral,   // ComplexLiteral
   closure,          // ClosureExpr
-  dsl,              // DslExpr
+  //dsl,            // DslExpr
   throwExpr,        // ThrowExpr
   awaitExpr,
   sizeOfExpr,

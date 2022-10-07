@@ -15,32 +15,24 @@ class BasicInit : CompilerStep {
   override Void visitTypeDef(TypeDef def)
   {
     loc := def.loc
-    if (def.inheritances.isEmpty) {
-      def.baseSpecified = false
-    }
-    
     def.flags = normalizeFlags(def.flags, loc)
     initVirtualFlags(def)
-    
-    // walk thru all the slots
-    def.slotDefs.dup.each |SlotDef s|
-    {
-      if (s is FieldDef)
-      {
-        f := (FieldDef)s
-        normalizeFieldDef(f)
-      }
+  }
+  
+  override Void visitFieldDef(FieldDef m) {
+    m.flags = normalizeFlags(m.flags, m.loc)
+    if (m.parentDef == null) {
+        m.flags = m.flags.or(FConst.Static)
     }
   }
-  
-  private Void normalizeFieldDef(FieldDef field) {
-    field.flags = normalizeFlags(field.flags, field.loc)
-  }
-  
+
   override Void visitMethodDef(MethodDef m) {
     m.flags = normalizeFlags(m.flags, m.loc)
     if (m.ret == null) {
       m.ret = TypeRef.voidType(m.loc)
+    }
+    if (m.parentDef == null) {
+        m.flags = m.flags.or(FConst.Static)
     }
   }
   

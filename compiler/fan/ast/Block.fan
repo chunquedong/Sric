@@ -9,7 +9,7 @@
 **
 ** Block is a list of zero or more Stmts
 **
-class Block : Node
+class Block : Node, Scope
 {
 
 //////////////////////////////////////////////////////////////////////////
@@ -21,6 +21,11 @@ class Block : Node
   {
     stmts = Stmt[,]
     vars = MethodVar[,]
+  }
+  
+  override Scope? parentScope() { parent }
+  override Symbol? doFindSymbol(Str name) {
+    vars.find { it.name == name }
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -135,4 +140,6 @@ class Block : Node
   MethodVar[] vars
   
   ClosureExpr? parentClosure
+  
+  Scope? parent
 }

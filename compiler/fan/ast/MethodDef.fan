@@ -10,7 +10,7 @@
 **
 ** MethodDef models a method definition - it's signature and body.
 **
-class MethodDef : SlotDef
+class MethodDef : SlotDef, Scope
 {
 
 //////////////////////////////////////////////////////////////////////////
@@ -26,22 +26,11 @@ class MethodDef : SlotDef
     paramDefs = ParamDef[,]
 //    vars = MethodVar[,]
   }
-**
-  ** Does this method have a covariant return type (we
-  ** don't count This returns as covariant)
-  **
-  Bool isCovariant() { isOverride && !returnType.isThis && returnType != inheritedReturnType }
-
-  **
-  ** Return the bridge if this slot is foreign or uses any foreign
-  ** types in its signature.
-  **
-//  override CBridge? usesBridge()
-//  {
-//    if (bridge != null) return bridge
-//    if (returnType.bridge != null) return returnType.bridge
-//    return params.eachWhile |ParamDef p->CBridge?| { p.paramType.bridge }
-//  }
+  
+  override Scope? parentScope() { parent }
+  override Symbol? doFindSymbol(Str name) {
+    paramDefs.find { it.name == name }
+  }
 
   **
   ** Does this method contains generic parameters in its signature.
@@ -62,7 +51,7 @@ class MethodDef : SlotDef
 
   internal static Bool calcGeneric(MethodDef m)
   {
-    if (!m.parent.isGeneric) return false
+    if (!m.parentDef.isGeneric) return false
     isGeneric := m.returnType.hasGeneriParamDefeter
     if (isGeneric) return true
     return m.params.any { it.paramType.hasGeneriParamDefeter }
@@ -84,7 +73,7 @@ class MethodDef : SlotDef
     if (ai.isNullable != bi.isNullable)
       return false
 
-    if (ai.qname == bi.qname) return true
+    if (ai.signature == bi.signature) return true
     
     /*
     if (ai is GeneriParamDefeter && bi is GeneriParamDefeter) {
@@ -205,10 +194,7 @@ class MethodDef : SlotDef
 
   TypeRef inheritedReturnType()
   {
-    if (inheritedRet != null)
-      return inheritedRet
-    else
-      return ret
+    return ret
   }
 
   ParamDef[] params() { paramDefs }
@@ -267,7 +253,8 @@ class MethodDef : SlotDef
     //if (isCtor) out.w("new ")
     //else out.w("fun ")
     
-    out.w(ret).w(" ")
+    ret.print(out)
+    out.w(" ")
     out.w(name).w("(")
     paramDefs.each |ParamDef p, Int i|
     {
@@ -287,11 +274,12 @@ class MethodDef : SlotDef
 //////////////////////////////////////////////////////////////////////////
 
   TypeRef? ret              // return type
-  TypeRef? inheritedRet    // used for original return if covariant
+  //TypeRef? inheritedRet    // used for original return if covariant
   ParamDef[] paramDefs   // parameter definitions
   Block? code            // code block
   //CallExpr? ctorChain    // constructor chain for this/super ctor
 //  MethodVar[] vars       // all param/local variables in method
   //FieldDef? accessorFor  // if accessor method for field
   Bool usesCvars         // does this method have locals enclosed by closure
+  Scope? parent
 }

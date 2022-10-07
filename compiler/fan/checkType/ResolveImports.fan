@@ -43,7 +43,7 @@ class ResolveImports : CompilerStep
     //debug("ResolveImports")
     
     // process each unit for Import.pod
-    compiler.cunits.each |CompilationUnit unit|
+    curPod.cunits.each |CompilationUnit unit|
     {
       try
         resolveImports(unit)
@@ -52,7 +52,7 @@ class ResolveImports : CompilerStep
     }
 
     // process each unit for CompilationUnit.importedTypes
-    compiler.cunits.each |CompilationUnit unit|
+    curPod.cunits.each |CompilationUnit unit|
     {
       try
         resolveImportedTypes(unit)
@@ -80,10 +80,10 @@ class ResolveImports : CompilerStep
 
       // check that this podName was in the compiler's
       // input dependencies
-      checkUsingPod(this.compiler, podName, u.loc)
+      checkUsingPod(this.log, this.curPod, podName, u.loc)
 
       // don't allow a using my own pod
-      if (u.typeName == null && u.podName == compiler.pod.name) {
+      if (u.typeName == null && u.podName == this.podName) {
         warn("Using '$u.podName' is on pod being compiled", u.loc)
         return
       }
@@ -142,17 +142,10 @@ class ResolveImports : CompilerStep
     }
   }
   
-  private once DefNode[] defaultImportedTypes() {
+  private DefNode[] defaultImportedTypes(CompilationUnit unit) {
     res := DefNode[,]
     if (podName != "sys") {
-      //std and reflect is imported implicitly
-      if (podName != "std") {
-        if (compiler.pod.resolvedDepends.containsKey("std")) {
-          pod := ns.resolvePod("std", compiler.pod.loc)
-          res.addAll(pod.defines)
-        }
-      }
-      pod := ns.resolvePod("sys", compiler.pod.loc)
+      pod := ns.resolvePod("sys", unit.loc)
       //echo("********$pod.defines")
       res.addAll(pod.defines)
     }
@@ -172,10 +165,10 @@ class ResolveImports : CompilerStep
     types := [Str:DefNode[]][:]
 
     //import system default pod types
-    addAll(types, defaultImportedTypes)
+    addAll(types, defaultImportedTypes(unit))
     
     // add types for my own pod
-    addAll(types, compiler.pod.defines)
+    addAll(types, curPod.defines)
     
     // add pod level imports first
     unit.usings.each |Using u|
@@ -323,22 +316,23 @@ class ResolveImports : CompilerStep
   **
   ** Check that a pod name is in the dependency list.
   **
-  static Void checkUsingPod(CompilerContext cs, Str podName, Loc loc)
+  static Void checkUsingPod(CompilerLog log, PodDef curPod, Str podName, Loc loc)
   {
     // scripts don't need dependencies
     //if (cs.input.isScript) return
+    if (curPod.resolvedDepends == null) return
 
     // if we have a declared dependency that is ok
-    if (cs.pod.resolvedDepends.containsKey(podName)) return
+    if (curPod.resolvedDepends.containsKey(podName)) return
 
     // if this is the pod being compiled that is obviously ok
-    if (cs.pod.name == podName) return
+    if (curPod.name == podName) return
 
     // we don't require explicit dependencies on FFI
     if (podName.startsWith("[")) return
 
     // we got a problem
-    cs.log.err("Using '$podName' which is not a declared dependency for '$cs.pod.name'", loc)
+    log.err("Using '$podName' which is not a declared dependency for '$curPod.name'", loc)
   }
 
 //////////////////////////////////////////////////////////////////////////

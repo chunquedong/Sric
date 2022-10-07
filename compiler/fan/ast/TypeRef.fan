@@ -6,13 +6,17 @@
 //   4 Jun 06  Brian Frank  Creation
 //
 
+enum class PtrType {
+    shared_ptr, weak_ptr, unique_ptr, temp_ptr, unsafe_ptr
+}
+
 **
 ** TypeRef is a "compiler type" which is class used for representing
 ** the Fantom type system in the compiler.  CTypes map to types within
 ** the compilation units themsevles as TypeDef and TypeRef or to
 ** precompiled types in imported pods via ReflectType or FType.
 **
-class TypeRef : Node, TypeMixin
+class TypeRef : Node
 {
   Str name
   Str podName
@@ -23,6 +27,8 @@ class TypeRef : Node, TypeMixin
   
   ** for sized primitive type. the Int32's extName is 32
   Str? sized
+  
+  PtrType? ptrType
   
   **
   ** Is this is a nullable type (marked with trailing ?)
@@ -118,38 +124,62 @@ class TypeRef : Node, TypeMixin
   **
   Bool isConst() { flags.and(FConst.Const) != 0 }
   
+  **
+  ** Return if this Type is a class (as opposed to enum or mixin)
+  **
+  Bool isClass() { !isMixin && flags.and(FConst.Enum) == 0 }
+
+  **
+  ** Return if this Type is a mixin type and cannot be instantiated.
+  **
+  Bool isMixin() { flags.and(FConst.Mixin) != 0 }
+
+  **
+  ** Return if this Type is final and cannot be subclassed.
+  **
+  Bool isFinal() { flags.and(FConst.Final) != 0 ||
+       (flags.and(FConst.Virtual) == 0  && flags.and(FConst.Abstract) == 0) }
+  
+  Bool isObj()     { signature == "sys::any" }
+  Bool isBool()    { signature == "sys::bool" }
+  Bool isInt()     { signature == "sys::int" }
+  Bool isFloat()   { signature == "sys::float" }
+  Bool isStr()     { signature == "sys::string" }
+  Bool isVoid()    { signature == "sys::void" }
+  Bool isNothing() { signature == "sys::nothing" }
+  Bool isError() { signature == "sys::error" }
+  
 //////////////////////////////////////////////////////////////////////////
 // Builder
 //////////////////////////////////////////////////////////////////////////
   
-  static TypeRef? objType(Loc loc) { makeRef(loc, "sys", "Obj") }
-  static TypeRef? voidType(Loc loc) { makeRef(loc, "sys", "Void") }
-  static TypeRef? errType(Loc loc) { makeRef(loc, "sys", "Err") }
-  static TypeRef? error(Loc loc) { makeRef(loc, "sys", "Error") }
-  static TypeRef? nothingType(Loc loc) { makeRef(loc, "sys", "Nothing") }
-  static TypeRef? boolType(Loc loc) { makeRef(loc, "sys", "Bool") }
-  static TypeRef? enumType(Loc loc) { makeRef(loc, "sys", "Enum") }
-  static TypeRef? facetType(Loc loc) { makeRef(loc, "sys", "Facet") }
-  static TypeRef? intType(Loc loc) { makeRef(loc, "sys", "Int") }
-  static TypeRef? strType(Loc loc) { makeRef(loc, "sys", "Str") }
-  static TypeRef? thisType(Loc loc) { makeRef(loc, "sys", "This") }
-  static TypeRef? listType(Loc loc, TypeRef elemType) {
-    t := makeRef(loc, "sys", "List")
+  static TypeRef? objType(Loc loc) { makeRef(loc, "sys", "any") }
+  static TypeRef? voidType(Loc loc) { makeRef(loc, "sys", "void") }
+  static TypeRef? errType(Loc loc) { makeRef(loc, "sys", "exception") }
+  static TypeRef? error(Loc loc) { makeRef(loc, "sys", "error") }
+  static TypeRef? nothingType(Loc loc) { makeRef(loc, "sys", "nothing") }
+  static TypeRef? boolType(Loc loc) { makeRef(loc, "sys", "bool") }
+  static TypeRef? intType(Loc loc) { makeRef(loc, "sys", "int") }
+  static TypeRef? strType(Loc loc) { makeRef(loc, "sys", "string") }
+  static TypeRef? pointerType(Loc loc, TypeRef elemType, PtrType ptrType = PtrType.unique_ptr) {
+    t := makeRef(loc, "sys", "pointer")
     t.genericArgs = [elemType]
+    t.ptrType = ptrType
+    return t
+  }
+
+  static TypeRef? listType(Loc loc, TypeRef elemType, PtrType ptrType = PtrType.unique_ptr) {
+    t := makeRef(loc, "sys", "array")
+    t.genericArgs = [elemType]
+    t.ptrType = ptrType
     return t
   }
   static TypeRef? funcType(Loc loc, TypeRef[] params, TypeRef ret) {
-    t := makeRef(loc, "sys", "Func")
+    t := makeRef(loc, "sys", "function")
     t.genericArgs = [ret].addAll(params)
     return t
   }
-  static TypeRef? asyncType(Loc loc) { makeRef(loc, "concurrent", "Async") }
-//  static TypeRef? promiseType(Loc loc) { TypeRef(loc, "concurrent", "Promise") }
-  static TypeRef? mapType(Loc loc, TypeRef k, TypeRef v) {
-    t := makeRef(loc, "std", "Map")
-    t.genericArgs = [k, v]
-    return t
-  }
+  //static TypeRef? asyncType(Loc loc) { makeRef(loc, "concurrent", "Async") }
   
 //////////////////////////////////////////////////////////////////////////
 // methods
@@ -157,7 +187,37 @@ class TypeRef : Node, TypeMixin
   
   override Void print(AstWriter out)
   {
-    out.w(toStr)
+    if (ptrType != null) {
+        if (ptrType == PtrType.shared_ptr) {
+            out.w("shared_ptr")
+        }
+        else if (ptrType == PtrType.weak_ptr) {
+            out.w("weak_ptr")
+        }
+        else if (ptrType == PtrType.unique_ptr) {
+            out.w("unique_ptr")
+        }
+        else if (ptrType == PtrType.unsafe_ptr) {
+            out.w("unsafe_ptr")
+        }
+        else if (ptrType == PtrType.temp_ptr) {
+            //out.w("temp_ptr")
+        }
+    }
+    else {
+        if (!podName.isEmpty && podName != "sys") {
+          out.w(podName).w("::")
+        }
+        out.w(name)
+    }
+    if (genericArgs != null) {
+      if (ptrType == PtrType.temp_ptr) {
+        out.w(genericArgs.first).w("*")
+      }
+      else {
+        out.w("<").w(genericArgs.join(",")).w(">")
+      }
+    }
   }
   
 
@@ -191,7 +251,8 @@ class TypeRef : Node, TypeMixin
         resolvedType = typeDef
       }
       else {
-        c := typeDef.parameterizedTypeCache[extName]
+        resolvedType = typeDef
+        //c := typeDef.parameterizedTypeCache[extName]
         //TODO
 //        if (c == null) {
 //          c = ParameterizedType.create(typeDef, genericArgs)
@@ -208,23 +269,19 @@ class TypeRef : Node, TypeMixin
       resolvedType = typeDef
     }
     
-    if (podName.isEmpty && !typeDef.isError) podName = this.resolvedType.podName
+    if (podName.isEmpty) podName = this.resolvedType.podName
     if (nullabelePeer != null) {
         nullabelePeer.resolvedType = this.resolvedType
-        if (nullabelePeer.podName.isEmpty && !typeDef.isError) nullabelePeer.podName = this.resolvedType.podName
+        if (nullabelePeer.podName.isEmpty) nullabelePeer.podName = this.resolvedType.podName
     }
   }
-
-  **
-  ** Qualified name such as "sys:Str".
-  **
-  override Str qname() { "${podName}::$name" }
 
   **
   ** This is the full signature of the type.
   **
   Str signature() {
     s := StrBuf()
+    
     if (!podName.isEmpty) {
       s.add(podName).add("::")
     }
@@ -236,6 +293,7 @@ class TypeRef : Node, TypeMixin
   Str extName() {
     s := StrBuf()
     if (sized != null) s.add(sized)
+    if (ptrType != null) s.add("_").add(ptrType.toStr)
     if (genericArgs != null) {
       s.add("<").add(genericArgs.join(",")).add(">")
     }
@@ -254,16 +312,12 @@ class TypeRef : Node, TypeMixin
   }
   
   
-  override Int flags() { typeDef.flags }
+  Int flags() { typeDef.flags }
   
+  Str qname() { "$podName::$name" }
   
-  virtual Bool isFunc() { qname == "sys::Func" || (base != null && base.qname == "sys::Func") }
+  virtual Bool isFunc() { qname == "sys::func" || (base != null && base.qname == "sys::func") }
   
-//  private TypeRef dup() {
-//    d := TypeRef(qname, name)
-//    d.resolvedType = typeDef
-//    return d
-//  }
 
    override Void getChildren(Node[] list, [Str:Obj]? options) {
      if (genericArgs != null) {
@@ -278,16 +332,10 @@ class TypeRef : Node, TypeMixin
   **
   ** Is this is a value type (Bool, Int, or Float and their nullables)
   **
-  virtual Bool isVal() {
-    if (isNullable) return false
-    return flags.and(FConst.Struct) != 0
-  }
-
-  Bool isJavaVal() {
-    if (isNullable) return false
-    n := qname
-    return n == "sys::Bool" || n == "sys::Float" || n == "sys::Int"
-  }
+//  virtual Bool isVal() {
+//    if (isNullable) return false
+//    return flags.and(FConst.Struct) != 0
+//  }
   
   private new makeNullable(TypeRef type) : super.make(type.loc) {
     this.name = type.name
@@ -380,30 +428,6 @@ class TypeRef : Node, TypeMixin
     
     return false
   }
-
-  **
-  ** If this is a parameterized type which uses 'This',
-  ** then replace 'This' with the specified type.
-  **
-  virtual TypeRef parameterizeThis(TypeRef thisType) {
-    //if (!usesThis) return this
-    //f := |TypeRef t->TypeRef| { t.isThis ? thisType : t }
-    //return FuncType(params.map(f), names, f(ret), defaultParameterized)
-    
-    if (this.isThis) return thisType
-    
-    if (this.genericArgs != null) {
-      hasThis := this.genericArgs.any { it.isThis }
-      if (!hasThis) return this
-      
-      nt := TypeRef.makeResolvedType(this.resolvedType)
-      if (this.isNullable)
-        nt = nt.toNullable
-      nt.genericArgs = this.genericArgs.map |a|{ a.parameterizeThis(thisType) }
-      return nt
-    }
-    return this
-  }
   
   TypeRef funcRet() {
     if (genericArgs == null || genericArgs.size == 0) return TypeRef.make("sys", "Obj").toNullable
@@ -479,7 +503,7 @@ class TypeRef : Node, TypeMixin
     if (typeDef is GeneriParamDefDef) {
         t = ((GeneriParamDefDef)typeDef).bound
     }
-    else if (t.isThis || t.podName.isEmpty || t.name != typeDef.name) {
+    else if (t.podName.isEmpty || t.name != typeDef.name) {
         t = typeDef.asRef
     }
     t = t.toNonNullable
@@ -530,13 +554,6 @@ class TypeRef : Node, TypeMixin
     for (i:=0; i<mixins.size; ++i)
       if (mixins[i].fits(t)) return true
 
-    // let anything fit unparameterized generic parameters like
-    // V, K (in case we are using List, Map, or Method directly)
-    //if (t.name.size == 1 && t.pod.name == "sys")
-    //  return true
-
-    //echo("$this not fits $ty")
-
     // no fit
     return false
   }
@@ -554,55 +571,15 @@ class TypeRef : Node, TypeMixin
 // Slots
 //////////////////////////////////////////////////////////////////////////
 
-  **
-  ** Map of the all defined slots, both fields and
-  ** methods (including inherited slots).
-  **
-  virtual Str:SlotDef slots() { typeDef.slots }
-
-  **
-  ** Return if this type contains a slot by the specified name.
-  **
-  Bool hasSlot(Str name) { slots.containsKey(name) }
-
-  **
-  ** Lookup a slot by name.  If the slot doesn't exist then return null.
-  **
-  virtual SlotDef? slot(Str name) { slots[name] }
-
-  **
-  ** Lookup a field by name (null if method).
-  **
-  virtual FieldDef? field(Str name) { slot(name) as FieldDef }
-
-  **
-  ** Lookup a method by name (null if field).
-  **
-  virtual MethodDef? method(Str name) { slot(name) as MethodDef }
-
-  **
-  ** List of the all defined fields (including inherited fields).
-  **
-  FieldDef[] fields() { slots.vals.findType(FieldDef#) }
-
-  **
-  ** List of the all defined methods (including inherited methods).
-  **
-  MethodDef[] methods() { slots.vals.findType(MethodDef#) }
-
-  **
-  ** List of the all constructors.
-  **
-  //MethodDef[] ctors() { slots.vals.findAll |s| { s.isCtor } }
-
-  ** List of the all instance constructors.
-  **
-  //MethodDef[] instanceCtors() { slots.vals.findAll |s| { s.isInstanceCtor } }
-
-  **
-  ** Get operators lookup structure
-  **
-//  abstract COperators operators()
+//  **
+//  ** Return if this type contains a slot by the specified name.
+//  **
+//  Bool hasSlot(Str name) { slots.containsKey(name) }
+//
+//  **
+//  ** Lookup a slot by name.  If the slot doesn't exist then return null.
+//  **
+//  virtual SlotDef? slot(Str name) { slots[name] }
 
 }
 

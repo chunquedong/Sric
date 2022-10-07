@@ -25,9 +25,8 @@ abstract class SlotDef : DefNode
 // SlotDef
 //////////////////////////////////////////////////////////////////////////
 
-  TypeDef? parent() { parentDef }
   override Str qname() {
-    if (parent != null) return "${parent.qname}.${name}"
+    if (parentDef != null) return "${parentDef.qname}.${name}"
     else return "${podName}::${name}"
   }
   

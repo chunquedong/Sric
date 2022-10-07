@@ -29,7 +29,7 @@ public class FieldDef : SlotDef
   {
     Expr? target
     if (isStatic)
-      target = StaticTargetExpr(loc, parent.asRef())
+      target = StaticTargetExpr(loc, parentDef.asRef())
     else
       target = ThisExpr(loc)
 
@@ -50,10 +50,7 @@ public class FieldDef : SlotDef
 
   TypeRef inheritedReturnType()
   {
-    if (inheritedRet != null)
-      return inheritedRet
-    else
-      return fieldType
+    return fieldType
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -125,7 +122,8 @@ public class FieldDef : SlotDef
     if (isConst) out.w("const ")
     //else if (isReadonly) out.w("let ")
     //else out.w("var ")
-    out.w(fieldType).w(" ")
+    fieldType.print(out)
+    out.w(" ")
     out.w(name).w(";")
     
     //if (init != null) { out.w(" = "); init.print(out) }
@@ -140,8 +138,8 @@ public class FieldDef : SlotDef
 //  Field? field              // resolved finalized field
 //  Expr? init                // init expression or null
   Bool walkInit := true     // tree walk init expression
-  FieldDef? concreteBase      // if I override a concrete virtual field
-  TypeRef? inheritedRet       // if covariant override of method
+  //FieldDef? concreteBase      // if I override a concrete virtual field
+  //TypeRef? inheritedRet       // if covariant override of method
   Bool requiresNullCheck    // flags that ctor needs runtime check to ensure it-block set it
   EnumDef? enumDef          // if an enum name/ordinal pair
   Str? closureInfo          // if this is a closure wrapper field

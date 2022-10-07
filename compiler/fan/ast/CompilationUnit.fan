@@ -10,7 +10,7 @@
 **
 ** CompilationUnit models the top level compilation unit of a source file.
 **
-class CompilationUnit : Node
+class CompilationUnit : Node, Scope
 {
 
 //////////////////////////////////////////////////////////////////////////
@@ -43,26 +43,26 @@ class CompilationUnit : Node
   }
 
   // get all imported extendsion methods
-  once Str:MethodDef[] extensionMethods() {
-    meths := [Str:MethodDef[]][:]
-    imported.each |defines|{
-      defines.each |define| {
-        if (define is MethodDef) {
-          try {
-            m := define as MethodDef
-            if (m.isStatic && (m.flags.and(FConst.Extension) != 0)) {
-                 ms := meths[m.name]
-                 if (ms == null) { ms = MethodDef[,]; meths[m.name] = ms }
-                 ms.add(m)
-            }
-          } catch (Err e) {
-            e.trace
-          }
-        }
-      }
-    }
-    return meths
-  }
+//  once Str:MethodDef[] extensionMethods() {
+//    meths := [Str:MethodDef[]][:]
+//    imported.each |defines|{
+//      defines.each |define| {
+//        if (define is MethodDef) {
+//          try {
+//            m := define as MethodDef
+//            if (m.isStatic && (m.flags.and(FConst.Extension) != 0)) {
+//                 ms := meths[m.name]
+//                 if (ms == null) { ms = MethodDef[,]; meths[m.name] = ms }
+//                 ms.add(m)
+//            }
+//          } catch (Err e) {
+//            e.trace
+//          }
+//        }
+//      }
+//    }
+//    return meths
+//  }
   
   Void addDef(DefNode t) {
     defines.add(t)
@@ -78,6 +78,26 @@ class CompilationUnit : Node
       list.add(t)
     }
   }
+  
+  override Scope? parentScope() { null }
+  override Symbol? doFindSymbol(Str name) {
+    if (symbolTable == null) {
+        symbolTable = [:]
+        defines.each { symbolTable[it.name] = it }
+    }
+    sym := symbolTable[name]
+    if (sym == null && imported != null) {
+        found := imported[name]
+        if (found.size > 1) {
+            throw CompilerErr("symbol conflicted: $name", loc)
+            //return null
+        }
+        else if (found.size == 1) {
+            sym = found.first
+        }
+    }
+    return sym
+  }
 
 //////////////////////////////////////////////////////////////////////////
 // Fields
@@ -90,4 +110,5 @@ class CompilationUnit : Node
   [Str:DefNode[]]? imported  // ResolveImports (includes my pod)
   Str file
   //Bool isFanx := true           //is fanx syntax
+  private [Str:Symbol]? symbolTable
 }

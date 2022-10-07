@@ -312,7 +312,7 @@ class ReturnStmt : Stmt
   override Void print(AstWriter out)
   {
     out.w("return")
-    if (expr != null) out.w(" $expr")
+    if (expr != null) out.w(" $expr;")
     out.nl
   }
 

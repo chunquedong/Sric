@@ -21,11 +21,11 @@ enum class Token
   strLiteral      ("Str literal"),
   intLiteral      ("Int literal"),
   floatLiteral    ("Float literal"),
-  decimalLiteral  ("Decimal literal"),
-  durationLiteral ("Duration literal"),
-  uriLiteral      ("Uri literal"),
-  dsl             ("DSL"),
-  localeLiteral   ("Locale literal"),
+  //decimalLiteral  ("Decimal literal"),
+  //durationLiteral ("Duration literal"),
+  //uriLiteral      ("Uri literal"),
+  //dsl             ("DSL"),
+  //localeLiteral   ("Locale literal"),
 
   // operators
   dot("."),
@@ -147,10 +147,15 @@ enum class Token
   sizeofKeyword,
   offsetofKeyword,
   uninitKeyword,
-  weakKeyword,
+  //weakKeyword,
   varKeyword,
   letKeyword,
   funKeyword,
+  sharedKeyword,
+  uniqueKeyword,
+  weakKeyword,
+  tempKeyword,
+  unsafeKeyword,
 
   // misc
   eof("eof");

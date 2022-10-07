@@ -144,7 +144,7 @@ class Tokenizer
     if (cur == '/' && peek == '*') return readCommentML
 
     // DSL
-    if (cur == '<' && peek == '|') return dsl
+    //if (cur == '<' && peek == '|') return dsl
 
     // symbols
     return symbol
@@ -230,52 +230,52 @@ class Tokenizer
     // check for suffixes
     floatSuffix   := false
     decimalSuffix := false
-    Int? dur      := null
-    if (cur.isLower && peek.isLower)
-    {
-      //if (cur == 'n' && peek == 's') { consume; consume; dur = 1 }
-      if (cur == 'm' && peek == 's') { consume; consume; dur = 1000000 }
-      if (cur == 's' && peek == 'e') { consume; consume; if (cur != 'c') throw err("Expected 'sec' in Duration literal"); consume; dur = 1_000_000_000 }
-      if (cur == 'm' && peek == 'i') { consume; consume; if (cur != 'n') throw err("Expected 'min' in Duration literal"); consume; dur = 60_000_000_000 }
-      if (cur == 'h' && peek == 'r') { consume; consume; dur = 3_600_000_000_000 }
-      if (cur == 'd' && peek == 'a') { consume; consume; if (cur != 'y') throw err("Expected 'day' in Duration literal"); consume; dur = 86_400_000_000_000 }
-    }
-    else if (cur == 'f' || cur == 'F')
+//    Int? dur      := null
+//    if (cur.isLower && peek.isLower)
+//    {
+//      //if (cur == 'n' && peek == 's') { consume; consume; dur = 1 }
+//      if (cur == 'm' && peek == 's') { consume; consume; dur = 1000000 }
+//      if (cur == 's' && peek == 'e') { consume; consume; if (cur != 'c') throw err("Expected 'sec' in Duration literal"); consume; dur = 1_000_000_000 }
+//      if (cur == 'm' && peek == 'i') { consume; consume; if (cur != 'n') throw err("Expected 'min' in Duration literal"); consume; dur = 60_000_000_000 }
+//      if (cur == 'h' && peek == 'r') { consume; consume; dur = 3_600_000_000_000 }
+//      if (cur == 'd' && peek == 'a') { consume; consume; if (cur != 'y') throw err("Expected 'day' in Duration literal"); consume; dur = 86_400_000_000_000 }
+//    }
+    if (cur == 'f' || cur == 'F')
     {
       consume
       floatSuffix = true
     }
-    else if (cur == 'd' || cur == 'D')
-    {
-      consume
-      decimalSuffix = true
-    }
+//    else if (cur == 'd' || cur == 'D')
+//    {
+//      consume
+//      decimalSuffix = true
+//    }
 
     try
     {
       // decimal literal
-      if (decimalSuffix) {
-        num := Decimal.fromStr(str)
-        return TokenVal(Token.decimalLiteral, num)
-      }
+//      if (decimalSuffix) {
+//        num := Decimal.fromStr(str)
+//        return TokenVal(Token.decimalLiteral, num)
+//      }
 
       // float literal
       if (floatSuffix || dot || exp)
       {
         num := Float.fromStr(str)
-        if (dur != null) {
-          return TokenVal(Token.durationLiteral, Duration.fromNanos((num*dur.toFloat).toInt))
-        }
-        else {
+//        if (dur != null) {
+//          return TokenVal(Token.durationLiteral, Duration.fromNanos((num*dur.toFloat).toInt))
+//        }
+//        else {
           return TokenVal(Token.floatLiteral, num)
-        }
+//        }
       }
 
       // int literal
       num := Int.fromStr(str)
-      if (dur != null)
-        return TokenVal(Token.durationLiteral, Duration.fromNanos(num*dur))
-      else
+//      if (dur != null)
+//        return TokenVal(Token.durationLiteral, Duration.fromNanos(num*dur))
+//      else
         return TokenVal(Token.intLiteral, num)
     }
     catch (ParseErr e)
@@ -357,35 +357,36 @@ class Tokenizer
           continue
         }
 
-        if (cur == '$' && paseStrInterpolation)
-        {
-          // if we have detected an interpolated string, then
-          // insert opening paren to treat whole string atomically
-          if (!interpolated)
-          {
-            interpolated = true
-            tokens.add(makeVirtualToken(line, col, offset, Token.lparenSynthetic, null))
-          }
-
-          // process interpolated string, it returns null
-          // if at end of string literal
-          if (!interpolation(line, col, offset, s.toStr, q))
-          {
-            line = this.line; col = this.col - 1;  // before quote
-            offset = this.pos -1
-            tokens.add(makeVirtualToken(line, col, offset, Token.rparen, null))
-            if (q.isUri)
-            {
-              tokens.add(makeVirtualToken(line, col, offset, Token.dot))
-              tokens.add(makeVirtualToken(line, col, offset, Token.identifier, "toUri"))
-            }
-            return null
-          }
-          line = this.line; col = this.col; offset = this.pos
-
-          s.clear
-        }
-        else if (cur == '\\')
+//        if (cur == '$' && paseStrInterpolation)
+//        {
+//          // if we have detected an interpolated string, then
+//          // insert opening paren to treat whole string atomically
+//          if (!interpolated)
+//          {
+//            interpolated = true
+//            tokens.add(makeVirtualToken(line, col, offset, Token.lparenSynthetic, null))
+//          }
+//
+//          // process interpolated string, it returns null
+//          // if at end of string literal
+//          if (!interpolation(line, col, offset, s.toStr, q))
+//          {
+//            line = this.line; col = this.col - 1;  // before quote
+//            offset = this.pos -1
+//            tokens.add(makeVirtualToken(line, col, offset, Token.rparen, null))
+//            if (q.isUri)
+//            {
+//              tokens.add(makeVirtualToken(line, col, offset, Token.dot))
+//              tokens.add(makeVirtualToken(line, col, offset, Token.identifier, "toUri"))
+//            }
+//            return null
+//          }
+//          line = this.line; col = this.col; offset = this.pos
+//
+//          s.clear
+//        }
+//        else 
+        if (cur == '\\')
         {
           if (q.isUri)
           {
@@ -415,25 +416,25 @@ class Tokenizer
 
       // if interpolated then we add rparen to treat whole atomically,
       // and if URI, then add call to Uri
-      if (interpolated)
-      {
-        tokens.add(makeVirtualToken(line, col, offset, Token.strLiteral, s.toStr))
-        line = this.line; col = this.col - 1;  // before quote
-        tokens.add(makeVirtualToken(line, col, offset, Token.rparen, null))
-        if (q.isUri)
-        {
-          tokens.add(makeVirtualToken(line, col, offset, Token.dot, null))
-          tokens.add(makeVirtualToken(line, col, offset, Token.identifier, "toUri"))
-        }
-        return null
-      }
-      else
-      {
-        if (q.isUri)
-          return TokenVal(Token.uriLiteral, s.toStr)
-        else
+//      if (interpolated)
+//      {
+//        tokens.add(makeVirtualToken(line, col, offset, Token.strLiteral, s.toStr))
+//        line = this.line; col = this.col - 1;  // before quote
+//        tokens.add(makeVirtualToken(line, col, offset, Token.rparen, null))
+//        if (q.isUri)
+//        {
+//          tokens.add(makeVirtualToken(line, col, offset, Token.dot, null))
+//          tokens.add(makeVirtualToken(line, col, offset, Token.identifier, "toUri"))
+//        }
+//        return null
+//      }
+//      else
+//      {
+//        if (q.isUri)
+//          return TokenVal(Token.uriLiteral, s.toStr)
+//        else
           return TokenVal(Token.strLiteral, s.toStr)
-      }
+//      }
     }
     finally
     {
@@ -477,87 +478,87 @@ class Tokenizer
   **   "a $<b> c" -> "a " + LocaleExpr("b") + " c"
   ** Return true if more in the string literal.
   **
-  private Bool interpolation(Int line, Int col, Int offset, Str s, Quoted q)
-  {
-    consume // $
-    tokens.add(makeVirtualToken(line, col, offset, Token.strLiteral, s))
-    line = this.line; col = this.col; offset = this.pos
-    tokens.add(makeVirtualToken(line, col, offset, Token.plus))
-
-    // if { we allow an expression b/w {...}
-    if (cur == '{')
-    {
-      line = this.line; col = this.col; offset = this.pos
-      tokens.add(makeVirtualToken(line, col, offset, Token.lparenSynthetic))
-      consume
-      while (true)
-      {
-        if (endOfQuoted(q) || cur == 0) throw err("Unexpected end of $q, missing }")
-        tok := next
-        if (tok.kind === Token.strLiteral) throw err("Cannot nest Str literal within interpolation", tok.loc)
-        if (tok.kind === Token.uriLiteral) throw err("Cannot nest Uri literal within interpolation", tok.loc)
-        if (tok.kind === Token.rbrace) break
-        tokens.add(tok)
-      }
-      line = this.line; col = this.col; offset = this.pos
-      tokens.add(makeVirtualToken(line, col, offset, Token.rparen))
-    }
-
-    // if < this is a localized literal <xxxx>
-    else if (cur == '<')
-    {
-      line = this.line; col = this.col; offset = this.pos
-      tokens.add(makeVirtualToken(line, col, offset, Token.lparenSynthetic))
-      consume
-      buf := StrBuf()
-      while (true)
-      {
-        if (endOfQuoted(q) || cur == 0) throw err("Unexpected end of $q, missing >")
-        if (cur == '\n') throw err("Unexpected newline, missing >")
-        if (cur == '>') break
-        buf.addChar(cur)
-        consume
-      }
-      consume
-
-      tok := TokenVal(Token.localeLiteral, buf.toStr)
-      tok.loc = Loc.make(filename, line, col, offset)
-      tok.len = this.pos - offset
-      tokens.add(tok)
-
-      line = this.line; col = this.col; offset = this.pos
-      tokens.add(makeVirtualToken(line, col, offset, Token.rparen))
-    }
-
-    // else also allow a single identifier with
-    // dotted accessors x, x.y, x.y.z
-    else
-    {
-      tok := next
-      if (tok.kind !== Token.identifier &&
-          tok.kind !== Token.thisKeyword &&
-          tok.kind !== Token.superKeyword &&
-          tok.kind !== Token.itKeyword)
-        throw err("Expected identifier after \$ but $tok")
-      tokens.add(tok)
-      while (true)
-      {
-        if (cur != '.') break
-        if (!isIdentifierStart(peek)) throw err("Expected identifier after dot")
-        tokens.add(next) // dot
-        tok = next
-        tokens.add(tok)
-      }
-    }
-
-    // if at end of string, all done
-    if (endOfQuoted(q)) return false
-
-    // add plus and return true to keep chugging
-    line = this.line; col = this.col; offset = this.pos
-    tokens.add(makeVirtualToken(line, col, offset, Token.plus))
-    return true
-  }
+//  private Bool interpolation(Int line, Int col, Int offset, Str s, Quoted q)
+//  {
+//    consume // $
+//    tokens.add(makeVirtualToken(line, col, offset, Token.strLiteral, s))
+//    line = this.line; col = this.col; offset = this.pos
+//    tokens.add(makeVirtualToken(line, col, offset, Token.plus))
+//
+//    // if { we allow an expression b/w {...}
+//    if (cur == '{')
+//    {
+//      line = this.line; col = this.col; offset = this.pos
+//      tokens.add(makeVirtualToken(line, col, offset, Token.lparenSynthetic))
+//      consume
+//      while (true)
+//      {
+//        if (endOfQuoted(q) || cur == 0) throw err("Unexpected end of $q, missing }")
+//        tok := next
+//        if (tok.kind === Token.strLiteral) throw err("Cannot nest Str literal within interpolation", tok.loc)
+//        if (tok.kind === Token.uriLiteral) throw err("Cannot nest Uri literal within interpolation", tok.loc)
+//        if (tok.kind === Token.rbrace) break
+//        tokens.add(tok)
+//      }
+//      line = this.line; col = this.col; offset = this.pos
+//      tokens.add(makeVirtualToken(line, col, offset, Token.rparen))
+//    }
+//
+//    // if < this is a localized literal <xxxx>
+//    else if (cur == '<')
+//    {
+//      line = this.line; col = this.col; offset = this.pos
+//      tokens.add(makeVirtualToken(line, col, offset, Token.lparenSynthetic))
+//      consume
+//      buf := StrBuf()
+//      while (true)
+//      {
+//        if (endOfQuoted(q) || cur == 0) throw err("Unexpected end of $q, missing >")
+//        if (cur == '\n') throw err("Unexpected newline, missing >")
+//        if (cur == '>') break
+//        buf.addChar(cur)
+//        consume
+//      }
+//      consume
+//
+//      tok := TokenVal(Token.localeLiteral, buf.toStr)
+//      tok.loc = Loc.make(filename, line, col, offset)
+//      tok.len = this.pos - offset
+//      tokens.add(tok)
+//
+//      line = this.line; col = this.col; offset = this.pos
+//      tokens.add(makeVirtualToken(line, col, offset, Token.rparen))
+//    }
+//
+//    // else also allow a single identifier with
+//    // dotted accessors x, x.y, x.y.z
+//    else
+//    {
+//      tok := next
+//      if (tok.kind !== Token.identifier &&
+//          tok.kind !== Token.thisKeyword &&
+//          tok.kind !== Token.superKeyword &&
+//          tok.kind !== Token.itKeyword)
+//        throw err("Expected identifier after \$ but $tok")
+//      tokens.add(tok)
+//      while (true)
+//      {
+//        if (cur != '.') break
+//        if (!isIdentifierStart(peek)) throw err("Expected identifier after dot")
+//        tokens.add(next) // dot
+//        tok = next
+//        tokens.add(tok)
+//      }
+//    }
+//
+//    // if at end of string, all done
+//    if (endOfQuoted(q)) return false
+//
+//    // add plus and return true to keep chugging
+//    line = this.line; col = this.col; offset = this.pos
+//    tokens.add(makeVirtualToken(line, col, offset, Token.plus))
+//    return true
+//  }
 
   **
   ** If at end of quoted literal consume the
@@ -584,16 +585,16 @@ class Tokenizer
     }
   }
 
-  **
-  ** Create a virtual token for string interpolation.
-  **
-  private TokenVal makeVirtualToken(Int line, Int col, Int offset, Token kind, Obj? value := null)
-  {
-    tok := TokenVal(kind, value)
-    tok.loc = Loc.make(filename, line, col, offset)
-    tok.len = this.pos - offset
-    return tok
-  }
+//  **
+//  ** Create a virtual token for string interpolation.
+//  **
+//  private TokenVal makeVirtualToken(Int line, Int col, Int offset, Token kind, Obj? value := null)
+//  {
+//    tok := TokenVal(kind, value)
+//    tok.loc = Loc.make(filename, line, col, offset)
+//    tok.len = this.pos - offset
+//    return tok
+//  }
 
 //////////////////////////////////////////////////////////////////////////
 // Char
@@ -672,32 +673,32 @@ class Tokenizer
   **
   ** Parse a domain specific language <| ... |>
   **
-  private TokenVal dsl()
-  {
-    consume // <
-    consume // |
-
-    // compute leading tabs/spaces
-    leadingTabs := 0
-    leadingSpaces := 0
-    for (i:=posOfLine; i<pos; ++i)
-      if (buf[i] == '\t') leadingTabs++; else leadingSpaces++
-
-    // loop until we find end of DSL
-    s := StrBuf()
-    while (true)
-    {
-      if (cur == '|' && peek == '>') break
-      if (cur == 0) throw err("Unexpected end of DSL")
-      s.addChar(cur)
-      consume
-    }
-
-    consume // |
-    consume // >
-
-    return TokenValDsl(Token.dsl, s.toStr, leadingTabs, leadingSpaces)
-  }
+//  private TokenVal dsl()
+//  {
+//    consume // <
+//    consume // |
+//
+//    // compute leading tabs/spaces
+//    leadingTabs := 0
+//    leadingSpaces := 0
+//    for (i:=posOfLine; i<pos; ++i)
+//      if (buf[i] == '\t') leadingTabs++; else leadingSpaces++
+//
+//    // loop until we find end of DSL
+//    s := StrBuf()
+//    while (true)
+//    {
+//      if (cur == '|' && peek == '>') break
+//      if (cur == 0) throw err("Unexpected end of DSL")
+//      s.addChar(cur)
+//      consume
+//    }
+//
+//    consume // |
+//    consume // >
+//
+//    return TokenValDsl(Token.dsl, s.toStr, leadingTabs, leadingSpaces)
+//  }
 
 //////////////////////////////////////////////////////////////////////////
 // Comments

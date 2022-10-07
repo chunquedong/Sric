@@ -12,7 +12,7 @@
 ** MethodDef, and FieldDef.  All definitions may be documented using a
 ** Javadoc style FanDoc comment.
 **
-abstract class DefNode : Node
+abstract class DefNode : Node, Symbol
 {
 
 //////////////////////////////////////////////////////////////////////////
@@ -53,24 +53,6 @@ abstract class DefNode : Node
   {
     if (flags.and(FConst.Synthetic) != 0) return false
     if (flags.and(FConst.Public) == 0 && flags.and(FConst.Protected) == 0) return false
-    if (this is TypeDef)
-    {
-      // check compiler input to override default behavior
-//      if (ns.c != null && ns.c.input.docTests) return true
-
-      // don't document test concrete subclasses
-      t := (TypeDef)this
-      if (t.podName == "sys") return true
-      
-      if (t.base != null && t.base.qname == "std::Test")
-        return t.isAbstract
-      return true
-    }
-    else if (this is MethodDef)
-    {
-      m := (MethodDef)this
-      //if (m.isFieldAccessor) return false
-    }
     return true
   }
 

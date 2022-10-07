@@ -34,7 +34,6 @@ class ResolveType : CompilerStep {
   
   override Void visitFieldDef(FieldDef f) {
     resolveType(f.fieldType)
-    if (f.inheritedRet != null) resolveType(f.inheritedRet)
   }
   
   override Void visitMethodDef(MethodDef m) {
@@ -46,9 +45,6 @@ class ResolveType : CompilerStep {
     m.paramDefs.each |p| {
       resolveType(p.paramType)
     }
-    
-    if (m.ret.isThis) m.inheritedRet = m.parent.asRef
-    else if (m.inheritedRet != null) resolveType(m.inheritedRet)
   }
   
   private Void resolveType(TypeRef type) {
@@ -104,7 +100,7 @@ class ResolveType : CompilerStep {
       }
     }
     else if (type.podName == step.podName) {
-        typeDef := step.compiler.pod.resolveType(type.name, false)
+        typeDef := step.curPod.findSymbol(type.name) as TypeDef
         if (typeDef == null) {
            step.err("Unknow type '${type}'", type.loc)
            type.resolveTo(step.ns.objType.typeDef)
@@ -121,9 +117,10 @@ class ResolveType : CompilerStep {
           step.err("Unknow type '${type}'", type.loc)
           type.resolveTo(step.ns.objType.typeDef)
         }
-        ResolveImports.checkUsingPod(step.compiler, type.typeDef.podName, type.loc)
+        ResolveImports.checkUsingPod(step.log, step.curPod, type.typeDef.podName, type.loc)
       }
       catch (Err e) {
+        e.trace
         step.err("Unknow type '${type}'", type.loc)
         type.resolveTo(step.ns.objType.typeDef)
       }

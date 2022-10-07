@@ -88,9 +88,9 @@ class ConstantFolder
     {
       case ExprId.intLiteral:      return ((LiteralExpr)expr).val
       case ExprId.floatLiteral:    return ((LiteralExpr)expr).val
-      case ExprId.decimalLiteral:  return ((LiteralExpr)expr).val
+      //case ExprId.decimalLiteral:  return ((LiteralExpr)expr).val
       case ExprId.strLiteral:      return ((LiteralExpr)expr).val
-      case ExprId.durationLiteral: return ((LiteralExpr)expr).val
+      //case ExprId.durationLiteral: return ((LiteralExpr)expr).val
       default:                     return null
     }
   }
@@ -100,9 +100,9 @@ class ConstantFolder
     if (val == null)     return LiteralExpr.makeType(orig.loc, ExprId.nullLiteral, ns.objType.toNullable, null)
     if (val is Int)      return LiteralExpr.makeType(orig.loc, ExprId.intLiteral, ns.intType, val)
     if (val is Float)    return LiteralExpr.makeType(orig.loc, ExprId.floatLiteral, ns.floatType, val)
-    if (val is Decimal)  return LiteralExpr.makeType(orig.loc, ExprId.decimalLiteral, ns.decimalType, val)
+    //if (val is Decimal)  return LiteralExpr.makeType(orig.loc, ExprId.decimalLiteral, ns.decimalType, val)
     if (val is Str)      return LiteralExpr.makeType(orig.loc, ExprId.strLiteral, ns.strType, val)
-    if (val is Duration) return LiteralExpr.makeType(orig.loc, ExprId.durationLiteral, ns.durationType, val)
+    //if (val is Duration) return LiteralExpr.makeType(orig.loc, ExprId.durationLiteral, ns.durationType, val)
     return orig
   }
 

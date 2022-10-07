@@ -90,14 +90,18 @@ class AstWriter
       if (flags.and(FConst.Protected) != 0) w("protected: ")
       if (flags.and(FConst.Private)   != 0) w("private: ")
       if (flags.and(FConst.Internal)  != 0) w("internal: ")
+      
+      
+      if (flags.and(FConst.Static)    != 0) w("static ")
+      if (flags.and(FConst.Override)  != 0) w("override ")
+      if (flags.and(FConst.Abstract)  != 0) w("abstract ")
+      if (flags.and(FConst.Virtual)   != 0) w("virtual ")
     }
     
-    if (flags.and(FConst.Override)  != 0) w("override ")
-    if (flags.and(FConst.Abstract)  != 0) w("abstract ")
-    if (flags.and(FConst.Static)    != 0) w("static ")
-    if (flags.and(FConst.Storage)   != 0) w("storage ")
+
+    //if (flags.and(FConst.Storage)   != 0) w("storage ")
     if (flags.and(FConst.Virtual)   != 0) w("virtual ")
-    if (flags.and(FConst.Struct)    != 0) w("struct ")
+    //if (flags.and(FConst.Struct)    != 0) w("struct ")
     if (flags.and(FConst.Extension) != 0) w("extension ")
 
     if (flags.and(FConst.Synthetic) != 0) w("synthetic ")

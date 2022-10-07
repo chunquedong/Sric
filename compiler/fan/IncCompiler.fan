@@ -31,24 +31,39 @@ class IncCompiler {
     
     pipelines = [
         BasicInit(ctx),
-        //SlotNormalize(ctx),
-        ResolveDepends(ctx),
         ResolveImports(ctx),
         ResolveType(ctx),
 
         CheckInheritance(ctx),
-        CheckInheritSlot(ctx),
         ResolveExpr(ctx),
         
         CheckErrors(ctx),
         CheckParamDefs(ctx),
-        
-        //ConstChecks(ctx),
-        //GenParamDefault(ctx),
-        
-        //backend
-        //GenerateCpp(ctx),
     ]
+  }
+  
+  static PodDef resolveDependPod(Str name, CNamespace ns, CompilerLog log) {
+    file := `./res/${name}.sc`.toFile
+    code := file.readAllStr
+    
+    pod := PodDef(Loc.make(file.osPath), name)
+    unit := CompilationUnit(Loc.make(file.osPath), pod, file.toStr)
+
+    parser := DeepParser(log, code, unit)
+    //parser.isImport = true
+    //echo(parser.tokens.join("\n")|t|{ t.loc.toStr + "\t\t" + t.kind + "\t\t" + t.val })
+    parser.parse
+    
+    pod.updateCompilationUnit(unit, null, log)
+    ns.addPod(name, pod)
+    
+    ctx := CompilerContext(pod, CompilerInput(), ns)
+    pass := [BasicInit(ctx),
+            ResolveImports(ctx),
+            ResolveType(ctx)]
+    pass.each { it.run }
+
+    return pod
   }
   
 ////////////////////////////////////////////////////////////////////////////////
@@ -102,7 +117,6 @@ class IncCompiler {
     old := context.cunitsMap[file]
     if (old != null) {
       context.cunitsMap.remove(file)
-      context.cunits.removeSame(old)
       context.log.clearByFile(file)
     }
     
@@ -115,7 +129,6 @@ class IncCompiler {
     context.pod.updateCompilationUnit(unit, old, context.log)
     
     context.cunitsMap[file] = unit
-    context.cunits.add(unit)
     return unit
   }
   
@@ -135,7 +148,7 @@ class IncCompiler {
     catch (CompilerErr e) {
     }
     finally {
-      context.cunits.clear
+      //context.cunits.clear
       //context.pod.closures.clear
     }
     return this

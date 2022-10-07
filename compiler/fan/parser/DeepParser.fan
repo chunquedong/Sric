@@ -9,36 +9,6 @@ class DeepParser : Parser {
   {
   }
   
-//  override CallExpr? ctorChain(MethodDef method)
-//  {
-//    consume(Token.colon)
-//    loc := cur.loc
-//
-//    call := CallExpr(loc)
-//    call.isCtorChain = true
-//    switch (curt)
-//    {
-//      case Token.superKeyword: consume; call.target = SuperExpr(loc)
-//      case Token.thisKeyword:  consume; call.target = ThisExpr(loc)
-//      default: throw err("Expecting this or super for constructor chaining", loc);
-//    }
-//
-//    // we can omit name if super
-//    if (call.target.id === ExprId.superExpr && curt != Token.dot)
-//    {
-//      call.name = method.name
-//    }
-//    else
-//    {
-//      consume(Token.dot)
-//      call.name = consumeId
-//    }
-//
-//    // TODO: omit args if pass thru?
-//    callArgs(call, false)
-//    endLoc(call)
-//    return call
-//  }
   
 //////////////////////////////////////////////////////////////////////////
 // Block
@@ -613,7 +583,7 @@ class DeepParser : Parser {
   **
   private Expr relationalExpr()
   {
-    expr := rangeExpr
+    expr := addExpr
     if (curt === Token.isKeyword || curt === Token.isnotKeyword ||
         curt === Token.asKeyword ||
         curt === Token.lt || curt === Token.ltEq ||
@@ -625,14 +595,14 @@ class DeepParser : Parser {
         case Token.isKeyword:
           consume
           expr = TypeCheckExpr(expr.loc, ExprId.isExpr, expr, ctype)
-        case Token.isnotKeyword:
-          consume
-          expr = TypeCheckExpr(expr.loc, ExprId.isnotExpr, expr, ctype)
+//        case Token.isnotKeyword:
+//          consume
+//          expr = TypeCheckExpr(expr.loc, ExprId.isnotExpr, expr, ctype)
         case Token.asKeyword:
           consume
           expr = TypeCheckExpr(expr.loc, ExprId.asExpr, expr, ctype)
         default:
-          expr = ShortcutExpr.makeBinary(expr, consume.kind, rangeExpr)
+          expr = ShortcutExpr.makeBinary(expr, consume.kind, addExpr)
       }
       endLoc(expr)
     }
@@ -643,19 +613,19 @@ class DeepParser : Parser {
   ** Range expression:
   **   <rangeExpr>  :=  <bitOrExpr> ((".." | "...") <bitOrExpr>)*
   **
-  private Expr rangeExpr()
-  {
-    expr := addExpr
-    if (curt === Token.dotDot || curt === Token.dotDotLt)
-    {
-      start := expr
-      exclusive := consume.kind === Token.dotDotLt
-      end := addExpr
-      expr = RangeLiteralExpr(expr.loc, start, end, exclusive)
-      endLoc(expr)
-    }
-    return expr
-  }
+//  private Expr rangeExpr()
+//  {
+//    expr := addExpr
+//    if (curt === Token.dotDot || curt === Token.dotDotLt)
+//    {
+//      start := expr
+//      exclusive := consume.kind === Token.dotDotLt
+//      end := addExpr
+//      expr = RangeLiteralExpr(expr.loc, start, end, exclusive)
+//      endLoc(expr)
+//    }
+//    return expr
+//  }
 
   **
   ** Additive expression:
@@ -827,18 +797,11 @@ class DeepParser : Parser {
 
     switch (curt)
     {
-      case Token.amp:             return idExpr(null, false, false)
+      case Token.amp:             return addressExpr()
       case Token.identifier:      return idExpr(null, false, false)
       case Token.intLiteral:      return LiteralExpr(loc, ExprId.intLiteral, consume.val)
       case Token.floatLiteral:    return LiteralExpr(loc, ExprId.floatLiteral, consume.val)
-      case Token.decimalLiteral:  return LiteralExpr(loc, ExprId.decimalLiteral, consume.val)
       case Token.strLiteral:      return LiteralExpr(loc, ExprId.strLiteral, consume.val)
-      case Token.durationLiteral: return LiteralExpr(loc, ExprId.durationLiteral, consume.val)
-      case Token.uriLiteral:      return LiteralExpr(loc, ExprId.uriLiteral, consume.val)
-      case Token.localeLiteral:
-        expr := LocaleLiteralExpr(loc, consume.val)
-        endLoc(expr)
-        return expr
       case Token.lbracket:        return collectionLiteralExpr(loc, null)
       case Token.falseKeyword:    consume; return LiteralExpr.makeFalse(loc)
       case Token.nullKeyword:     consume; return LiteralExpr.makeNull(loc)
@@ -919,20 +882,6 @@ class DeepParser : Parser {
         endLoc(target)
         return idExpr(target, false, false)
       }
-    }
-
-    // dsl
-    if (curt == Token.dsl)
-    {
-      srcLoc := Loc(cur.loc.file, cur.loc.line, cur.loc.col+2, cur.loc.offset)
-      dslVal := cur as TokenValDsl
-      expr := DslExpr(loc, ctype, srcLoc, consume.val)
-      {
-        leadingTabs = dslVal.leadingTabs
-        leadingSpaces = dslVal.leadingSpaces
-      }
-      endLoc(expr)
-      return expr
     }
 
     // list/map literal with explicit type
@@ -1037,6 +986,15 @@ class DeepParser : Parser {
 // Term Expr Utils
 //////////////////////////////////////////////////////////////////////////
 
+  private Expr addressExpr() {
+    loc := cur.loc
+    consume(Token.amp)
+    expr0 := UnknownVarExpr(cur.loc, null, consumeId)
+    expr := AddressOfExpr(loc, expr0)
+    endLoc(expr)
+    return expr
+  }
+
   **
   ** Identifier expression:
   **   <idExpr>  :=  <local> | <field> | <call>
@@ -1047,13 +1005,13 @@ class DeepParser : Parser {
   {
     loc := cur.loc
 
-    if (curt == Token.amp)
-    {
-      consume
-      expr := UnknownVarExpr(loc, target, consumeId, ExprId.storage)
-      endLoc(expr)
-      return expr
-    }
+//    if (curt == Token.amp)
+//    {
+//      consume
+//      expr := UnknownVarExpr(loc, target, consumeId, ExprId.storage)
+//      endLoc(expr)
+//      return expr
+//    }
 
     if (peek.isCallOpenParen)
     {
@@ -1212,8 +1170,8 @@ class DeepParser : Parser {
       return listLiteralExpr(loc, explicitType, null)
 
     // empty map [:]
-    if (peekt === Token.colon)
-      return mapLiteralExpr(loc, explicitType, null)
+//    if (peekt === Token.colon)
+//      return mapLiteralExpr(loc, explicitType, null)
 
     // opening bracket
     consume(Token.lbracket)
@@ -1232,9 +1190,9 @@ class DeepParser : Parser {
     first := expr
 
     // at this point we can determine if it is a list or a map
-    if (curt === Token.colon)
-      return mapLiteralExpr(loc, explicitType, first)
-    else
+//    if (curt === Token.colon)
+//      return mapLiteralExpr(loc, explicitType, first)
+//    else
       return listLiteralExpr(loc, explicitType, first)
   }
 
@@ -1281,55 +1239,55 @@ class DeepParser : Parser {
     return list
   }
 
-  **
-  ** Parse Map literal; if first is null:
-  **   cur must be on lbracket
-  ** else
-  **   cur must be on colon of first key/value pair
-  **
-  private MapLiteralExpr mapLiteralExpr(Loc loc, TypeRef? explicitType, Expr? first)
-  {
-    // explicitType is *the* map type: Str:Str[,]
-    if (explicitType != null && !explicitType.isMap)
-    {
-      err("Invalid map type '$explicitType' for map literal", loc)
-      explicitType = null
-    }
-
-    map := MapLiteralExpr(loc, explicitType)
-
-    // if first is null, must be on lbracket
-    if (first == null)
-    {
-      consume(Token.lbracket)
-
-      // if [,] empty list
-      if (curt === Token.colon)
-      {
-        consume
-        consume(Token.rbracket)
-        return map
-      }
-
-      first = expr
-    }
-
-    map.keys.add(first)
-    consume(Token.colon)
-    map.vals.add(expr)
-    while (curt === Token.comma)
-    {
-      consume
-      if (curt === Token.rbracket) break // allow extra trailing comma
-      map.keys.add(expr)
-      consume(Token.colon)
-      map.vals.add(expr)
-    }
-    consume(Token.rbracket)
-    
-    endLoc(map)
-    return map
-  }
+//  **
+//  ** Parse Map literal; if first is null:
+//  **   cur must be on lbracket
+//  ** else
+//  **   cur must be on colon of first key/value pair
+//  **
+//  private MapLiteralExpr mapLiteralExpr(Loc loc, TypeRef? explicitType, Expr? first)
+//  {
+//    // explicitType is *the* map type: Str:Str[,]
+//    if (explicitType != null && !explicitType.isMap)
+//    {
+//      err("Invalid map type '$explicitType' for map literal", loc)
+//      explicitType = null
+//    }
+//
+//    map := MapLiteralExpr(loc, explicitType)
+//
+//    // if first is null, must be on lbracket
+//    if (first == null)
+//    {
+//      consume(Token.lbracket)
+//
+//      // if [,] empty list
+//      if (curt === Token.colon)
+//      {
+//        consume
+//        consume(Token.rbracket)
+//        return map
+//      }
+//
+//      first = expr
+//    }
+//
+//    map.keys.add(first)
+//    consume(Token.colon)
+//    map.vals.add(expr)
+//    while (curt === Token.comma)
+//    {
+//      consume
+//      if (curt === Token.rbracket) break // allow extra trailing comma
+//      map.keys.add(expr)
+//      consume(Token.colon)
+//      map.vals.add(expr)
+//    }
+//    consume(Token.rbracket)
+//    
+//    endLoc(map)
+//    return map
+//  }
 
 //////////////////////////////////////////////////////////////////////////
 // Closure
@@ -1395,7 +1353,7 @@ class DeepParser : Parser {
     if (curType == null || curSlot == null) throw err("Unexpected closure")
 
     // closure anonymous class name: class$slot$count
-    name := "${curType.name}\$${curSlot.name}\$${curType.closures.size}"
+    name := "${curType.name}\$${curSlot.name}\$"
 
     // verify func types has named parameters
     if (funcType.unnamed) err("Closure parameters must be named", loc)
@@ -1405,7 +1363,7 @@ class DeepParser : Parser {
 
     // save all closures in global list and list per type
 //    closures.add(closure)
-    curType.closures.add(closure)
+    //curType.closures.add(closure)
 
     // parse block; temporarily change curClosure
     oldClosure := curClosure
