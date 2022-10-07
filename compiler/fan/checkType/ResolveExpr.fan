@@ -71,16 +71,20 @@ class ResolveExpr : CompilerStep
 
     // bind to scope as a method variable
     bindToMethodVar(def)
+    
+    def.var_v.scopeLevel = this.scopeLevel
 
     // if init is null, then we default the variable to null (Fan
     // doesn't do true definite assignment checking since most local
     // variables use type inference anyhow)
-    if (def.init == null && !def.isCatchVar)
+    if (def.init == null && !def.isCatchVar) {
       def.init = LiteralExpr.makeDefaultLiteral(def.loc, def.ctype)
-
+      def.init.scopeLevel = this.scopeLevel
+    }
     // turn init into full assignment
     if (def.init != null)
       def.init = BinaryExpr.makeAssign(LocalVarExpr(def.loc, def.var_v), def.init)
+    
   }
 
   private Void resolveFor(ForStmt stmt)
@@ -225,6 +229,7 @@ class ResolveExpr : CompilerStep
         expr = resolveAddressOf(expr)
     }
 
+    if (expr.scopeLevel == -1) expr.scopeLevel = this.scopeLevel
     return expr
   }
   
@@ -316,7 +321,9 @@ class ResolveExpr : CompilerStep
 
   private Expr resolveAddressOf(AddressOfExpr expr) {
     //expr.var_v = resolveExpr(expr.var_v)
-    expr.ctype = ns.pointerType
+    expr.ctype = TypeRef.pointerType(expr.loc, expr.var_v.ctype, PtrType.temp_ptr)
+    ResolveType.doResolveType(this, expr.ctype)
+    expr.scopeLevel = expr.var_v.scopeLevel
     return expr
   }
 
@@ -441,14 +448,6 @@ class ResolveExpr : CompilerStep
       shortcut.args.add(expr.rhs)
       shortcut.method = null
       return resolveCall(shortcut)
-    }
-
-    // check for left hand side the -> shortcut, because a->x=b is trap.a("x", [b])
-    call := expr.lhs as CallExpr
-    if (call != null && call.isDynamic)
-    {
-      call.args.add(expr.rhs)
-      return resolveCall(call)
     }
 
     // assignment is typed by lhs
@@ -757,6 +756,7 @@ class ResolveExpr : CompilerStep
     if (stmt.id === StmtId.forStmt) {
         s := stmt as ForStmt
         s.block.parent = curScope; curScope = s.block
+        ++scopeLevel
     }
   }
   
@@ -766,6 +766,7 @@ class ResolveExpr : CompilerStep
     if (stmt.id === StmtId.forStmt) {
         s := stmt as ForStmt
         curScope = curScope.parentScope
+        --scopeLevel
     }
   }
 
@@ -777,11 +778,13 @@ class ResolveExpr : CompilerStep
     super.enterBlock(block); 
     if (curScope === block) return
     block.parent = curScope; curScope = block
+    ++scopeLevel
   }
   override Void exitBlock(Block block)  {
     super.exitBlock(block); 
     if (curScope !== block) return
     curScope = curScope.parentScope
+    --scopeLevel
   }
   
   virtual Void enterUnit(CompilationUnit unit) { super.enterUnit(unit); curScope = unit }
@@ -797,8 +800,9 @@ class ResolveExpr : CompilerStep
     super.enterMethodDef(def);
     def.parent = curScope
     curScope = def
+    ++scopeLevel
   }
-  virtual Void exitMethodDef(MethodDef def) { super.exitMethodDef(def); curScope = curScope.parentScope }
+  virtual Void exitMethodDef(MethodDef def) { super.exitMethodDef(def); curScope = curScope.parentScope; --scopeLevel }
 
 //////////////////////////////////////////////////////////////////////////
 // Fields
@@ -807,5 +811,6 @@ class ResolveExpr : CompilerStep
   Stmt[] stmtStack  := Stmt[,]    // statement stack
   //Block[] blockStack := Block[,]  // block stack used for scoping
   Scope? curScope
-  Bool inClosure := false         // are we inside a closure's block
+  Bool inClosure = false         // are we inside a closure's block
+  Int scopeLevel = 0
 }

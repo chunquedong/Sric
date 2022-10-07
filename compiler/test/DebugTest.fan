@@ -4,10 +4,13 @@ class DebugTest : Test {
   Void test() {
     code := 
     Str<| 
-            void main()
+            void main2()
             {
-                int i = 1;
-                printf("hello:%d\n", i);
+                int&? p;
+                if (true) {
+                    int a = 1;
+                    p = &a;
+                }
             }
         |>
     

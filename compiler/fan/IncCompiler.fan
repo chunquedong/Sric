@@ -146,6 +146,7 @@ class IncCompiler {
       }
     }
     catch (CompilerErr e) {
+        e.trace
     }
     finally {
       //context.cunits.clear

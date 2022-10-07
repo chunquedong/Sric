@@ -38,7 +38,7 @@ class LiteralExpr : Expr
   new makeStr(Loc loc, Str val)
     : this.make(loc, ExprId.strLiteral, val) {}
 
-  static LiteralExpr makeDefaultLiteral(Loc loc, TypeRef ctype)
+  static LiteralExpr? makeDefaultLiteral(Loc loc, TypeRef ctype)
   {
     LiteralExpr? literal
     if (!ctype.isNullable)
@@ -51,6 +51,9 @@ class LiteralExpr : Expr
         literal.ctype = ctype
         return literal
       }
+    }
+    if (!ctype.isPointer) {
+        return null
     }
     literal = makeNull(loc)
     literal.ctype = ctype

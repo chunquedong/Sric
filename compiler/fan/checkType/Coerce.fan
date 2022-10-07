@@ -27,9 +27,9 @@ mixin Coerce {
   ** the expression is not type compatible run the onErr function.
   ** Default Fantom behavior.
   **
-  static Expr doCoerce(Expr expr, TypeRef expected, |->| onErr)
+  private static Expr doCoerce(Expr expr, TypeRef expected, |->| onErr)
   {
-    expected = expected.raw
+    //expected = expected
     
     // sanity check that expression has been typed
     TypeRef actual := expr.ctype
@@ -76,14 +76,14 @@ mixin Coerce {
     // have to treat function auto-casting a little specially here
     if (actual.isFunc && expected.isFunc)
     {
-//      if (isFuncAutoCoerce(actual, expected))
-//         return TypeCheckExpr.coerce(expr, expected)
+      if (isFuncAutoCoerce(actual, expected))
+         return TypeCheckExpr.coerce(expr, expected)
     }
-    else
-    {
-      if (expected.fits(actual))
-        return TypeCheckExpr.coerce(expr, expected)
-    }
+//    else
+//    {
+//      if (expected.fits(actual))
+//        return TypeCheckExpr.coerce(expr, expected)
+//    }
 
     // we have an error condition
     onErr()
@@ -132,7 +132,8 @@ mixin Coerce {
   static Bool needCoerce(TypeRef from, TypeRef to)
   {
     //always cast for generic
-    if (from.isParameterized || to.isParameterized) return true
+    //if (from.isParameterized || to.isParameterized) return true
+    if (from.qname != to.qname) return true
 
     // if going from Obj? -> Obj we need a nullable coercion
     if (!to.isNullable) return from.isNullable

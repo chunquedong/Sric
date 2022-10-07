@@ -112,7 +112,7 @@ class DeepParser : Parser {
 
     // if expression statement ends with comma then this
     // is syntax sugar for it.add(expr) ...
-    if (curt === Token.comma) e = itAdd(e)
+    //if (curt === Token.comma) e = itAdd(e)
 
     // return expression as statement
     stmt := ExprStmt(e)
@@ -133,19 +133,19 @@ class DeepParser : Parser {
   ** Comma operator is sugar for it.add(target):
   **   <itAdd>  :=  <expr> ("," <expr>)* <eos>
   **
-  private Expr itAdd(Expr e)
-  {
-    e = CallExpr(e.loc, ItExpr(cur.loc), "add") { args.add(e); isItAdd = true }
-    while (true)
-    {
-      consume(Token.comma)
-      if (curt === Token.rbrace || curt === Token.semicolon) break
-      e = CallExpr(cur.loc, e, "add") { args.add(expr()) }
-      if (curt === Token.rbrace || curt === Token.semicolon) break
-    }
-    endLoc(e)
-    return e
-  }
+//  private Expr itAdd(Expr e)
+//  {
+//    e = CallExpr(e.loc, ItExpr(cur.loc), "add") { args.add(e); isItAdd = true }
+//    while (true)
+//    {
+//      consume(Token.comma)
+//      if (curt === Token.rbrace || curt === Token.semicolon) break
+//      e = CallExpr(cur.loc, e, "add") { args.add(expr()) }
+//      if (curt === Token.rbrace || curt === Token.semicolon) break
+//    }
+//    endLoc(e)
+//    return e
+//  }
 
   **
   ** Parse local variable declaration, the current token must be
@@ -943,21 +943,21 @@ class DeepParser : Parser {
       case Token.dot: consume;  return idExpr(target, false, false)
 
       // if "->id" dynamic call
-      case Token.arrow: consume; return idExpr(target, true, false, false)
+      //case Token.arrow: consume; return idExpr(target, true, false, false)
 
       // if "~>" checked dynamic call
-      case Token.tildeArrow:
-        consume; return idExpr(target, true, false, true)
+      //case Token.tildeArrow:
+      //  consume; return idExpr(target, true, false, true)
 
       // if "?.id" safe call
       case Token.safeDot: consume; return idExpr(target, false, true)
 
       // if "?->id" safe dynamic call
-      case Token.safeArrow: consume; return idExpr(target, true, true, false)
+      //case Token.safeArrow: consume; return idExpr(target, true, true, false)
 
       // if "?~>id" safe checked dynamic call
-      case Token.safeTildeArrow:
-        consume; return idExpr(target, true, true, true)
+      //case Token.safeTildeArrow:
+      //  consume; return idExpr(target, true, true, true)
     }
 
     // if target[...]
@@ -1016,8 +1016,8 @@ class DeepParser : Parser {
     if (peek.isCallOpenParen)
     {
       call := callExpr(target)
-      call.isDynamic = dynamicCall
-      call.isCheckedCall = checkedCall
+      //call.isDynamic = dynamicCall
+      //call.isCheckedCall = checkedCall
       call.isSafe = safeCall
       return call
     }
@@ -1031,8 +1031,8 @@ class DeepParser : Parser {
       call := CallExpr(loc)
       call.target    = target
       call.name      = name
-      call.isDynamic = dynamicCall
-      call.isCheckedCall = checkedCall
+      //call.isDynamic = dynamicCall
+      //call.isCheckedCall = checkedCall
       call.isSafe    = safeCall
       call.noParens  = true
       call.args.add(closure)
@@ -1041,18 +1041,18 @@ class DeepParser : Parser {
     }
 
     // if dynamic call then we know this is a call not a field
-    if (dynamicCall)
-    {
-      call := CallExpr(loc)
-      call.target    = target
-      call.name      = name
-      call.isDynamic = true
-      call.isCheckedCall = checkedCall
-      call.isSafe    = safeCall
-      call.noParens  = true
-      endLoc(call)
-      return call
-    }
+//    if (dynamicCall)
+//    {
+//      call := CallExpr(loc)
+//      call.target    = target
+//      call.name      = name
+//      //call.isDynamic = true
+//      //call.isCheckedCall = checkedCall
+//      call.isSafe    = safeCall
+//      call.noParens  = true
+//      endLoc(call)
+//      return call
+//    }
 
     // at this point we are parsing a single identifier, but
     // if it looks like it was expected to be a type we can

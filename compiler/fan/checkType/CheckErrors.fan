@@ -415,7 +415,7 @@ class CheckErrors : CompilerStep, Coerce
     // check parameter default type
     if (p.def != null)// && !p.paramType.isGeneriParamDefeter)
     {
-      p.def = coerce(p.def, p.paramType.raw) |->|
+      p.def = coerce(p.def, p.paramType) |->|
       {
         err("'$p.def.toTypeStr' is not assignable to '$p.paramType'", p.def.loc)
       }
@@ -866,6 +866,10 @@ class CheckErrors : CompilerStep, Coerce
     {
       err("'$expr.rhs.toTypeStr' is not assignable to '$expr.lhs.ctype'", expr.rhs.loc)
     }
+    
+    if (expr.lhs.scopeLevel < expr.rhs.scopeLevel) {
+      err("'$expr.rhs' is short lifetime than '$expr.lhs'", expr.rhs.loc)
+    }
 
     // check that lhs is assignable
     if (!expr.lhs.isAssignable)
@@ -1058,11 +1062,10 @@ class CheckErrors : CompilerStep, Coerce
     checkSlotProtection(call.method, call.loc)
 
     // arguments
-    if (!call.isDynamic || call.isCheckedCall)
-    {
+    
       // do normal call checking and coercion
       checkArgs(call)
-    }
+    
     
 //    if (call.isDynamic)
 //    {

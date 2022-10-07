@@ -360,6 +360,7 @@ abstract class Expr : Node
   const ExprId id         // expression type identifier
   TypeRef? ctype            // type expression resolves to
   Bool leave := true { protected set } // leave this expression on the stack
+  Int scopeLevel = -1
 }
 
 

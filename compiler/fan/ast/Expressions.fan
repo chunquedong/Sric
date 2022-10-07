@@ -222,10 +222,10 @@ class CallExpr : NameExpr
     : super(loc, id, target, name)
   {
     args = Expr[,]
-    isDynamic = false
-    isCheckedCall = true
+    //isDynamic = false
+    //isCheckedCall = true
     isSafe = false
-    isCtorChain = false
+    //isCtorChain = false
   }
 
   new makeWithMethod(Loc loc, Expr? target, MethodDef method, Expr[]? args := null)
@@ -290,7 +290,7 @@ class CallExpr : NameExpr
 
     if (target != null)
     {
-      s.add(target).add(isSafe ? "?" : "").add(isDynamic ? "->" : ".")
+      s.add(target).add(isSafe ? "?" : "")
     }
 //    else if (method != null && (method.isStatic || method.isCtor))
 //      s.add(method.parent.qname).add(".")
@@ -310,12 +310,12 @@ class CallExpr : NameExpr
 
   Expr[] args         // Expr[] arguments to pass
   [Int:Str]? paramNames  // args pos to name for named param
-  Bool isDynamic      // true if this is a -> dynamic call
-  Bool isCheckedCall  // true if this is a ~> dynamic call
-  Bool isCtorChain    // true if this is MethodDef.ctorChain call
+  //Bool isDynamic      // true if this is a -> dynamic call
+  //Bool isCheckedCall  // true if this is a ~> dynamic call
+  //Bool isCtorChain    // true if this is MethodDef.ctorChain call
   Bool noParens       // was this call accessed without parens
   Bool isCallOp       // was this 'target()' (instead of 'target.name()')
-  Bool isItAdd        // if using comma operator
+  //Bool isItAdd        // if using comma operator
   MethodDef? method     // resolved method
   override Bool synthetic := false
 }
@@ -529,6 +529,7 @@ class LocalVarExpr : Expr
     {
       this.var_v = var_v
       this.ctype = var_v.ctype
+      this.scopeLevel = var_v.scopeLevel
     }
   }
 

@@ -11,5 +11,5 @@ struct A {
 void main()
 {
     int i = 1;
-    int* p = &i
+    int& p = &i
 }

@@ -148,6 +148,7 @@ class TypeRef : Node
   Bool isVoid()    { signature == "sys::void" }
   Bool isNothing() { signature == "sys::nothing" }
   Bool isError() { signature == "sys::error" }
+  Bool isPointer() { qname == "sys::pointer" }
   
 //////////////////////////////////////////////////////////////////////////
 // Builder
@@ -212,10 +213,16 @@ class TypeRef : Node
     }
     if (genericArgs != null) {
       if (ptrType == PtrType.temp_ptr) {
-        out.w(genericArgs.first).w("*")
+        genericArgs.first.print(out)
+        out.w("*")
       }
       else {
-        out.w("<").w(genericArgs.join(",")).w(">")
+        out.w("<")
+        genericArgs.each |g, i| {
+            if (i > 0) out.w(",")
+            g.print(out)
+        }
+        out.w(">")
       }
     }
   }
@@ -293,7 +300,7 @@ class TypeRef : Node
   Str extName() {
     s := StrBuf()
     if (sized != null) s.add(sized)
-    if (ptrType != null) s.add("_").add(ptrType.toStr)
+    if (ptrType != null) s.add("^").add(ptrType.toStr)
     if (genericArgs != null) {
       s.add("<").add(genericArgs.join(",")).add(">")
     }
@@ -307,8 +314,7 @@ class TypeRef : Node
   ** Return signature
   **
   override Str toStr() {
-    if (podName != "sys") return signature
-    return name
+    return signature
   }
   
   
@@ -343,6 +349,7 @@ class TypeRef : Node
     this.resolvedType = type.resolvedType
     this._isNullable = true
     this.genericArgs = type.genericArgs
+    this.ptrType = type.ptrType
     this.loc = type.loc
     this.len = type.len
     //d.attachedGeneriParamDef = attachedGeneriParamDef
@@ -392,15 +399,15 @@ class TypeRef : Node
     return false
   }
   
-  ** after generic type erasure
-  virtual TypeRef raw() {
-    if (typeDef is GeneriParamDefDef) {
-        t := ((GeneriParamDefDef)typeDef).bound
-        if (this.isNullable && !t.isNullable) t = t.toNullable
-        return t
-    }
-    return this
-  }
+//  ** after generic type erasure
+//  virtual TypeRef raw() {
+//    if (typeDef is GeneriParamDefDef) {
+//        t := ((GeneriParamDefDef)typeDef).bound
+//        if (this.isNullable && !t.isNullable) t = t.toNullable
+//        return t
+//    }
+//    return this
+//  }
   
   Bool isGeneriParamDefeter() {
     return typeDef is GeneriParamDefDef
@@ -519,10 +526,20 @@ class TypeRef : Node
   virtual Bool fits(TypeRef ty)
   {
     if (ty.isObj) return true
-    if (this == ty) return true
+    if (this === ty) return true
     
     if (this.isFunc && ty.isFunc) {
         return Coerce.isFuncAutoCoerce(this, ty)
+    }
+    
+    if (this.ptrType != null) {
+        if (this.ptrType === PtrType.temp_ptr && ty.ptrType !== PtrType.temp_ptr) {
+            return false
+        }
+
+        if (this.ptrType !== PtrType.unsafe_ptr && ty.ptrType !== PtrType.unsafe_ptr) {
+            if (this.ptrType != ty.ptrType) return false
+        }
     }
     
     //unparameterized generic parameters

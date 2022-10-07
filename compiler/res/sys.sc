@@ -2,6 +2,7 @@
 native public struct int {}
 native public struct void {}
 native public struct float {}
+native public struct bool {}
 native public struct string {}
 native public struct exception {}
 native public struct any {}

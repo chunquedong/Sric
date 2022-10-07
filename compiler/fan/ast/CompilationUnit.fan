@@ -88,6 +88,7 @@ class CompilationUnit : Node, Scope
     sym := symbolTable[name]
     if (sym == null && imported != null) {
         found := imported[name]
+        if (found == null) return null
         if (found.size > 1) {
             throw CompilerErr("symbol conflicted: $name", loc)
             //return null
