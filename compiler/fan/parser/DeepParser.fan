@@ -670,20 +670,6 @@ class DeepParser : Parser {
     loc := cur.loc
     consume()
 
-    // In Fantom just like C# and Java, a paren could mean
-    // either a cast or a parenthesized expression
-    mark := pos
-    castType := tryType(true)
-    if (curt === Token.rparen)
-    {
-      consume
-      if (castType == null) throw err("Expecting cast '(type)'")
-      e := TypeCheckExpr(loc, ExprId.coerce, parenExpr, castType)
-      endLoc(e)
-      return e
-    }
-    reset(mark)
-
     // this is just a normal parenthesized expression
     expr := expr
     consume(Token.rparen)
@@ -891,10 +877,18 @@ class DeepParser : Parser {
     }
 
     // closure expr never parse as TypeBase
-//    if (curt == Token.lbrace && ctype.isFunc)
-//    {
-//      return closure(loc, ctype)
-//    }
+    if (curt == Token.lbrace)
+    {
+      Expr[] list = [,]
+      consume(Token.lbrace)
+      while (curt != Token.rbrace)
+        list.add( expr )
+      consume(Token.rbrace)
+      
+      expr := InitListExpr(loc, ctype, false)
+      endLoc(expr)
+      return expr
+    }
 
     // simple literal type(arg)
     if (curt == Token.lparen)

@@ -1008,3 +1008,48 @@ class AddressOfExpr : Expr
 
   Expr var_v
 }
+
+class InitListExpr : Expr {
+
+  new make(Loc loc, TypeRef type, Bool heap)
+    : super(loc, ExprId.initListExpr)
+  {
+    this.baseType = type
+    this.isPointer = heap
+  }
+  
+  override Void walkChildren(Visitor v)
+  {
+    if (v.isReadOnly) {
+        stmts.each |Expr stmt|
+        {
+          stmt.walk(v)
+        }
+    }
+    else {
+        copy := Expr[,]
+        copy.capacity = stmts.size
+        stmts.each |Expr stmt|
+        {
+          r := stmt.walk(v)
+          copy.add(r)
+        }
+        stmts = copy
+    }
+  }
+  
+  override Void getChildren(Node[] list, [Str:Obj]? options) {
+    stmts.each |stmt| {
+      list.add(stmt)
+    }
+  }
+
+  override Str toStr()
+  {
+    "$baseType{"+stmts.join(";")+"}"
+  }
+
+  Bool isPointer
+  TypeRef baseType
+  Expr[] stmts = [,]
+}

@@ -227,6 +227,8 @@ class ResolveExpr : CompilerStep
         expr.ctype = ns.intType
       case ExprId.addressOfExpr:
         expr = resolveAddressOf(expr)
+      case ExprId.initListExpr:
+        expr = resolveInitListExpr(expr)
     }
 
     if (expr.scopeLevel == -1) expr.scopeLevel = this.scopeLevel
@@ -324,6 +326,18 @@ class ResolveExpr : CompilerStep
     expr.ctype = TypeRef.pointerType(expr.loc, expr.var_v.ctype, PtrType.temp_ptr)
     ResolveType.doResolveType(this, expr.ctype)
     expr.scopeLevel = expr.var_v.scopeLevel
+    return expr
+  }
+  
+  private Expr resolveInitListExpr(InitListExpr expr) {
+    ResolveType.doResolveType(this, expr.baseType)
+    if (expr.isPointer) {
+        expr.ctype = TypeRef.pointerType(expr.loc, expr.baseType)
+        expr.scopeLevel = 0
+    }
+    else {
+        expr.ctype = expr.baseType
+    }
     return expr
   }
 

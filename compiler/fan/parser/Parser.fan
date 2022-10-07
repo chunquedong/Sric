@@ -894,7 +894,7 @@ public class Parser
   ** valid type production return it.  Otherwise leave
   ** the parser positioned on the current token.
   **
-  protected TypeRef? tryType(Bool maybeCast := false)
+  protected TypeRef? tryType()
   {
     // types can only begin with identifier, | or [
     if (curt !== Token.identifier && curt !== Token.pipe && curt !== Token.lbracket)
@@ -929,9 +929,8 @@ public class Parser
         //Int[a, b]
         type = atype
       }
-      else if (curt === Token.rparen && maybeCast &&
-        (isExprValue(peekt) || peekt === Token.lparen) ) {
-        //(Int)a
+      else if (curt === Token.lbrace) {
+        //Int{
         type = atype
       }
       else if (this.tokens[pos>1?pos-1:0].kind == Token.gt) {

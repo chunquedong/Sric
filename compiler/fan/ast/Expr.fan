@@ -420,6 +420,7 @@ enum class ExprId
   throwExpr,        // ThrowExpr
   awaitExpr,
   sizeOfExpr,
-  addressOfExpr
+  addressOfExpr,
+  initListExpr
 }
 
