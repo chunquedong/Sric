@@ -5,23 +5,22 @@ memory safe and compiled systems programming language
 ## Features
 - fast as C. low-level memeory access
 - safe as Rust. compile time lifetime check
-- powerful as C++. support object-oriented inheritance and polymorphisn
-- simple as Java. less features than C++
+- object-oriented. inheritance and polymorphisn
+- simple as C. less features than C++
 - interoperate with existing code. compile to C++ code
 - familiar C-like syntax
-
+- non-nullable pointer
 
 ## Design
 
 ### Pointer Type
 
 ```
-shared int* p; //reference count pointer
-uniuqe int* p; //unique reference pointer
-weak int* p;   //weak pointer for beak cycle reference
-unsafe int* p; //unsafe raw pointer
-int& p;        //temporary local pointer
-int* p;        //default is unique pointer
+unsafe int* p;   //unsafe raw pointer
+int& p;          //temporary local pointer
+int* p;          //unique ownership pointer
+shared int* p;   //reference count pointer
+weak int* p;     //weak pointer for beak cycle reference
 ```
 
 ### Pointer safe
@@ -32,34 +31,39 @@ unique pointer and temporary work like Rust, but no lifetime annotations.
 - temporary pointer can't convert to others.
 - short liftime object can't be referenced by long lifetime.
 
+```
+void foo() {
+  int& p = ...;
+  if (true) {
+     int a;
+     p = &a; //compile error
+  }
+}
+```
+- borrow check
+```
+void main() {
+  int* p = ...;
+  int& p2 = p;
+  foo(move p); //compile error
+}
+```
+
 ### Copy and Move
 
-custem copy function:
+it cannot be copied if the struct has unique pointer:
 ```
 struct A {
-  unique int* i;
-  A copy() {...}
+  int* i;
 }
 A a;
-A b = a;
+A b = a; //compile error
 ```
 
-right-value move by default.
+move the ownership
 ```
 struct A {
-  unique int* i;
-  A copy() {...}
-  void move_to(A &a) {...}
-}
-A getA() { ... }
-A b = getA();  //call move_to
-```
-
-left-value copy by default.
-```
-struct A {
-  unique int* i;
-  void move_to(A &a) {...}
+  int* i;
 }
 A a;
 A b = move a;
@@ -77,6 +81,17 @@ unsafe {
 }
 ```
 
+unsafe function must call in unsafe block
+```
+unsafe void foo() { ... }
+
+void main() {
+  unsafe {
+    foo();
+  }
+}
+```
+
 ### Inheritance
 
 ```
@@ -90,12 +105,29 @@ virtual struct B {
 }
 
 struct A : B, I {
-  unique B* b;
+  B* b;
   override void foo(B* b) {
     ...
   }
   override void bar() {...}
 }
+```
+
+
+### Struct Init
+
+```
+struct A {
+  int i;
+}
+
+A a = { .i = 0; }
+A *a = alloc<A>() { .i = 0; }
+```
+
+type inference
+```
+a := alloc<A>() { .i = 0; }
 ```
 
 
@@ -115,12 +147,13 @@ B *a = unsafe_cast<B*>(p);
 
 ### Array
 
-array is a fat pointer with lenght.
-array bounds checks at runtime.
-
+array define
 ```
 int[14] a;
-...
+```
+
+array pass by array ref
+```
 foo(int[] a) {
   print(a.length);
   print(a[0]);
@@ -128,31 +161,12 @@ foo(int[] a) {
 foo(a);
 ```
 
-pointer cast to array
+pointer to array ref
 ```
-int *p;
-int[] a = as_array(p, 5);
+unsafe int* p = ...;
+int[] a = as_array(p, 14);
 
-int *q = a.pointer;
-```
-
-### Exception
-A function that throw exception, must mark with throws keyword.
-```
-void foo() throws {
-}
-
-void dar() throws {
-  foo();
-}
-
-void bar2() {
-  try {
-    foo();
-  }
-  catch (Exception *e) {
-  }
-}
+int& q = a.pointer;
 ```
 
 ### Template
@@ -163,56 +177,32 @@ struct Bar<T> {
   }
 }
 
-
 T foo<T>(T a) {
    return a;
 }
 ```
 
 ### Null
-Default non-nullable.
+non-nullable is default.
 ```
 B* a;
 B*? a = null;
 ```
 
 
-### Getter/Setter
-```
-struct Bar {
-  private int _size;
-  setter void size(int s) {
-    this._size = s;
-  }
-  int size() { return _size; }
-}
-
-Bar b;
-b.size = 2; // call b.size(2);
-int n = b.size;
-```
-
 ### Immutable
 
-const means pointer and conent immutable
+const means pointer and content immutable
 ```
 const struct Str {
     ...
 }
-
 
 const Str* str = "";
 final StrBuf* str;
 ```
 static and global var mast define as const for thread safe.
 
-### Closure
-```
-
-void foo(|int->string| f) { f(1); }
-foo |i| { i.to_string };
-
-```
 
 
 ### Operator overload
@@ -243,7 +233,23 @@ set        a[b] = c  ternary
 add        a { b, }
 ```
 
-### enum
+### Getter/Setter
+```
+struct Bar {
+  private int _size;
+  setter void size(int s) {
+    this._size = s;
+  }
+  getter int size() { return _size; }
+}
+
+Bar b;
+b.size = 2; // call b.size(2);
+int n = b.size;
+```
+
+
+### Enum
 
 ```
 enum Color {
@@ -254,7 +260,38 @@ Color c = Color::red;
 ```
 
 
-### Removed features from C++
+
+## Plan Features
+
+### Closure
+```
+
+void foo(|int->string| f) { f(1); }
+foo |i| { i.to_string };
+
+```
+
+### Exception
+A function that throw exception, must mark with throws keyword.
+```
+void foo() throws {
+}
+
+void dar() throws {
+  foo();
+}
+
+void bar2() {
+  try {
+    foo();
+  }
+  catch (Exception *e) {
+  }
+}
+```
+
+
+## Removed features from C++
 
 - no reference, only pointer
 - no class, only struct
