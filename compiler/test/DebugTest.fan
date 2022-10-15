@@ -4,14 +4,16 @@ class DebugTest : Test {
   Void test() {
     code := 
     Str<| 
-            void main2()
-            {
-                int&? p;
-                if (true) {
-                    int a = 1;
-                    p = &a;
-                }
+            struct A {
+                int i;
             }
+
+            void main()
+            {
+                A a;
+                a.i = 2;
+            }
+
         |>
     
     

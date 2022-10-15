@@ -10,5 +10,5 @@ void main()
 {
     a := A<int>{}
     a.i = 2
-    b := a.foo
+    b := a.foo();
 }

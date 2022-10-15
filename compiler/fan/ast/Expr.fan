@@ -421,6 +421,6 @@ enum class ExprId
   awaitExpr,
   sizeOfExpr,
   addressOfExpr,
-  initListExpr
+  InitBlockExpr
 }
 

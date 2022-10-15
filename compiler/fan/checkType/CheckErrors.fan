@@ -1176,28 +1176,6 @@ class CheckErrors : CompilerStep, Coerce
       err("Non-null safe field access chained after null safe call", f.loc)
       return
     }
-
-    // if accessing storage directly
-    else
-    {
-      // check that the current class gets access to direct
-      // field storage (only defining class gets it); allow closures
-      // same scope priviledges as enclosing class
-      enclosing := curType
-      if (!field.isConst && !field.isReadonly && field.parentDef.qname != curType.qname &&
-         field.parentDef.qname != enclosing.qname)
-      {
-        err("Field storage for '$field.qname' not accessible", f.loc)
-        return
-      }
-
-      // cannot use storage operator in mixin
-      if (enclosing.isMixin && !curMethod.isSynthetic)
-      {
-        err("Field storage not accessible in mixin '$field.qname'", f.loc)
-        return
-      }
-    }
   }
 
   private Bool useFieldAccessor(FieldDef f)

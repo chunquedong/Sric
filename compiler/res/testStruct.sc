@@ -2,13 +2,14 @@
 
 
 struct A {
-    int a;
+    int i;
 
-    int foo() { return a; }
+    int foo() { return i; }
 }
 
 void main()
 {
-    int i = 1;
-    printf("hello:%d\n", i);
+    A a;
+    a.i = 2;
+    int i = a.foo();
 }

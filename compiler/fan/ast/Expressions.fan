@@ -1009,10 +1009,10 @@ class AddressOfExpr : Expr
   Expr var_v
 }
 
-class InitListExpr : Expr {
+class InitBlockExpr : Expr {
 
   new make(Loc loc, TypeRef type, Bool heap)
-    : super(loc, ExprId.initListExpr)
+    : super(loc, ExprId.InitBlockExpr)
   {
     this.baseType = type
     this.isPointer = heap

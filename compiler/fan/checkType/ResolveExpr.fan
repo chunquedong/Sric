@@ -79,7 +79,7 @@ class ResolveExpr : CompilerStep
     // variables use type inference anyhow)
     if (def.init == null && !def.isCatchVar) {
       def.init = LiteralExpr.makeDefaultLiteral(def.loc, def.ctype)
-      def.init.scopeLevel = this.scopeLevel
+      if (def.init != null) def.init.scopeLevel = this.scopeLevel
     }
     // turn init into full assignment
     if (def.init != null)
@@ -227,7 +227,7 @@ class ResolveExpr : CompilerStep
         expr.ctype = ns.intType
       case ExprId.addressOfExpr:
         expr = resolveAddressOf(expr)
-      case ExprId.initListExpr:
+      case ExprId.InitBlockExpr:
         expr = resolveInitListExpr(expr)
     }
 
@@ -329,7 +329,7 @@ class ResolveExpr : CompilerStep
     return expr
   }
   
-  private Expr resolveInitListExpr(InitListExpr expr) {
+  private Expr resolveInitListExpr(InitBlockExpr expr) {
     ResolveType.doResolveType(this, expr.baseType)
     if (expr.isPointer) {
         expr.ctype = TypeRef.pointerType(expr.loc, expr.baseType)
@@ -512,7 +512,19 @@ class ResolveExpr : CompilerStep
         }
     }
     else {
-        //TODO
+        binding := var_v.target.ctype.typeDef.slot(var_v.name)
+           if (binding is FieldDef) {
+            f := binding as FieldDef
+            Expr res = FieldExpr(var_v.loc, var_v.target, f)
+            res.len = var_v.len
+            return res
+          }
+          else if (binding is MethodDef) {
+            f := binding as MethodDef
+            Expr res = CallExpr(var_v.loc, var_v.target, f)
+            res.len = var_v.len
+            return res
+          }
     }
     return var_v
   }
@@ -573,6 +585,7 @@ class ResolveExpr : CompilerStep
             
         }
       }
+      return call
     }
     
     //maybe ctor
@@ -581,12 +594,13 @@ class ResolveExpr : CompilerStep
 //      return this.resolveConstruction(ctor)
 //    }
 
-    //TODO
-//    res := CallResolver(compiler, curType, curMethod, call, null).resolve
-//    if (call.isDynamic) {
-//      res.ctype = ns.objType.toNullable
-//    }
-//    return res
+    binding := call.target.ctype.typeDef.slot(call.name)
+    if (binding is MethodDef) {
+      f := binding as MethodDef
+      Expr res = CallExpr(call.loc, call.target, f)
+      res.len = call.len
+      return res
+    }
     return call
   }
 

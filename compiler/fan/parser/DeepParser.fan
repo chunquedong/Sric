@@ -885,7 +885,7 @@ class DeepParser : Parser {
         list.add( expr )
       consume(Token.rbrace)
       
-      expr := InitListExpr(loc, ctype, false)
+      expr := InitBlockExpr(loc, ctype, false)
       endLoc(expr)
       return expr
     }
