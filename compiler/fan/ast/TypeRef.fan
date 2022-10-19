@@ -188,43 +188,7 @@ class TypeRef : Node
   
   override Void print(AstWriter out)
   {
-    if (ptrType != null) {
-        if (ptrType == PtrType.shared_ptr) {
-            out.w("shared_ptr")
-        }
-        else if (ptrType == PtrType.weak_ptr) {
-            out.w("weak_ptr")
-        }
-        else if (ptrType == PtrType.unique_ptr) {
-            out.w("unique_ptr")
-        }
-        else if (ptrType == PtrType.unsafe_ptr) {
-            out.w("unsafe_ptr")
-        }
-        else if (ptrType == PtrType.temp_ptr) {
-            //out.w("temp_ptr")
-        }
-    }
-    else {
-        if (!podName.isEmpty && podName != "sys") {
-          out.w(podName).w("::")
-        }
-        out.w(name)
-    }
-    if (genericArgs != null) {
-      if (ptrType == PtrType.temp_ptr) {
-        genericArgs.first.print(out)
-        out.w("*")
-      }
-      else {
-        out.w("<")
-        genericArgs.each |g, i| {
-            if (i > 0) out.w(",")
-            g.print(out)
-        }
-        out.w(">")
-      }
-    }
+    out.w(toCppStr)
   }
   
 
@@ -243,40 +207,20 @@ class TypeRef : Node
     return true
   }
   
-    
-  ** generic genericArgs is absent
-  Bool defaultParameterized() {
-//    if (resolvedType is ParameterizedType) {
-//       return ((ParameterizedType)resolvedType).defaultParameterized
-//    }
-    return false
-  }
-  
   Void resolveTo(TypeDef typeDef, Bool defaultParameterized := true) {
     if (typeDef.isGeneric) {
       if (genericArgs == null && !defaultParameterized) {
         resolvedType = typeDef
       }
       else {
-        resolvedType = typeDef
-        //c := typeDef.parameterizedTypeCache[extName]
-        //TODO
-//        if (c == null) {
-//          c = ParameterizedType.create(typeDef, genericArgs)
-//          typeDef.parameterizedTypeCache[extName] = c
-//        }
-//        resolvedType = c
-//
-//        if ((resolvedType as ParameterizedType).defaultParameterized) {
-//          genericArgs = (resolvedType as ParameterizedType).genericArgs
-//        }
+        resolvedType = typeDef.instantiateGeneric(this)
       }
     }
     else {
       resolvedType = typeDef
     }
     
-    if (podName.isEmpty) podName = this.resolvedType.podName
+    //if (podName.isEmpty) podName = this.resolvedType.podName
     if (nullabelePeer != null) {
         nullabelePeer.resolvedType = this.resolvedType
         if (nullabelePeer.podName.isEmpty) nullabelePeer.podName = this.resolvedType.podName
@@ -300,7 +244,7 @@ class TypeRef : Node
   Str extName() {
     s := StrBuf()
     if (sized != null) s.add(sized)
-    if (ptrType != null) s.add("^").add(ptrType.toStr)
+    if (ptrType != null) s.add("_").add(ptrType.toStr)
     if (genericArgs != null) {
       s.add("<").add(genericArgs.join(",")).add(">")
     }
@@ -314,7 +258,54 @@ class TypeRef : Node
   ** Return signature
   **
   override Str toStr() {
-    return signature
+    signature
+  }
+  
+  Str toCppStr() {
+    s := StrBuf()
+    if (ptrType != null) {
+        if (ptrType == PtrType.shared_ptr) {
+            s.add("shared_ptr")
+        }
+        else if (ptrType == PtrType.weak_ptr) {
+            s.add("weak_ptr")
+        }
+        else if (ptrType == PtrType.unique_ptr) {
+            s.add("unique_ptr")
+        }
+        else if (ptrType == PtrType.unsafe_ptr) {
+            s.add("unsafe_ptr")
+        }
+        else if (ptrType == PtrType.temp_ptr) {
+            //out.w("temp_ptr")
+        }
+    }
+    else {
+        if (this.typeDef is GeneriParamDefDef) {
+            s.add(name)
+        }
+        else {
+            if (!podName.isEmpty && podName != "sys") {
+              s.add(podName).add("::")
+            }
+            s.add(name)
+        }
+    }
+    if (genericArgs != null) {
+      if (ptrType == PtrType.temp_ptr) {
+        s.add(genericArgs.first.toCppStr)
+        s.add("*")
+      }
+      else {
+        s.add("<")
+        genericArgs.each |g, i| {
+            if (i > 0) s.add(",")
+            s.add(g.toCppStr)
+        }
+        s.add(">")
+      }
+    }
+    return s.toStr
   }
   
   
@@ -386,39 +377,17 @@ class TypeRef : Node
 //////////////////////////////////////////////////////////////////////////
 // Generics
 //////////////////////////////////////////////////////////////////////////
-
-  **
-  ** A parameterized type is a type which has parameterized a generic type
-  ** and replaced all the generic parameter types with generic argument
-  ** types.  The type Str[] is a parameterized type of the generic type
-  ** List (V is replaced with Str).  A parameterized type always has a
-  ** signature which is different from the qname.
-  **
-  Bool isParameterized() {
-    //if (this.typeDef is ParameterizedType) return true
-    return false
-  }
   
-//  ** after generic type erasure
-//  virtual TypeRef raw() {
-//    if (typeDef is GeneriParamDefDef) {
-//        t := ((GeneriParamDefDef)typeDef).bound
-//        if (this.isNullable && !t.isNullable) t = t.toNullable
-//        return t
-//    }
-//    return this
+//  Bool isGeneriParamDefeter() {
+//    return typeDef is GeneriParamDefDef
 //  }
-  
-  Bool isGeneriParamDefeter() {
-    return typeDef is GeneriParamDefDef
-  }
-  
-  TypeDef? generic() {
-    if (typeDef.isGeneric) return typeDef
-    //if (typeDef is ParameterizedType) return ((ParameterizedType)typeDef).root
-    return null
-  }
-
+//  
+//  TypeDef? generic() {
+//    if (typeDef.isGeneric) return typeDef
+//    //if (typeDef is ParameterizedType) return ((ParameterizedType)typeDef).root
+//    return null
+//  }
+//
   **
   ** Return if this type is a generic parameter (such as V or K) in a
   ** generic type (List, Map, or Method).  Generic parameters serve
@@ -550,7 +519,7 @@ class TypeRef : Node
     // short circuit if myself
     if (m.qname == t.qname) {
         if (t.genericArgs == null || m.genericArgs == null) return true
-        if (t.defaultParameterized || m.defaultParameterized) return true
+        //if (t.defaultParameterized || m.defaultParameterized) return true
         if (t.genericArgs.size != m.genericArgs.size) {
             //echo("fits1: m != $t: size: ${m.genericArgs.size}!=${t.genericArgs.size}")
             return false

@@ -1,6 +1,6 @@
 
 struct A<T> {
-    T*? i
+    T i
     T*? foo() {
        return null
     }

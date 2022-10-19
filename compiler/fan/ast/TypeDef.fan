@@ -119,7 +119,17 @@ class TypeDef : DefNode, Scope
     return ps.find { it.paramName == name }
   }
   
-  internal once Str:TypeDef parameterizedTypeCache() { [Str:TypeDef][:] }
+  TypeDef instantiateGeneric(TypeRef type) {
+    key := type.signature
+    val := parameterizedTypeCache[key]
+    if (val != null) return val
+    typeDef := GenericInstancing().instantiate(this, type)
+    val = typeDef
+    parameterizedTypeCache[key] = val
+    return val
+  }
+  
+  private once [Str:TypeDef] parameterizedTypeCache() { [Str:TypeDef][:] }
   
 //////////////////////////////////////////////////////////////////////////
 // Data
@@ -244,6 +254,15 @@ class TypeDef : DefNode, Scope
 
   override Void print(AstWriter out)
   {
+    if (generiParamDefeters.size > 0) {
+        out.w("template<")
+        generiParamDefeters.each |p, i| {
+            if (i > 0) out.w(", ")
+            out.w("typename ")
+            out.w(p.name)
+        }
+        out.w(">").nl
+    }
     super.print(out)
     //out.flags(flags, false)
     

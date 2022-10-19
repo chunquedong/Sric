@@ -14,13 +14,13 @@ class GeneriParamDefDef : TypeDef {
   Str paramName
   Int index
 
-  new make(Loc loc, Str name, TypeDef parent, Int index, TypeRef? bound := null) : super.make(loc, parent.unit, name)
+  new make(Loc loc, Str name, TypeDef parent, Int index, TypeRef? bound := null) : super.make(loc, parent.unit, name, FConst.Public)
   {
     this.loc = loc
     this.parent = parent
     this.paramName = name
     this.index = index
-    this.name = parent.name+"^"+name
+    this.name = name
     if (bound == null) bound = TypeRef.objType(loc).toNullable
     this.bound = bound
     this.pod = parent.pod

@@ -79,51 +79,24 @@ class CNamespace
   protected PodDef? findPod(Str podName) {
     return IncCompiler.resolveDependPod(podName, this, context.log)
   }
-
-  **
-  ** Attempt resolve a signature against our dependency
-  ** library.  If not a valid signature or it can't be
-  ** resolved, then throw Err.
-  **
-  TypeRef resolveType(Str sig)
-  {
-    // check our cache first
-    t := typeCache[sig]
-    if (t != null) return t
-
-    // parse it into a TypeRef
-    t = TypeParser.parse(sig)
-    resolveTypeRef(t, null)
-    
-    if (!t.hasGeneriParamDefeter)
-      typeCache[sig] = t
-    return t
-  }
-  internal Str:TypeRef typeCache := [Str:TypeRef][:]   // keyed by signature
   
   Void resolveTypeRef(TypeRef typeRef, Loc? loc, Bool recursive := true) {
     if (typeRef.isResolved) return
     if (typeRef.podName.isEmpty)
       throw Err("Invalid typeRef: $typeRef, ${loc?.toLocStr}")
 
-    //unspoort java FFI
-    if (typeRef.podName[0] == '[') {
-      typeRef.resolveTo(error.typeDef)
-      return
-    }
-    
     pod := this.resolvePod(typeRef.podName, loc)
     
     //GeneriParamDefeterType
     typeName := typeRef.name
-    pos := typeName.index("^")
-    if (pos != null) {
-      parentName := typeName[0..<pos]
-      name := typeName[pos+1..-1]
-      parent := pod.findSymbol(parentName) as TypeDef
-      gptype := parent.getGeneriParamDefeter(name)
-      return typeRef.resolveTo(gptype)
-    }
+//    pos := typeName.index("^")
+//    if (pos != null) {
+//      parentName := typeName[0..<pos]
+//      name := typeName[pos+1..-1]
+//      parent := pod.findSymbol(parentName) as TypeDef
+//      gptype := parent.getGeneriParamDefeter(name)
+//      return typeRef.resolveTo(gptype)
+//    }
     
     if (recursive && typeRef.genericArgs != null) {
       typeRef.genericArgs.each {
@@ -135,18 +108,6 @@ class CNamespace
       throw CompilerErr("Type not found '$typeName'", loc)
     }
     typeRef.resolveTo(typeDef)
-  }
-
-  **
-  ** Attempt resolve a slot against our dependency
-  ** library.  If can't be resolved, then throw Err.
-  **
-  SlotDef resolveSlot(Str qname)
-  {
-    dot := qname.indexr(".")
-    slot := resolveType(qname[0..<dot]).typeDef.findSymbol(qname[dot+1..-1])
-    if (slot == null) throw Err("Cannot resolve slot: $qname")
-    return slot
   }
 
 //////////////////////////////////////////////////////////////////////////

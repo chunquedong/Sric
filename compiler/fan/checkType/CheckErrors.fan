@@ -1284,13 +1284,13 @@ class CheckErrors : CompilerStep, Coerce
       {
         //ignore on sig.defaultParameterized
         //echo("$base.genericArgs, $base.defaultParameterized, $base.typeDef.typeof")
-        if (base.defaultParameterized || base.typeDef.isGeneric) {
-          objType := ns.objType.toNullable
-          args.size.times |i| {
-            newArgs[i] = coerce(args[i], objType) |->| { isErr = true }
-          }
-        }
-        else
+//        if (base.defaultParameterized || base.typeDef.isGeneric) {
+//          objType := ns.objType.toNullable
+//          args.size.times |i| {
+//            newArgs[i] = coerce(args[i], objType) |->| { isErr = true }
+//          }
+//        }
+//        else
           isErr = true
       }
       else
@@ -1380,12 +1380,12 @@ class CheckErrors : CompilerStep, Coerce
 
   private Void checkParameterizedType(Loc loc, TypeRef t)
   {
-    if (t.isParameterized) {
+    //if (t.isParameterized) {
 //      ParameterizedType o := t.typeDef
 //      if (o.defaultParameterized && o.qname != "sys::Func") {
 //        warn("Expected generic parameter", loc)
 //      }
-    }
+    //}
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1423,16 +1423,16 @@ class CheckErrors : CompilerStep, Coerce
   {
     t = t.toNonNullable
 
-    if (t.isParameterized)
-    {
-//      x := (ParameterizedType)t.typeDef
-//      x.genericArgs.each |p| { checkTypeProtection(p, loc) }
-    }
-    else
-    {
+//    if (t.isParameterized)
+//    {
+////      x := (ParameterizedType)t.typeDef
+////      x.genericArgs.each |p| { checkTypeProtection(p, loc) }
+//    }
+//    else
+    //{
       if (t.isInternal && t.podName != curType.podName)
         err("Internal type '$t' not accessible", loc)
-    }
+    //}
 
     checkDeprecated(t, loc)
   }

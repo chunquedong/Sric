@@ -81,6 +81,8 @@ abstract class Expr : Node
 // Expr
 //////////////////////////////////////////////////////////////////////////
 
+  //abstract Stmt dup()
+
   **
   ** Return this expression as an Int literal usable in a tableswitch,
   ** or null if this Expr doesn't represent a constant Int.  Expressions

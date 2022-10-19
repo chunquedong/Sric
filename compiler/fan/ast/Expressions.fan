@@ -1046,7 +1046,8 @@ class InitBlockExpr : Expr {
 
   override Str toStr()
   {
-    "$baseType{"+stmts.join(";")+"}"
+    s := baseType.toCppStr
+    return "$s{"+stmts.join(";")+"}"
   }
 
   Bool isPointer

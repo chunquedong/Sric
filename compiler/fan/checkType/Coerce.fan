@@ -98,7 +98,7 @@ mixin Coerce {
     // auto-cast to or from unparameterized 'sys::Func'
     if (actual.genericArgs == null || expected.genericArgs == null) return true
     
-    if (actual.defaultParameterized || expected.defaultParameterized) return true
+    //if (actual.defaultParameterized || expected.defaultParameterized) return true
 
     // if actual function requires more parameters than
     // we are expecting, then this cannot be a match
@@ -133,7 +133,8 @@ mixin Coerce {
   {
     //always cast for generic
     //if (from.isParameterized || to.isParameterized) return true
-    if (from.qname != to.qname) return true
+    
+    if (from.qname != to.qname && from.typeDef !== to.typeDef) return true
 
     // if going from Obj? -> Obj we need a nullable coercion
     if (!to.isNullable) return from.isNullable

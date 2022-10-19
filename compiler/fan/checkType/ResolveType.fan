@@ -66,8 +66,8 @@ class ResolveType : CompilerStep {
           gt := step.curType.getGeneriParamDefeter(type.name)
           if (gt != null) {
             type.resolveTo(gt)
-            type.podName = step.curType.podName
-            type.name = step.curType.name + "^" + type.name
+            //type.podName = step.curType.podName
+            //type.name = type.name
             return
           }
       }
@@ -128,21 +128,13 @@ class ResolveType : CompilerStep {
     
     //sett typeRef's podname
     if (type.isResolved) {
-      if (type.typeDef.qname == "sys::This") {
-        type.resolveTo(step.curType)
-//        type.podName = step.curType.podName
-//        type.name = step.curType.name
-        type.podName = "sys"
-        type.name = "This"
-        return
-      }
-      if (type.typeDef is GeneriParamDefDef) {
-        type.podName = type.typeDef.qname
-        type.name = type.typeDef.name
-      }
-      else if (type.podName.isEmpty && type.typeDef.name == type.name) {
-        type.podName = type.typeDef.podName
-      }
+//      if (type.typeDef is GeneriParamDefDef) {
+//        type.podName = type.typeDef.qname
+//        type.name = type.typeDef.name
+//      }
+//      else if (type.podName.isEmpty && type.typeDef.name == type.name) {
+//        type.podName = type.typeDef.podName
+//      }
       
       if (type.typeDef.isGeneric) {
         type.typeDef.generiParamDefeters.each |g| {
@@ -150,11 +142,11 @@ class ResolveType : CompilerStep {
         }
       }
       
-      if (type.genericArgs != null) {
-        if (type.typeDef.isGeneric) {}
-        else
-          step.err("$type is not Generic", type.loc)
-      }
+//      if (type.genericArgs != null) {
+//        if (type.typeDef.isGeneric) {}
+//        else
+//          step.err("$type is not Generic", type.loc)
+//      }
     }
   }
 }

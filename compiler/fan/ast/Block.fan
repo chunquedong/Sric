@@ -110,6 +110,13 @@ class Block : Node, Scope
     v.exitBlock(this)
   }
   
+  Block dup()
+  {
+    nb := Block(this.loc)
+    nb.stmts = stmts.dup
+    return nb
+  }
+  
   override Void getChildren(Node[] list, [Str:Obj]? options) {
     stmts.each |stmt| {
       list.add(stmt)

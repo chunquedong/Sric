@@ -144,6 +144,7 @@ type cast:
 A *a = cast<A*>(p);
 B *a = unsafe_cast<B*>(p);
 ```
+no pointer arithmetic in safe mode.
 
 ### Array
 

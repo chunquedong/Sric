@@ -37,6 +37,8 @@ abstract class Stmt : Node
   ** returns true for the LHS of an assignment in all code paths.
   **
   abstract Bool isDefiniteAssign(|Expr lhs->Bool| f)
+  
+  abstract Stmt dup()
 
 //////////////////////////////////////////////////////////////////////////
 // Tree
@@ -113,6 +115,10 @@ class ExprStmt : Stmt
   override Bool isExit() { false }
 
   override Bool isDefiniteAssign(|Expr lhs->Bool| f) { expr.isDefiniteAssign(f) }
+  
+  override Stmt dup() {
+    return ExprStmt(expr)
+  }
 
   override Void walkChildren(Visitor v, VisitDepth depth)
   {
@@ -163,6 +169,12 @@ class LocalDefStmt : Stmt
     if (init != null) return init.isDefiniteAssign(f)
     return false
   }
+  
+  override Stmt dup() {
+    n := LocalDefStmt(loc, ctype, name)
+    n.init = init
+    return n
+  }
 
   override Void walkChildren(Visitor v, VisitDepth depth)
   {
@@ -191,7 +203,11 @@ class LocalDefStmt : Stmt
 
   override Void print(AstWriter out) {
     var_v.print(out)
-    if (init != null) out.w(";$init;").nl
+    if (init != null) {
+        out.w(";")
+        init.print(out)
+        out.w(";").nl
+    }
     else out.w(";").nl
   }
 
@@ -232,6 +248,12 @@ class IfStmt : Stmt
     if (condition.id === ExprId.trueLiteral) return true
     if (falseBlock == null) return false
     return falseBlock.isDefiniteAssign(f)
+  }
+  
+  override Stmt dup() {
+    n := IfStmt(loc, condition, trueBlock.dup)
+    n.falseBlock = falseBlock.dup
+    return n
   }
 
   override Void walkChildren(Visitor v, VisitDepth depth)
@@ -295,6 +317,10 @@ class ReturnStmt : Stmt
     if (expr == null) return false
     return expr.isDefiniteAssign(f)
   }
+  
+  override Stmt dup() {
+    return ReturnStmt(loc, expr)
+  }
 
   override Void walkChildren(Visitor v, VisitDepth depth)
   {
@@ -342,6 +368,10 @@ class ThrowStmt : Stmt
   override Bool isExit() { true }
 
   override Bool isDefiniteAssign(|Expr lhs->Bool| f) { true }
+  
+  override Stmt dup() {
+    return ThrowStmt(loc, exception)
+  }
 
   override Void walkChildren(Visitor v, VisitDepth depth)
   {
@@ -379,6 +409,15 @@ class ForStmt : Stmt
     if (condition.isDefiniteAssign(f)) return true
     if (init != null && init.isDefiniteAssign(f)) return true
     return false
+  }
+  
+  override Stmt dup() {
+    n := ForStmt(loc)
+    n.init = init
+    n.condition = condition
+    n.update = update
+    n.block = block?.dup
+    return n
   }
 
   override Void walkChildren(Visitor v, VisitDepth depth)
@@ -445,6 +484,10 @@ class WhileStmt : Stmt
   {
     condition.isDefiniteAssign(f)
   }
+  
+  override Stmt dup() {
+    return WhileStmt(loc, condition, block.dup)
+  }
 
   override Void walkChildren(Visitor v, VisitDepth depth)
   {
@@ -481,6 +524,10 @@ class BreakStmt : Stmt
   override Bool isExit() { false }
 
   override Bool isDefiniteAssign(|Expr lhs->Bool| f) { false }
+  
+  override Stmt dup() {
+    return BreakStmt(loc)
+  }
 
   override Void print(AstWriter out)
   {
@@ -504,6 +551,10 @@ class ContinueStmt : Stmt
   override Bool isExit() { false }
 
   override Bool isDefiniteAssign(|Expr lhs->Bool| f) { false }
+  
+  override Stmt dup() {
+    return ContinueStmt(loc)
+  }
 
   override Void print(AstWriter out)
   {
@@ -539,6 +590,15 @@ class TryStmt : Stmt
     if (finallyBlock != null && finallyBlock.isDefiniteAssign(f)) return true
     if (!block.isDefiniteAssign(f)) return false
     return catches.all |Catch c->Bool| { c.isDefiniteAssign(f) }
+  }
+  
+  override Stmt dup() {
+    n := TryStmt(loc)
+    n.exception = exception
+    n.catches = catches.map { it.dup }
+    n.block = block?.dup
+    n.finallyBlock = finallyBlock?.dup
+    return n
   }
 
   override Void walkChildren(Visitor v, VisitDepth depth)
@@ -604,6 +664,14 @@ class Catch : Node
     return block.isDefiniteAssign(f)
   }
   
+  Catch dup() {
+    n := Catch(loc)
+    n.errType = errType
+    n.errVariable = errVariable
+    n.block = block?.dup
+    return n
+  }
+  
   override Void getChildren(Node[] list, [Str:Obj]? options) {
     if (errType != null) {
       list.add(errType)
@@ -625,8 +693,8 @@ class Catch : Node
   TypeRef? errType     // Err type to catch or null for catch-all
   Str? errVariable     // name of err local variable
   Block? block         // body of catch block
-  Int start            // start offset generated in CodeAsm
-  Int end              // end offset generated in CodeAsm
+  //Int start            // start offset generated in CodeAsm
+  //Int end              // end offset generated in CodeAsm
 }
 
 **************************************************************************
@@ -657,6 +725,13 @@ class SwitchStmt : Stmt
     if (defaultBlock == null) return false
     if (!defaultBlock.isExit) return false
     return cases.all |Case c->Bool| { c.block.isExit }
+  }
+  
+  override Stmt dup() {
+    n := SwitchStmt(loc, condition)
+    n.cases = cases.map { it.dup }
+    n.defaultBlock = defaultBlock?.dup
+    return n
   }
 
   override Void walkChildren(Visitor v, VisitDepth depth)
@@ -696,7 +771,7 @@ class SwitchStmt : Stmt
   Expr condition        // test expression
   Case[] cases          // list of case blocks
   Block? defaultBlock   // default block (or null)
-  Bool isTableswitch    // just for testing
+  //Bool isTableswitch    // just for testing
 }
 
 **
@@ -708,6 +783,13 @@ class Case : Node
     : super(loc)
   {
     cases = Expr[,]
+  }
+  
+  Case dup() {
+    n := Case(loc)
+    n.cases = cases.map { it }
+    n.block = block?.dup
+    return n
   }
 
   Void walk(Visitor v, VisitDepth depth)
@@ -734,153 +816,9 @@ class Case : Node
 
   Expr[] cases     // list of case target (literal expressions)
   Block? block     // code to run for case
-  Int startOffset  // start offset for CodeAsm
+  //Int startOffset  // start offset for CodeAsm
 }
 
-**************************************************************************
-** Lower level Stmt
-**************************************************************************
-/*
-abstract class LowerLevelStmt : Stmt {
-  new make(Loc loc, StmtId id) : super(loc, id) {}
-  override Bool isExit() { false }
-  override Bool isDefiniteAssign(|Expr lhs->Bool| f) { false }
-}
-
-class TargetLabel : LowerLevelStmt {
-  Int pos := -1
-  Int[] backpatchs := [,]
-
-  new make(Loc loc) : super(loc, StmtId.targetLable) {}
-  
-  override Void print(AstWriter out)
-  {
-    out.w("label_$pos:").nl
-  }
-}
-
-class JumpStmt : LowerLevelStmt {
-  Expr? condition
-  TargetLabel? target
-  //is leave protected region
-  Bool isLeave := false
-  Bool ifFalse := true //jump when condition is false
-
-  new make(Loc loc, Expr? condition)
-    : super(loc, StmtId.jumpStmt)
-  {
-    this.condition = condition
-  }
-  
-  new makeGoto(Loc loc) : this.make(loc, null) {
-  }
-  
-  override Void walkChildren(Visitor v, VisitDepth depth)
-  {
-    condition = walkExpr(v, depth, condition)
-  }
-  
-  override Void print(AstWriter out)
-  {
-    out.w("if ($condition) goto ")
-    target.print(out)
-  }
-}
-
-class SwitchTable : LowerLevelStmt {
-  Expr condition
-  TargetLabel?[] jumps
-  TargetLabel? defJump
-  TargetLabel endLabel
-
-  new make(Loc loc, Expr? condition)
-    : super(loc, StmtId.switchTable)
-  {
-    this.condition = condition
-    jumps = [,]
-    endLabel = TargetLabel(loc)
-  }
-  
-  override Void walkChildren(Visitor v, VisitDepth depth)
-  {
-    condition = walkExpr(v, depth, condition)
-  }
-  
-  override Void print(AstWriter out)
-  {
-    out.w("switch ($condition) {").nl
-    jumps.each |jmp,i| { out.w(i).w("->").w(jmp).nl }
-    if (defJump != null) out.w("default:").w(defJump.id).nl
-    out.w("}").nl
-  }
-}
-
-class Exception : LowerLevelStmt {
-  TargetLabel exceptionEnd
-
-  Int tryStart
-  ExceptionHandler tryEnd
-  ExceptionHandler[] catchStarts
-  ExceptionHandler[] catchEnds
-  ExceptionHandler? finallyStart
-  ExceptionHandler? finallyEnd
-  
-  TryStmt stmt
-
-  new make(Loc loc, TryStmt stmt)
-    : super(loc, StmtId.exception)
-  {
-    catchStarts = ExceptionHandler[,]
-    catchEnds = ExceptionHandler[,]
-    this.tryEnd = ExceptionHandler(loc, ExceptionHandler.typeTryEnd, this)
-    this.exceptionEnd = TargetLabel(loc)
-    this.stmt = stmt
-  }
-  
-  Bool hasFinally() { stmt.finallyBlock != null }
-  
-  override Void print(AstWriter out)
-  {
-    out.w("try {").nl
-  }
-}
-
-class ExceptionHandler : LowerLevelStmt {
-  static const Int typeTryEnd := 1
-  static const Int typeCatchStart := 2
-  static const Int typeCatchEnd := 3
-  static const Int typeFinallyStart := 4
-  static const Int typeFinallyEnd := 5
-  
-  Int type
-  TypeRef? errType
-  Exception parent
-  Int pos := -1
-
-  new make(Loc loc, Int type, Exception parent)
-    : super(loc, StmtId.exceptionHandler)
-  {
-    this.type = type
-    this.parent = parent
-  }
-  
-  override Void print(AstWriter out)
-  {
-    switch (type) {
-      case typeTryEnd:
-      out.w("}").nl
-      case typeCatchStart:
-      out.w("catch($errType){").nl
-      case typeCatchEnd:
-      out.w("}").nl
-      case typeFinallyStart:
-      out.w("finally {").nl
-      case typeFinallyEnd:
-      out.w("}").nl
-    }
-  }
-}
-*/
 **************************************************************************
 ** StmtId
 **************************************************************************
@@ -898,10 +836,5 @@ enum class StmtId
   breakStmt,
   continueStmt,
   tryStmt,
-  switchStmt,
-  jumpStmt,
-  targetLable,
-  switchTable,
-  exception,
-  exceptionHandler
+  switchStmt
 }

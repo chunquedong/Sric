@@ -4,14 +4,13 @@ class DebugTest : Test {
   Void test() {
     code := 
     Str<| 
-            struct A {
-                int i;
+            struct A<T> {
+                T i
             }
 
             void main()
             {
-                A a;
-                a.i = 2;
+                a := A<int>{}
             }
 
         |>
