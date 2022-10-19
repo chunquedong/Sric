@@ -260,9 +260,33 @@ enum Color {
 Color c = Color::red;
 ```
 
+### Module
+
+A module is a compilation/deployment unit.
+
+The module name is a namespace. Namespaces can only be defined in build scripts:
+```
+name = std
+summary = standard library
+outType = lib
+version = 1.0
+depends = sys 1.0
+srcDirs = src/*
+```
+
+import a module in source file:
+```
+using std;
+using std::vec;
+```
+
+type alias in import statement:
+```
+using std::vec<int> as ints;
+```
 
 
-## Plan Features
+## Planned Features
 
 ### Closure
 ```
