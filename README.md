@@ -19,6 +19,7 @@ memory safe and compiled systems programming language
 unsafe int* p;   //unsafe raw pointer
 int& p;          //temporary local pointer
 int* p;          //unique ownership pointer
+manual int* p;   //as same as unsafe pointer, but checked in debug mode
 shared int* p;   //reference count pointer
 weak int* p;     //weak pointer for beak cycle reference
 ```
@@ -123,6 +124,8 @@ struct A {
 
 A a = { .i = 0; }
 A *a = alloc<A>() { .i = 0; }
+unsafe A *a = alloc<A>() { .i = 0; }
+shared A *a = alloc_shared<A>() { .i = 0; }
 ```
 
 type inference
