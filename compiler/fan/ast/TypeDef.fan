@@ -254,17 +254,7 @@ class TypeDef : DefNode, Scope
 
   override Void print(AstWriter out)
   {
-    if (generiParamDefeters.size > 0) {
-        out.w("template<")
-        generiParamDefeters.each |p, i| {
-            if (i > 0) out.w(", ")
-            out.w("typename ")
-            out.w(p.name)
-        }
-        out.w(">").nl
-    }
     super.print(out)
-    //out.flags(flags, false)
     
     if (isMixin)
       out.w("class $name")
@@ -273,21 +263,14 @@ class TypeDef : DefNode, Scope
     else
       out.w("struct $name")
 
-//    if (base != null || !mixins.isEmpty)
-//    {
-//      out.w(" : ")
-//      if (base != null) out.w(" $base")
-//      if (!mixins.isEmpty) out.w(", ").w(mixins.join(", ")).nl
-//    }
-    if (!inheritances.isEmpty) out.w(" : ").w(inheritances.join(", ")).nl
-    else out.nl
+    if (!inheritances.isEmpty) out.w(" : ").w(inheritances.join(", "))
 
     out.w("{").nl
     out.indent
     enumDefs.each |EnumDef e| { e.print(out) }
     slotDefs.each |SlotDef s| { s.print(out) }
     out.unindent
-    out.w("};").nl
+    out.w("}").nl
   }
   
   GeneriParamDefDef[] generiParamDefeters := [,]

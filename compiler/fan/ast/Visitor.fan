@@ -220,31 +220,3 @@ class BlockVisitor : Visitor
   |Block expr| func
 }
 
-**************************************************************************
-** TreeWriter
-**************************************************************************
-
-/*
-class TreeWriter : AstWriter mixin Visitor
-{
-  new make(OutStream out := Env.cur.out) : super(out) {}
-  override Void enterTypeDef(TypeDef def) { w(def.qname).nl; indent }
-  override Void exitTypeDef(TypeDef def) { unindent }
-
-  override Void enterFieldDef(FieldDef def) { w(def).nl; indent }
-  override Void exitFieldDef(FieldDef def) { unindent }
-
-  override Void enterMethodDef(MethodDef def) { w(def).nl; indent }
-  override Void exitMethodDef(MethodDef def) { unindent }
-
-  override Void enterBlock(Block b) { w("{").nl; indent }
-  override Void exitBlock(Block b) { unindent; w("}").nl }
-
-  override Void enterStmt(Stmt s) { w(s.id).nl; indent }
-  override Void exitStmt(Stmt s) { unindent }
-
-  override Void enterExpr(Expr expr) { w(expr).nl; indent }
-  override Void exitExpr(Expr expr) { unindent  }
-  override Expr visitExpr(Expr expr) {  return expr }
-}
-*/

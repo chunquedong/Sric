@@ -501,23 +501,10 @@ public class Parser
     def := EnumDef(cur.loc, doc, facets, consumeId, ordinal)
 
     // optional ctor args
-    if (curt === Token.lparen)
+    if (curt === Token.assign)
     {
-      consume(Token.lparen)
-      if (curt != Token.rparen)
-      {
-        while (true)
-        {
-          texpr := expr
-          //not support parse expr
-          if (texpr != null) {
-            def.ctorArgs.add( texpr )
-          }
-          if (curt === Token.rparen) break
-          consume(Token.comma);
-        }
-      }
-      consume(Token.rparen)
+      consume(Token.assign)
+      def.val = expr
     }
 
     return def
@@ -720,16 +707,16 @@ public class Parser
     field.pod = unit.pod
 
     // field initializer
-//    if (curt === Token.defAssign || curt === Token.assign)
-//    {
-//      //if (curt === Token.assign) err("Must use := for field initialization")
-//      consume
-//      curSlot = field
-//      inFieldInit = true
-//      field.init = expr
-//      inFieldInit = false
-//      curSlot = null
-//    }
+    if (curt === Token.assign)
+    {
+      //if (curt === Token.assign) err("Must use := for field initialization")
+      consume
+      curSlot = field
+      inFieldInit = true
+      field.init = expr
+      inFieldInit = false
+      curSlot = null
+    }
 
     // disable type inference for now - doing inference for literals is
     // pretty trivial, but other types is tricky;  I'm not sure it is such

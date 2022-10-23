@@ -61,8 +61,8 @@ public class FieldDef : SlotDef
   {
     v.enterFieldDef(this)
     //walkFacets(v, depth)
-//    if (depth >= VisitDepth.expr && init != null && walkInit)
-//      init = init.walk(v)
+    if (depth >= VisitDepth.expr && init != null && walkInit)
+      init = init.walk(v)
     v.visitFieldDef(this)
     v.exitFieldDef(this)
   }
@@ -72,16 +72,9 @@ public class FieldDef : SlotDef
       list.add(facets)
     }
     
-//    if (init != null) {
-//      list.add(init)
-//    }
-    
-//    if (get != null && !get.isSynthetic) {
-//      list.add(get)
-//    }
-//    if (set != null && !set.isSynthetic) {
-//      list.add(set)
-//    }
+    if (init != null) {
+      list.add(init)
+    }
   }
   **
   ** Does this field covariantly override a method?
@@ -101,16 +94,6 @@ public class FieldDef : SlotDef
   **
   override Bool isParameterized() { false }
 
-  **
-  ** Return the bridge if this slot is foreign or uses any foreign
-  ** types in its signature.
-  **
-//  override CBridge? usesBridge()
-//  {
-//    if (bridge != null) return bridge
-//    return fieldType.bridge
-//  }
-
 //////////////////////////////////////////////////////////////////////////
 // Debug
 //////////////////////////////////////////////////////////////////////////
@@ -120,14 +103,15 @@ public class FieldDef : SlotDef
     super.print(out)
     
     if (isConst) out.w("const ")
-    //else if (isReadonly) out.w("let ")
-    //else out.w("var ")
+    else if (isReadonly) out.w("let ")
+    else out.w("var ")
+    
     fieldType.print(out)
     out.w(" ")
     out.w(name).w(";")
     
-    //if (init != null) { out.w(" = "); init.print(out) }
-    out.nl.nl
+    if (init != null) { out.w(" = "); init.print(out) }
+    out.nl
    }
 
 //////////////////////////////////////////////////////////////////////////
@@ -136,7 +120,7 @@ public class FieldDef : SlotDef
 
   TypeRef fieldType  // field type
 //  Field? field              // resolved finalized field
-//  Expr? init                // init expression or null
+  Expr? init                // init expression or null
   Bool walkInit := true     // tree walk init expression
   //FieldDef? concreteBase      // if I override a concrete virtual field
   //TypeRef? inheritedRet       // if covariant override of method

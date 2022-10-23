@@ -22,9 +22,9 @@ class DebugTest : Test {
     file := "testFile"
     m.updateSource(file, code)
     
-    m.checkError
+    m.run
     
-    m.context.pod.dump
+    //m.context.pod.dump
 
   }
 }

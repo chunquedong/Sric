@@ -49,6 +49,7 @@ mixin FConst
   const static Int Overload   := 0x01000000 //imples param default by Overload
   const static Int Closure    := 0x02000000
   const static Int Once       := 0x04000000
+  const static Int Inline     := 0x08000000
   const static Int FlagsMask  := 0x0fffffff
   
 //////////////////////////////////////////////////////////////////////////

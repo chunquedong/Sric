@@ -41,16 +41,14 @@ class SemanticTest : GoldenTest {
     m := IncCompiler(pod)
     //m.context.input.isScript = true
     
+    s := StrBuf()
+    m.setOutStream(s.out)
+    
     file := name
     m.updateSource(file, code)
     
-    m.checkError
+    m.run
     
-    s := StrBuf()
-    
-    writer := AstWriter.make(s.out)
-    pod.print(writer)
-//    s.add(code)
     s.add(separator)
     m.context.log.errs.each { s.add(it).add("\n") }
 

@@ -26,7 +26,7 @@ class EnumDef : Node
     this.facets   = facets
     this.name     = name
     this.ordinal  = ordinal
-    this.ctorArgs = Expr[,]
+    //this.ctorArgs = Expr[,]
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -41,8 +41,8 @@ class EnumDef : Node
   override Void print(AstWriter out)
   {
     out.w(name)
-    if (!ctorArgs.isEmpty)
-      out.w("(").w(ctorArgs.join(", ")).w(")")
+    if (val != null)
+      out.w(" = ").w(val)
     out.w("  // ").w(ordinal).nl
   }
 
@@ -53,6 +53,7 @@ class EnumDef : Node
   DocDef? doc
   FacetDef? facets
   Int ordinal
+  Expr? val
   Str name
-  Expr[] ctorArgs
+  //Expr[] ctorArgs
 }

@@ -36,7 +36,7 @@ abstract class DefNode : Node, Symbol
       facets.print(out)
       out.nl
     }
-    
+    out.flags(flags)
   }
   
   **

@@ -265,9 +265,11 @@ Color c = Color::red;
 
 ### Module
 
-A module is a compilation/deployment unit.
+Module is namespace as well as the unit of compilation and deployment.
 
-The module name is a namespace. Namespaces can only be defined in build scripts:
+A module contains several source files and folders.
+
+The module is defined in build scripts:
 ```
 name = std
 summary = standard library
@@ -277,7 +279,7 @@ depends = sys 1.0
 srcDirs = src/*
 ```
 
-import a module in source file:
+import external module in source file:
 ```
 using std;
 using std::vec;

@@ -31,6 +31,8 @@ class MethodDef : SlotDef, Scope
   override Symbol? doFindSymbol(Str name) {
     paramDefs.find { it.name == name }
   }
+  
+  Bool isInline() { flags.and(FConst.Inline) != 0 }
 
   **
   ** Does this method contains generic parameters in its signature.
@@ -251,7 +253,7 @@ class MethodDef : SlotDef, Scope
     super.print(out)
     
     //if (isCtor) out.w("new ")
-    //else out.w("fun ")
+    out.w("fun ")
     
     ret.print(out)
     out.w(" ")
@@ -262,8 +264,6 @@ class MethodDef : SlotDef, Scope
       p.print(out)
     }
     out.w(")")
-    
-    out.nl
 
     if (code != null) code.print(out)
     out.nl

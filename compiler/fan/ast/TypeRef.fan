@@ -188,10 +188,9 @@ class TypeRef : Node
   
   override Void print(AstWriter out)
   {
-    out.w(toCppStr)
+    out.w(toStr)
   }
   
-
   TypeDef typeDef() {
     if (resolvedType == null) {
       throw Err("try access unresolved type: $this")
@@ -261,7 +260,7 @@ class TypeRef : Node
     signature
   }
   
-  Str toCppStr() {
+  Str toCppStr(Str? curPodName = null) {
     s := StrBuf()
     if (ptrType != null) {
         if (ptrType == PtrType.shared_ptr) {
@@ -285,22 +284,24 @@ class TypeRef : Node
             s.add(name)
         }
         else {
-            if (!podName.isEmpty && podName != "sys") {
-              s.add(podName).add("::")
+            pname := podName
+            if (pname.isEmpty) pname = typeDef.podName
+            if (pname != curPodName && pname != "sys") {
+              s.add(pname).add("::")
             }
             s.add(name)
         }
     }
     if (genericArgs != null) {
       if (ptrType == PtrType.temp_ptr) {
-        s.add(genericArgs.first.toCppStr)
+        s.add(genericArgs.first.toCppStr(curPodName))
         s.add("*")
       }
       else {
         s.add("<")
         genericArgs.each |g, i| {
             if (i > 0) s.add(",")
-            s.add(g.toCppStr)
+            s.add(g.toCppStr(curPodName))
         }
         s.add(">")
       }

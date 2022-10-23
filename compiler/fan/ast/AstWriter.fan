@@ -76,7 +76,7 @@ class AstWriter
   **
   ** Write the source code for the mask of flags with a trailing space.
   **
-  AstWriter flags(Int flags, Bool inType)
+  AstWriter flags(Int flags)
   {
     
     if (flags.and(FConst.Native)    != 0) w("native ")
@@ -85,19 +85,15 @@ class AstWriter
     if (flags.and(FConst.Final)     != 0) w("final ")
     if (flags.and(FConst.Const)     != 0) w("const ")
     
-    if (inType) {
-      if (flags.and(FConst.Public)    != 0) w("public: ")
-      if (flags.and(FConst.Protected) != 0) w("protected: ")
-      if (flags.and(FConst.Private)   != 0) w("private: ")
-      if (flags.and(FConst.Internal)  != 0) w("internal: ")
-      
-      
-      if (flags.and(FConst.Static)    != 0) w("static ")
-      if (flags.and(FConst.Override)  != 0) w("override ")
-      if (flags.and(FConst.Abstract)  != 0) w("abstract ")
-      if (flags.and(FConst.Virtual)   != 0) w("virtual ")
-    }
-    
+    if (flags.and(FConst.Public)    != 0) w("public ")
+    if (flags.and(FConst.Protected) != 0) w("protected ")
+    if (flags.and(FConst.Private)   != 0) w("private ")
+    if (flags.and(FConst.Internal)  != 0) w("internal ")
+
+    if (flags.and(FConst.Static)    != 0) w("static ")
+    if (flags.and(FConst.Override)  != 0) w("override ")
+    if (flags.and(FConst.Abstract)  != 0) w("abstract ")
+    if (flags.and(FConst.Virtual)   != 0) w("virtual ")
 
     //if (flags.and(FConst.Storage)   != 0) w("storage ")
     if (flags.and(FConst.Virtual)   != 0) w("virtual ")
@@ -114,7 +110,7 @@ class AstWriter
   static Str flagsToStr(Int flags)
   {
     s := StrBuf()
-    w := AstWriter(s.out).flags(flags, true)
+    w := AstWriter(s.out).flags(flags)
     return s.toStr
   }
 

@@ -39,7 +39,17 @@ class IncCompiler {
         
         CheckErrors(ctx),
         CheckParamDefs(ctx),
+        
+        GenerateCpp(ctx),
+        GenerateCpp(ctx){isImpl = true},
     ]
+  }
+  
+  Void setOutStream(OutStream out) {
+    pipelines.each |p| {
+        g := p as GenerateCpp
+        if (g != null) g.out = AstWriter(out)
+    }
   }
   
   static PodDef resolveDependPod(Str name, CNamespace ns, CompilerLog log) {

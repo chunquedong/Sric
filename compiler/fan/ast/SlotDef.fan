@@ -32,7 +32,6 @@ abstract class SlotDef : DefNode
   
   override Void print(AstWriter out) {
     super.print(out)
-    out.flags(flags, parentDef != null)
   }
   
   virtual Bool isParameterized() { false }
