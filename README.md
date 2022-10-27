@@ -19,7 +19,7 @@ memory safe and compiled systems programming language
 raw int* p;      //unsafe raw pointer
 int& p;          //temporary local pointer
 int* p;          //unique ownership pointer
-debug int* p;    //checked in debug mode
+dchecked int* p; //checked in debug mode
 checked int* p;  //checked in runtime
 shared int* p;   //reference count pointer
 weak int* p;     //weak pointer for beak cycle reference
@@ -73,10 +73,10 @@ print(b); //compile error: already moved
 ```
 
 ### Unsafe
-dereference unsafe pointer in unsafe block
+dereference raw pointer in unsafe block
 
 ```
-unsafe int* p;
+raw int* p;
 ...
 unsafe {
   int i = *p;
@@ -182,7 +182,7 @@ foo(a);
 
 pointer to array ref
 ```
-unsafe int* p = ...;
+raw int* p = ...;
 int[] a = as_array(p, 14);
 
 int& q = a.pointer;
@@ -211,16 +211,28 @@ B*? a = null;
 
 ### Immutable
 
-const means pointer and content immutable
+readonly for outside class.
+```
+struct A {
+   readonly int i;
+   void change() {
+      i = 1;
+   }
+}
+
+A a;
+a.i = 1; //compile error;
+```
+
+const class and const value
 ```
 const struct Str {
     ...
 }
 
 const Str* str = "";
-final StrBuf* str;
 ```
-static and global var mast define as const for thread safe.
+static and global value mast define as const for thread safe.
 
 
 
