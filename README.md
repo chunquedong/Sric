@@ -16,10 +16,11 @@ memory safe and compiled systems programming language
 ### Pointer Type
 
 ```
-unsafe int* p;   //unsafe raw pointer
+raw int* p;      //unsafe raw pointer
 int& p;          //temporary local pointer
 int* p;          //unique ownership pointer
-manual int* p;   //as same as unsafe pointer, but checked in debug mode
+debug int* p;    //checked in debug mode
+checked int* p;  //checked in runtime
 shared int* p;   //reference count pointer
 weak int* p;     //weak pointer for beak cycle reference
 ```
@@ -131,6 +132,20 @@ shared A *a = alloc_shared<A>() { .i = 0; }
 type inference
 ```
 a := alloc<A>() { .i = 0; }
+```
+
+Constructor
+```
+struct A {
+  const int i;
+  
+  cotr void init(int s) {
+    this { .i=s; }
+  }
+}
+
+a := A.init(2);
+p := alloc<A>().init(2);
 ```
 
 
