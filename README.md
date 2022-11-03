@@ -96,14 +96,15 @@ void main() {
 
 ### Inheritance
 
+Only interface can have virtual methods.
 ```
-mixin I {
-  virtual void foo() { ... }
+interface I {
+  virtual void foo();
 }
 
-virtual struct B {
+struct B {
   int a;
-  virtual void bar() { ... }
+  void foo() { ... }
 }
 
 struct A : B, I {
@@ -111,7 +112,6 @@ struct A : B, I {
   override void foo(B* b) {
     ...
   }
-  override void bar() {...}
 }
 ```
 
@@ -134,7 +134,7 @@ type inference
 a := alloc<A>() { .i = 0; }
 ```
 
-Constructor
+Constructor as same as normal method except for extra checks.
 ```
 struct A {
   const int i;
@@ -180,6 +180,9 @@ foo(int[] a) {
 foo(a);
 ```
 
+array ref is temp fat pointer.
+heap dynamic array is not supported.
+
 pointer to array ref
 ```
 raw int* p = ...;
@@ -187,6 +190,7 @@ int[] a = as_array(p, 14);
 
 int& q = a.pointer;
 ```
+
 
 ### Template
 ```
@@ -356,7 +360,7 @@ void bar2() {
 - no function overload
 - define one var per statement
 - no RAII
-- no constructor and destructor
+- no explicit constructor and destructor
 - no nested class, nested function
 - no namespace, only module
 - no macro
