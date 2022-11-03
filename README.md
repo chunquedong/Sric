@@ -22,7 +22,7 @@ int* p;          //unique ownership pointer
 dchecked int* p; //checked in debug mode
 checked int* p;  //checked in runtime
 shared int* p;   //reference count pointer
-weak int* p;     //weak pointer for beak cycle reference
+weak int* p;     //weak pointer
 ```
 
 ### Pointer safe
@@ -115,6 +115,14 @@ struct A : B, I {
 }
 ```
 
+Protection
+```
+public
+private
+protected
+internal
+```
+defaults to public
 
 ### Struct Init
 
@@ -268,21 +276,6 @@ set        a[b] = c  ternary
 add        a { b, }
 ```
 
-### Getter/Setter
-```
-struct Bar {
-  private int _size;
-  setter void size(int s) {
-    this._size = s;
-  }
-  getter int size() { return _size; }
-}
-
-Bar b;
-b.size = 2; // call b.size(2);
-int n = b.size;
-```
-
 
 ### Enum
 
@@ -351,6 +344,20 @@ void bar2() {
 }
 ```
 
+### Getter/Setter
+```
+struct Bar {
+  private int _size;
+  setter void size(int s) {
+    this._size = s;
+  }
+  getter int size() { return _size; }
+}
+
+Bar b;
+b.size = 2; // call b.size(2);
+int n = b.size;
+```
 
 ## Removed features from C++
 
