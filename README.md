@@ -22,7 +22,7 @@ int* p;          //unique ownership pointer
 dchecked int* p; //checked in debug mode
 checked int* p;  //checked in runtime
 shared int* p;   //reference count pointer
-weak int* p;     //weak pointer for beak cycle reference
+weak int* p;     //weak pointer
 ```
 
 ### Pointer safe
@@ -96,14 +96,15 @@ void main() {
 
 ### Inheritance
 
+Only interface can have virtual methods.
 ```
-mixin I {
-  virtual void foo() { ... }
+interface I {
+  virtual void foo();
 }
 
-virtual struct B {
+struct B {
   int a;
-  virtual void bar() { ... }
+  void foo() { ... }
 }
 
 struct A : B, I {
@@ -111,10 +112,17 @@ struct A : B, I {
   override void foo(B* b) {
     ...
   }
-  override void bar() {...}
 }
 ```
 
+Protection
+```
+public
+private
+protected
+internal
+```
+defaults to public
 
 ### Struct Init
 
@@ -134,7 +142,7 @@ type inference
 a := alloc<A>() { .i = 0; }
 ```
 
-Constructor
+Constructor as same as normal method except for extra checks.
 ```
 struct A {
   const int i;
@@ -180,6 +188,9 @@ foo(int[] a) {
 foo(a);
 ```
 
+array ref is temp fat pointer.
+heap dynamic array is not supported.
+
 pointer to array ref
 ```
 raw int* p = ...;
@@ -187,6 +198,7 @@ int[] a = as_array(p, 14);
 
 int& q = a.pointer;
 ```
+
 
 ### Template
 ```
@@ -264,21 +276,6 @@ set        a[b] = c  ternary
 add        a { b, }
 ```
 
-### Getter/Setter
-```
-struct Bar {
-  private int _size;
-  setter void size(int s) {
-    this._size = s;
-  }
-  getter int size() { return _size; }
-}
-
-Bar b;
-b.size = 2; // call b.size(2);
-int n = b.size;
-```
-
 
 ### Enum
 
@@ -347,6 +344,20 @@ void bar2() {
 }
 ```
 
+### Getter/Setter
+```
+struct Bar {
+  private int _size;
+  setter void size(int s) {
+    this._size = s;
+  }
+  getter int size() { return _size; }
+}
+
+Bar b;
+b.size = 2; // call b.size(2);
+int n = b.size;
+```
 
 ## Removed features from C++
 
@@ -356,7 +367,7 @@ void bar2() {
 - no function overload
 - define one var per statement
 - no RAII
-- no constructor and destructor
+- no explicit constructor and destructor
 - no nested class, nested function
 - no namespace, only module
 - no macro
