@@ -90,5 +90,7 @@ class PodDef : Node
   //Str:Obj index := [Str:Obj][:]       // pod index props (vals are Str or Str[])
   CompilationUnit[] cunits := [,]           // Tokenize
 
+  TypeDef[] types = [,]    //ordered types
+
   Str? summary
 }

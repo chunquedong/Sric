@@ -34,6 +34,7 @@ class IncCompiler {
         ResolveImports(ctx),
         ResolveType(ctx),
 
+        OrderByInheritance(ctx),
         CheckInheritance(ctx),
         ResolveExpr(ctx),
         
