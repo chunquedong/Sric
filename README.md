@@ -17,20 +17,18 @@ memory safe and compiled systems programming language
 
 ```
 raw int* p;      //unsafe raw pointer
-int& p;          //temporary local pointer
+int& p;          //instant pointer
 int* p;          //unique ownership pointer
-dchecked int* p; //checked in debug mode
-checked int* p;  //checked in runtime
 shared int* p;   //reference count pointer
 weak int* p;     //weak pointer
 ```
 
 ### Pointer safe
 
-unique pointer and temporary work like Rust, but no lifetime annotations.
+unique pointer and instant pointer work like Rust, but no lifetime annotations.
 
-- other pointers can implicit convert to temporary pointer.
-- temporary pointer can't convert to others.
+- other pointers can implicit convert to instant pointer.
+- instant pointer convert to others in unsafe block.
 - short liftime object can't be referenced by long lifetime.
 
 ```
