@@ -95,6 +95,7 @@ void main() {
 ### Inheritance
 
 Only interface can have virtual methods.
+Inherite struct by super keyword.
 ```
 interface I {
   virtual void foo();
@@ -102,15 +103,16 @@ interface I {
 
 struct B {
   int a;
-  void foo() { ... }
+  void bar() { ... }
 }
 
-struct A : B, I {
-  B* b;
+struct A : I {
+  B super;
   override void foo(B* b) {
     ...
   }
 }
+
 ```
 
 Protection
@@ -122,7 +124,7 @@ internal
 ```
 defaults to public
 
-### Struct Init
+### Init Block
 
 ```
 struct A {
@@ -140,12 +142,11 @@ type inference
 a := alloc<A>() { .i = 0; }
 ```
 
-Constructor as same as normal method except for extra checks.
+this init block:
 ```
 struct A {
   const int i;
-  
-  cotr void init(int s) {
+  void init(int s) {
     this { .i=s; }
   }
 }
@@ -187,7 +188,6 @@ foo(a);
 ```
 
 array ref is temp fat pointer.
-heap dynamic array is not supported.
 
 pointer to array ref
 ```
@@ -240,9 +240,9 @@ const struct Str {
     ...
 }
 
-const Str* str = "";
+const Str* str = ...;
 ```
-static and global value mast define as const for thread safe.
+global value mast define as const in safe mode.
 
 
 
