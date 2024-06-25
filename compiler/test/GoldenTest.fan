@@ -9,7 +9,7 @@ abstract class GoldenTest : Test {
       fileName += "/" + name
     }
    
-    file := goldenDir + (fileName+".golden").toUri
+    file := goldenDir + (fileName+".cpp").toUri
     file.parent.create
     return file
   }

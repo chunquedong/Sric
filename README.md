@@ -4,7 +4,7 @@ memory safe and compiled systems programming language
 
 ## Features
 - fast as C. low-level memeory access
-- safe as Rust. compile time lifetime check
+- safe as Rust. compile time and runtime check
 - object-oriented. inheritance and polymorphisn
 - simple as C. less features than C++
 - interoperate with existing code. compile to C++ code
@@ -16,19 +16,24 @@ memory safe and compiled systems programming language
 ### Pointer Type
 
 ```
-raw int* p;      //unsafe raw pointer
-int& p;          //instant pointer
-int* p;          //unique ownership pointer
-shared int* p;   //reference count pointer
-weak int* p;     //weak pointer
+int& p;              //instant pointer, runtime checked in debug mode
+int* p;              //ownership pointer, unique or ref counted
+raw_ptr<int> p;      //unsafe raw pointer
+weak_ptr<int> p;     //weak pointer
 ```
 
 ### Pointer safe
 
-unique pointer and instant pointer work like Rust, but no lifetime annotations.
-
+- runtime check dangling pointer in debug mode.
 - other pointers can implicit convert to instant pointer.
-- instant pointer convert to others in unsafe block.
+- instant pointer convert to others by function.
+```
+raw_ptr<int> p1;
+int* p2 = unsafe_raw_to_owner(p1);
+
+int& p3 = ...;
+int* p4 = instant_to_owner(p3);
+```
 - short liftime object can't be referenced by long lifetime.
 
 ```
@@ -40,41 +45,30 @@ void foo() {
   }
 }
 ```
-- borrow check
+
+### Share and Move
+
+share or move ownership pointer
 ```
-void main() {
-  int* p = ...;
-  int& p2 = p;
-  foo(move p); //compile error
-}
+int* p = ...;
+int* p2 = move p;
+int* p3 = share p2;
 ```
 
-### Copy and Move
-
-it cannot be copied if the struct has unique pointer:
-```
-struct A {
-  int* i;
-}
-A a;
-A b = a; //compile error
-```
-
-move the ownership
+explicit move if the struct has ownership pointer:
 ```
 struct A {
   int* i;
 }
 A a;
 A b = move a;
-print(b); //compile error: already moved
 ```
 
 ### Unsafe
 dereference raw pointer in unsafe block
 
 ```
-raw int* p;
+raw_ptr<int> p;
 ...
 unsafe {
   int i = *p;
@@ -131,15 +125,13 @@ struct A {
   int i;
 }
 
-A a = { .i = 0; }
-A *a = alloc<A>() { .i = 0; }
-unsafe A *a = alloc<A>() { .i = 0; }
-shared A *a = alloc_shared<A>() { .i = 0; }
+A a { .i = 0; };
+A *a = alloc<A>() { .i = 0; };
 ```
 
 type inference
 ```
-a := alloc<A>() { .i = 0; }
+auto a = alloc<A>() { .i = 0; }
 ```
 
 this init block:
@@ -151,8 +143,8 @@ struct A {
   }
 }
 
-a := A.init(2);
-p := alloc<A>().init(2);
+auto a= A.init(2);
+auto p = alloc<A>().init(2);
 ```
 
 
@@ -191,7 +183,7 @@ array ref is temp fat pointer.
 
 pointer to array ref
 ```
-raw int* p = ...;
+raw_ptr<int> p = ...;
 int[] a = as_array(p, 14);
 
 int& q = a.pointer;
