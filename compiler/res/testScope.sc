@@ -2,7 +2,7 @@
 void main1()
 {
     int i = 1;
-    int* p = &i
+    int* p = &i;
 }
 
 void main2()

@@ -151,11 +151,11 @@ enum class Token
   varKeyword,
   letKeyword,
   funKeyword,
-  sharedKeyword,
-  uniqueKeyword,
+  shareKeyword,
+  moveKeyword,
   weakKeyword,
-  tempKeyword,
   unsafeKeyword,
+  autoKeyword,
 
   // misc
   eof("eof");

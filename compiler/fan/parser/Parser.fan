@@ -827,7 +827,7 @@ public class Parser
     }
     
     param := ParamDef(cur.loc, typeRef, consumeId)
-    if (curt === Token.defAssign || curt === Token.assign)
+    if (curt === Token.assign)
     {
       //if (curt === Token.assign) err("Must use := for parameter default");
       consume
@@ -884,7 +884,7 @@ public class Parser
   protected TypeRef? tryType()
   {
     // types can only begin with identifier, | or [
-    if (curt !== Token.identifier && curt !== Token.pipe && curt !== Token.lbracket)
+    if (curt !== Token.identifier && curt !== Token.pipe && curt !== Token.lbracket && curt !== Token.autoKeyword)
       return null
 
     oldSuppress := suppressErr
@@ -944,42 +944,21 @@ public class Parser
   ** Type signature:
   **   <type>      :=  <simpleType> | <listType> | <mapType> | <funcType>
   **   <listType>  :=  <type> "[]"
-  **   <pointerType>   := [shared|unique|weak] (<type> "*" | <type> "&")
   **
   protected TypeRef ctype(Bool isTypeRef := false)
   {
     TypeRef? t := null
     loc := cur.loc
-    
-    if (curt == Token.sharedKeyword || curt === Token.weakKeyword || curt === Token.uniqueKeyword || curt === Token.unsafeKeyword) {
-        if (curt === Token.sharedKeyword) {
-            consume(Token.sharedKeyword)
-            t = ctype(isTypeRef)
-            t.ptrType = PtrType.shared_ptr
-            return t
-        }
-        if (curt === Token.weakKeyword) {
-            consume(Token.weakKeyword)
-            t = ctype(isTypeRef)
-            t.ptrType = PtrType.weak_ptr
-            return t
-        }
-        if (curt === Token.unsafeKeyword) {
-            consume(Token.unsafeKeyword)
-            t = ctype(isTypeRef)
-            t.ptrType = PtrType.unsafe_ptr
-            return t
-        }
-        if (curt === Token.uniqueKeyword) {
-            consume(Token.uniqueKeyword)
-        }
-    }
 
     // Types can begin with:
     //   - id
     //   - [k:v]
     //   - |a, b -> r|
-    if (curt === Token.identifier)
+    if (curt === Token.autoKeyword) {
+      t = TypeRef.objType(loc)
+      consume
+    }
+    else if (curt === Token.identifier)
     {
       t = simpleType
     }
@@ -1044,7 +1023,12 @@ public class Parser
     }
     
     if (curt === Token.star || curt === Token.amp) {
-        t = TypeRef.pointerType(loc, t, curt === Token.star ? PtrType.unique_ptr : PtrType.temp_ptr)
+        if (curt === Token.star) {
+            t = TypeRef.ownerptrType(loc, t);
+        }
+        else {
+            t = TypeRef.instantptrType(loc, t);
+        }
         consume()
         if (curt === Token.question && !cur.whitespace)
         {

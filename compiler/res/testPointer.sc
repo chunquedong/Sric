@@ -1,15 +1,15 @@
 struct A {
-    shared int* a;
+    int* a;
     int* b;
-    unsafe int* c;
+    raw_ptr<int> c;
 
     int& foo(int& c) {
-        return c
+        return c;
     }
 }
 
 void main()
 {
     int i = 1;
-    int& p = &i
+    int& p = &i;
 }

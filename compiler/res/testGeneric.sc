@@ -1,14 +1,14 @@
 
 struct A<T> {
-    T i
+    T i;
     T*? foo() {
-       return null
+       return null;
     }
 }
 
 void main()
 {
-    a := A<int>{}
-    a.i = 2
-    b := a.foo();
+    A<int> a = A<int>{};
+    a.i = 2;
+    int* b = a.foo();
 }

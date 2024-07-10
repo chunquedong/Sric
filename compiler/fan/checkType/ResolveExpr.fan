@@ -323,7 +323,7 @@ class ResolveExpr : CompilerStep
 
   private Expr resolveAddressOf(AddressOfExpr expr) {
     //expr.var_v = resolveExpr(expr.var_v)
-    expr.ctype = TypeRef.pointerType(expr.loc, expr.var_v.ctype, PtrType.temp_ptr)
+    expr.ctype = TypeRef.instantptrType(expr.loc, expr.var_v.ctype)
     ResolveType.doResolveType(this, expr.ctype)
     expr.scopeLevel = expr.var_v.scopeLevel
     return expr
@@ -332,7 +332,7 @@ class ResolveExpr : CompilerStep
   private Expr resolveInitListExpr(InitBlockExpr expr) {
     ResolveType.doResolveType(this, expr.baseType)
     if (expr.isPointer) {
-        expr.ctype = TypeRef.pointerType(expr.loc, expr.baseType)
+        expr.ctype = TypeRef.instantptrType(expr.loc, expr.baseType)
         expr.scopeLevel = 0
     }
     else {

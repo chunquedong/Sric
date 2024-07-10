@@ -8,7 +8,10 @@ native public struct exception {}
 native public struct any {}
 
 native public struct array<T> {}
-native public struct pointer<T> {}
+native public struct owner_ptr<T> {}
+native public struct instant_ptr<T> {}
+native public struct raw_ptr<T> {}
+native public struct weak_ptr<T> {}
 native public struct function<T> {}
 
 native public int printf(string format, ...);

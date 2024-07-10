@@ -6,10 +6,6 @@
 //   4 Jun 06  Brian Frank  Creation
 //
 
-enum class PtrType {
-    shared_ptr, weak_ptr, unique_ptr, temp_ptr, unsafe_ptr
-}
-
 **
 ** TypeRef is a "compiler type" which is class used for representing
 ** the Fantom type system in the compiler.  CTypes map to types within
@@ -27,8 +23,6 @@ class TypeRef : Node
   
   ** for sized primitive type. the Int32's extName is 32
   Str? sized
-  
-  PtrType? ptrType
   
   **
   ** Is this is a nullable type (marked with trailing ?)
@@ -162,17 +156,29 @@ class TypeRef : Node
   static TypeRef? boolType(Loc loc) { makeRef(loc, "sys", "bool") }
   static TypeRef? intType(Loc loc) { makeRef(loc, "sys", "int") }
   static TypeRef? strType(Loc loc) { makeRef(loc, "sys", "string") }
-  static TypeRef? pointerType(Loc loc, TypeRef elemType, PtrType ptrType = PtrType.unique_ptr) {
-    t := makeRef(loc, "sys", "pointer")
+  static TypeRef? ownerptrType(Loc loc, TypeRef elemType) {
+    t := makeRef(loc, "sys", "owner_ptr")
     t.genericArgs = [elemType]
-    t.ptrType = ptrType
     return t
   }
-
-  static TypeRef? listType(Loc loc, TypeRef elemType, PtrType ptrType = PtrType.unique_ptr) {
+  static TypeRef? instantptrType(Loc loc, TypeRef elemType) {
+    t := makeRef(loc, "sys", "instant_ptr")
+    t.genericArgs = [elemType]
+    return t
+  }
+  static TypeRef? rawptrType(Loc loc, TypeRef elemType) {
+    t := makeRef(loc, "sys", "raw_ptr")
+    t.genericArgs = [elemType]
+    return t
+  }
+  static TypeRef? weakptrType(Loc loc, TypeRef elemType) {
+    t := makeRef(loc, "sys", "weak_ptr")
+    t.genericArgs = [elemType]
+    return t
+  }
+  static TypeRef? listType(Loc loc, TypeRef elemType) {
     t := makeRef(loc, "sys", "array")
     t.genericArgs = [elemType]
-    t.ptrType = ptrType
     return t
   }
   static TypeRef? funcType(Loc loc, TypeRef[] params, TypeRef ret) {
@@ -243,7 +249,6 @@ class TypeRef : Node
   Str extName() {
     s := StrBuf()
     if (sized != null) s.add(sized)
-    if (ptrType != null) s.add("_").add(ptrType.toStr)
     if (genericArgs != null) {
       s.add("<").add(genericArgs.join(",")).add(">")
     }
@@ -262,49 +267,26 @@ class TypeRef : Node
   
   Str toCppStr(Str? curPodName = null) {
     s := StrBuf()
-    if (ptrType != null) {
-        if (ptrType == PtrType.shared_ptr) {
-            s.add("shared_ptr")
-        }
-        else if (ptrType == PtrType.weak_ptr) {
-            s.add("weak_ptr")
-        }
-        else if (ptrType == PtrType.unique_ptr) {
-            s.add("unique_ptr")
-        }
-        else if (ptrType == PtrType.unsafe_ptr) {
-            s.add("unsafe_ptr")
-        }
-        else if (ptrType == PtrType.temp_ptr) {
-            //out.w("temp_ptr")
-        }
+
+    if (this.typeDef is GeneriParamDefDef) {
+        s.add(name)
     }
     else {
-        if (this.typeDef is GeneriParamDefDef) {
-            s.add(name)
+        pname := podName
+        if (pname.isEmpty) pname = typeDef.podName
+        if (pname != curPodName && pname != "sys") {
+          s.add(pname).add("::")
         }
-        else {
-            pname := podName
-            if (pname.isEmpty) pname = typeDef.podName
-            if (pname != curPodName && pname != "sys") {
-              s.add(pname).add("::")
-            }
-            s.add(name)
-        }
+        s.add(name)
     }
+    
     if (genericArgs != null) {
-      if (ptrType == PtrType.temp_ptr) {
-        s.add(genericArgs.first.toCppStr(curPodName))
-        s.add("*")
-      }
-      else {
         s.add("<")
         genericArgs.each |g, i| {
             if (i > 0) s.add(",")
             s.add(g.toCppStr(curPodName))
         }
         s.add(">")
-      }
     }
     return s.toStr
   }
@@ -341,7 +323,6 @@ class TypeRef : Node
     this.resolvedType = type.resolvedType
     this._isNullable = true
     this.genericArgs = type.genericArgs
-    this.ptrType = type.ptrType
     this.loc = type.loc
     this.len = type.len
     //d.attachedGeneriParamDef = attachedGeneriParamDef
@@ -500,16 +481,6 @@ class TypeRef : Node
     
     if (this.isFunc && ty.isFunc) {
         return Coerce.isFuncAutoCoerce(this, ty)
-    }
-    
-    if (this.ptrType != null) {
-        if (this.ptrType === PtrType.temp_ptr && ty.ptrType !== PtrType.temp_ptr) {
-            return false
-        }
-
-        if (this.ptrType !== PtrType.unsafe_ptr && ty.ptrType !== PtrType.unsafe_ptr) {
-            if (this.ptrType != ty.ptrType) return false
-        }
     }
     
     //unparameterized generic parameters

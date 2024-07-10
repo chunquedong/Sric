@@ -100,8 +100,7 @@ struct B {
   void bar() { ... }
 }
 
-struct A : I {
-  B super;
+struct A : B, I {
   override void foo(B* b) {
     ...
   }
@@ -125,26 +124,13 @@ struct A {
   int i;
 }
 
-A a { .i = 0; };
+A a = A { .i = 0; };
 A *a = alloc<A>() { .i = 0; };
 ```
 
-type inference
+### Type inference
 ```
 auto a = alloc<A>() { .i = 0; }
-```
-
-this init block:
-```
-struct A {
-  const int i;
-  void init(int s) {
-    this { .i=s; }
-  }
-}
-
-auto a= A.init(2);
-auto p = alloc<A>().init(2);
 ```
 
 
@@ -165,7 +151,7 @@ no pointer arithmetic in safe mode.
 
 ### Array
 
-array define
+define an array 
 ```
 int[14] a;
 ```
@@ -178,8 +164,6 @@ foo(int[] a) {
 }
 foo(a);
 ```
-
-array ref is temp fat pointer.
 
 pointer to array ref
 ```
@@ -274,7 +258,7 @@ enum Color {
     red = 1, green, blue
 }
 
-Color c = Color::red;
+Color c = Color.red;
 ```
 
 ### Module

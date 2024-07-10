@@ -10,7 +10,7 @@ class DebugTest : Test {
 
             void main()
             {
-                a := A<int>{}
+                auto a = A<int>{}
             }
 
         |>

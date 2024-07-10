@@ -157,7 +157,7 @@ class DeepParser : Parser {
     name := consumeId
     stmt := LocalDefStmt(loc, localType, name)
 
-    if (curt === Token.defAssign || curt === Token.assign)
+    if (curt === Token.assign)
     {
       //if (curt === Token.assign) err("Must use := for declaration assignments")
       consume
