@@ -5,6 +5,7 @@
 package sc2.compiler.ast;
 
 import java.util.ArrayList;
+import sc2.compiler.ast.Token.TokenKind;
 
 /**
  *
@@ -43,19 +44,32 @@ public class AstNode {
     public Loc loc;
     public int len = 0;
     
-    public String doc;
     public AstNode parent;
     
     public int flags;
     
     public void getChildren(ArrayList<AstNode> list, Object options) {}
     
+    
+    public static class Comment extends AstNode {
+        public String content;
+        public TokenKind type;
+        
+        public Comment(Loc loc, String content, TokenKind type) {
+            this.loc = loc;
+            this.content = content;
+            this.type = type;
+        }
+    }
+    
     public static abstract class TypeDef extends AstNode {
         public String name;
+        public Comment comment;
     }
     
     public static class FieldDef extends Stmt {
         public String name;
+        public Comment comment;
         public Type fieldType;        // field type
         public Expr initExpr;         // init expression or null
     }
@@ -86,12 +100,15 @@ public class AstNode {
     }
     
     public static class FuncDef extends AstNode {
+        public String name;
+        public Comment comment;
         public FuncPrototype prototype = new FuncPrototype();       // return type
         public Block code;            // code block
         public ArrayList<GeneriParamDef> generiParams;
     }
     
     public static class FileUnit extends AstNode {
+        public String name;
         public ArrayList<TypeDef> typeDefs;
         public ArrayList<FieldDef> fieldDefs;
         public ArrayList<FuncDef> funcDefs;
@@ -109,6 +126,7 @@ public class AstNode {
     }
     
     public static class Module extends AstNode {
+        public String name;
         public ArrayList<FileUnit> fileUints;
     }
     

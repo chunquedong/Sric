@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+/compiler/build/
+/compiler/nbproject/
+/compiler/target/

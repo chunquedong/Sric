@@ -119,7 +119,7 @@ public class Parser {
 
     private AstNode topLevelDef() {
         // [<doc>]
-        String doc = doc();
+        Comment doc = doc();
         //if (curt == TokenKind.usingKeyword) throw err("Cannot use ** doc comments before using statement");
         if (curt == TokenKind.eof) {
             return null;
@@ -146,7 +146,7 @@ public class Parser {
 //    {
 //      return fieldDef(loc, curType, doc, facets, flags, type, name);
 //    }
-        String sdoc = this.doc();
+        Comment sdoc = this.doc();
         int flag = flags();
         String sname = consumeId();
         Type type = ctype();
@@ -179,7 +179,7 @@ public class Parser {
      **   <inheritance> := ":" <typeList>
   *
      */
-    TypeDef typeDef(String doc, int flags) {
+    TypeDef typeDef(Comment doc, int flags) {
         // local working variables
         Loc loc = cur.loc;
         boolean isMixin = false;
@@ -222,7 +222,7 @@ public class Parser {
         def.name = name;
         def.loc = loc;
 
-        def.doc = doc();
+        def.comment = doc();
         def.flags = flags();
 
         //GenericType Param
@@ -282,7 +282,7 @@ public class Parser {
 
         // slots
         while (true) {
-            String sdoc = this.doc();
+            Comment sdoc = this.doc();
             if (curt == TokenKind.rbrace) {
                 break;
             }
@@ -441,12 +441,12 @@ public class Parser {
   *
      */
     private FieldDef enumDef(int ordinal) {
-        String doc = doc();
+        Comment doc = doc();
 //    facets := facets();
 
         FieldDef def = new FieldDef();
         def.loc = cur.loc;
-        def.doc = doc;
+        def.comment = doc;
         def.name = consumeId();
 
         // optional ctor args
@@ -618,11 +618,11 @@ public class Parser {
      **   <fieldSetter> :=  <protection> "set" (<eos> | <block>)
   *
      */
-    private FieldDef fieldDef(Loc loc, String doc, int flags, Type type, String name) {
+    private FieldDef fieldDef(Loc loc, Comment doc, int flags, Type type, String name) {
         // define field itself
         FieldDef field = new FieldDef();
         field.loc = loc;
-        field.doc = doc;
+        field.comment = doc;
         field.flags = flags;
         field.name = name;
         if (type != null) {
@@ -670,10 +670,10 @@ public class Parser {
      **   <methodBody> :=  <eos> | ( "{" <stmts> "}" )
   *
      */
-    private FuncDef methodDef(Loc loc, String doc, int flags, Type ret, String name) {
+    private FuncDef methodDef(Loc loc, Comment doc, int flags, Type ret, String name) {
         FuncDef method = new FuncDef();
         method.loc = loc;
-        method.doc = doc;
+        method.comment = doc;
 //    method.facets = facets;
         method.flags = flags;
         if (ret != null) {
@@ -920,12 +920,13 @@ public class Parser {
      ** Parse fandoc or return null
   *
      */
-    private String doc() {
-        String doc = null;
-        while (curt == TokenKind.mlComment) {
-            //Loc loc = cur.loc;
-            String lines = (String) consume(TokenKind.mlComment).val;
-            doc = lines;
+    private Comment doc() {
+        Comment doc = null;
+        while (curt == TokenKind.docComment || curt == TokenKind.cmdComment) {
+            Loc loc = cur.loc;
+            TokenKind kind = curt;
+            String lines = (String) consume().val;
+            doc = new Comment(loc, lines, kind);
         }
         return doc;
     }

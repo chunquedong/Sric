@@ -71,7 +71,8 @@ public class Token {
         safeDot       ("?.", false),
         safeArrow     ("?->", false),
         safeTildeArrow("?~>", false),
-        docComment    ("**", false),
+        docComment    ("/**", false),
+        cmdComment     ("///", false),
         slComment     ("//", false),
         mlComment     ("/*", false),
         dollar        ("$", false),
@@ -150,6 +151,7 @@ public class Token {
         
         public final String symbol;
         public final boolean keyword;
+                
         TokenKind(String symbol, boolean isKeyword) {
             this.symbol = symbol;
             this.keyword = isKeyword;
@@ -157,9 +159,14 @@ public class Token {
                 keywords.put(symbol, this);
             }
         }
+        
+        @Override
+        public String toString() {
+            return super.toString() + "(" + symbol+")";
+        }
     }
     
-    public static HashMap<String, TokenKind> keywords;
+    public static HashMap<String, TokenKind> keywords = new HashMap<String, TokenKind>();
     
     public final TokenKind kind;      // enum for Token type
     public final Object val;        // Str, Int, Float, Duration, or Str[]
@@ -198,5 +205,13 @@ public class Token {
                 return true;
         }
         return false;
+    }
+    
+    @Override
+    public String toString() {
+        if (val == null) {
+            return this.kind.toString();
+        }
+        return this.kind + ":" + val;
     }
 }
