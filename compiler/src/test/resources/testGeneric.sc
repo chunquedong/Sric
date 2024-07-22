@@ -1,14 +1,14 @@
 
 struct A<T> {
-    T i;
-    T*? foo() {
-       return null;
+    i: T ;
+    fun foo(): T* {
+       return &i;
     }
 }
 
-void main()
+fun main()
 {
-    A<int> a = A<int>{};
+    a := A<Int>{};
     a.i = 2;
-    int* b = a.foo();
+    b : Int* = a.foo();
 }

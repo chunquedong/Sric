@@ -40,7 +40,7 @@ public class Parser {
     CompilerLog log;
 
     void parse() {
-        usings();
+        imports();
         while (curt.equals(TokenKind.eof)) {
             try {
                 AstNode defNode = topLevelDef();
@@ -58,7 +58,7 @@ public class Parser {
     private boolean recoverToDef() {
         int oldPos = pos;
         while (curt != TokenKind.eof) {
-            if (curt == TokenKind.classKeyword && curt == TokenKind.mixinKeyword) {
+            if (curt == TokenKind.classKeyword && curt == TokenKind.traitKeyword) {
                 int curPos = this.pos;
                 while (isModifierFlags(tokens.get(curPos - 1)) && curPos > 0) {
                     --curPos;
@@ -89,14 +89,14 @@ public class Parser {
      **   <ffiPodSpec> := "[" <id> "]" <id> ("." <id>)*
   *
      */
-    private void usings() {
-        while (curt == TokenKind.usingKeyword) {
-            parseUsing();
+    private void imports() {
+        while (curt == TokenKind.importKeyword) {
+            parseImports();
         }
     }
 
-    private void parseUsing() {
-        consume(TokenKind.usingKeyword);
+    private void parseImports() {
+        consume(TokenKind.importKeyword);
         Import u = new Import();
         u.loc = this.cur.loc;
 
@@ -131,7 +131,7 @@ public class Parser {
         int flags = flags();
 
 //    loc := cur.loc;
-        if (curt == TokenKind.mixinKeyword || curt == TokenKind.enumKeyword || curt == TokenKind.structKeyword) {
+        if (curt == TokenKind.traitKeyword || curt == TokenKind.enumKeyword || curt == TokenKind.structKeyword) {
             return typeDef(doc, flags);
         }
 
@@ -186,7 +186,7 @@ public class Parser {
         boolean isEnum = false;
 
         // mixin
-        if (curt == TokenKind.mixinKeyword) {
+        if (curt == TokenKind.traitKeyword) {
             if ((flags & AstNode.Abstract) != 0) {
                 err("The 'abstract' modifier is implied on mixin");
             }
@@ -323,21 +323,16 @@ public class Parser {
             case constKeyword:
             case finalKeyword:
             case virtualKeyword:
-            case nativeKeyword:
+            case externKeyword:
                 return true;
 
             case readonlyKeyword:
-//      case onceKeyword:
             case extensionKeyword:
             case overrideKeyword:
             case staticKeyword:
             case asyncKeyword:
             case funKeyword:
-            case varKeyword:
-            case letKeyword:
-                return true;
-
-            case rtconstKeyword:
+            case mutKeyword:
                 return true;
         }
         return false;
@@ -366,7 +361,7 @@ public class Parser {
                 case internalKeyword:
                     flags = flags | (AstNode.Internal);
                     protection = true;
-                case nativeKeyword:
+                case externKeyword:
                     flags = flags | (AstNode.Native);
 //        case onceKeyword:      flags = flags.or(FConst.Once); // Parser only flag
                 case extensionKeyword:
@@ -760,10 +755,7 @@ public class Parser {
         //   - id
         //   - [k:v]
         //   - |a, b -> r|
-        if (curt == TokenKind.autoKeyword) {
-//      t = TypeRef.objType(loc);
-            consume();
-        } else if (curt == TokenKind.identifier) {
+        if (curt == TokenKind.identifier) {
             t = simpleType();
         } else if (curt == TokenKind.lbracket) {
             loc = consume(TokenKind.lbracket).loc;

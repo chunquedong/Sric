@@ -1,17 +1,15 @@
 
-native public struct int {}
-native public struct void {}
-native public struct float {}
-native public struct bool {}
-native public struct string {}
-native public struct exception {}
-native public struct any {}
+extern public struct Int {}
+extern public struct Void {}
+extern public struct Float {}
+extern public struct Bool {}
+extern public struct Str {}
+extern public struct Any {}
 
-native public struct array<T> {}
-native public struct owner_ptr<T> {}
-native public struct instant_ptr<T> {}
-native public struct raw_ptr<T> {}
-native public struct weak_ptr<T> {}
-native public struct function<T> {}
+extern public struct Array<T> {}
+extern public struct OwnPtr<T> {}
+extern public struct WeakPtr<T> {}
+extern public struct RawPtr<T> {}
+extern public struct Func<T> {}
 
-native public int printf(string format, ...);
+extern public fun printf(format: Int8*, ...);

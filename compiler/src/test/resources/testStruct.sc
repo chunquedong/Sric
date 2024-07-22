@@ -2,14 +2,14 @@
 
 
 struct A {
-    int i;
+    i : Int;
 
-    int foo() { return i; }
+    fun foo() : Int { return i; }
 }
 
-void main()
+fun main()
 {
-    A a;
+    a : A;
     a.i = 2;
-    int i = a.foo();
+    i:Int = a.foo();
 }

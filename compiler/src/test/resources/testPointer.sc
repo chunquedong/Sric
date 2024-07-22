@@ -1,15 +1,15 @@
 struct A {
-    int* a;
-    int* b;
-    raw_ptr<int> c;
+    a: own Int*;
+    b: ref Int*;
+    c: Int*;
+    d: weak Int*;
 
-    int& foo(int& c) {
-        return c;
+    fun foo(c: mut Int*) {
     }
 }
 
-void main()
+fun main()
 {
-    int i = 1;
-    int& p = &i;
+    i := 1;
+    p: Int* = &i;
 }

@@ -1,15 +1,15 @@
 
-void main1()
+fun main1()
 {
-    int i = 1;
-    int* p = &i;
+    i := 1;
+    p: Int* = &i;
 }
 
-void main2()
+fun main2()
 {
-    int&? p;
+    p: Int?;
     if (true) {
-        int a = 1;
+        a : Int = 1;
         p = &a;
     }
 }
