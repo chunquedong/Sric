@@ -7,7 +7,7 @@ fun main1()
 
 fun main2()
 {
-    p: Int?;
+    p: Int*?;
     if (true) {
         a : Int = 1;
         p = &a;

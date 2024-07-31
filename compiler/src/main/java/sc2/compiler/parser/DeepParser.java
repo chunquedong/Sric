@@ -189,10 +189,8 @@ public class DeepParser extends Parser {
     private FieldDef localDefStmt(Loc loc, Type localType, boolean isEndOfStmt) {
         // verify name doesn't conflict with an import type
         String name = consumeId();
-        FieldDef stmt = new FieldDef();
-        stmt.loc = loc;
+        FieldDef stmt = new FieldDef(loc, null, name);
         stmt.fieldType = localType;
-        stmt.name = name;
 
         if (curt == TokenKind.assign) {
             //if (curt == TokenKind.assign) err("Must use = for declaration assignments")
@@ -382,9 +380,8 @@ public class DeepParser extends Parser {
         if (curt == TokenKind.lparen) {
             consume(TokenKind.lparen);
 
-            FieldDef errVariable = new FieldDef();
+            FieldDef errVariable = new FieldDef(curLoc(), null, consumeId());
             errVariable.fieldType = typeRef();
-            errVariable.name = consumeId();
             c.errVariable = errVariable;
             consume(TokenKind.rparen);
         }

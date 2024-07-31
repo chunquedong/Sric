@@ -7,6 +7,7 @@ extern public struct Str {}
 extern public struct Any {}
 
 extern public struct Array<T> {}
+extern public struct ArrayRef<T> {}
 extern public struct OwnPtr<T> {}
 extern public struct WeakPtr<T> {}
 extern public struct RawPtr<T> {}

@@ -19,6 +19,24 @@ import sc2.compiler.ast.AstNode.*;
 import sc2.compiler.ast.Token.TokenKind;
 import sc2.compiler.CompilerLog.CompilerErr;
 import java.util.ArrayList;
+import static sc2.compiler.ast.Token.TokenKind.abstractKeyword;
+import static sc2.compiler.ast.Token.TokenKind.asyncKeyword;
+import static sc2.compiler.ast.Token.TokenKind.constKeyword;
+import static sc2.compiler.ast.Token.TokenKind.enumKeyword;
+import static sc2.compiler.ast.Token.TokenKind.extensionKeyword;
+import static sc2.compiler.ast.Token.TokenKind.externKeyword;
+import static sc2.compiler.ast.Token.TokenKind.finalKeyword;
+import static sc2.compiler.ast.Token.TokenKind.funKeyword;
+import static sc2.compiler.ast.Token.TokenKind.internalKeyword;
+import static sc2.compiler.ast.Token.TokenKind.overrideKeyword;
+import static sc2.compiler.ast.Token.TokenKind.privateKeyword;
+import static sc2.compiler.ast.Token.TokenKind.protectedKeyword;
+import static sc2.compiler.ast.Token.TokenKind.publicKeyword;
+import static sc2.compiler.ast.Token.TokenKind.readonlyKeyword;
+import static sc2.compiler.ast.Token.TokenKind.staticKeyword;
+import static sc2.compiler.ast.Token.TokenKind.structKeyword;
+import static sc2.compiler.ast.Token.TokenKind.traitKeyword;
+import static sc2.compiler.ast.Token.TokenKind.virtualKeyword;
 
 /**
  *
@@ -38,6 +56,10 @@ public class Parser {
 //    protected Type curType;        // current TypeDef scope
 
     CompilerLog log;
+    
+    Loc curLoc() {
+        return cur.loc;
+    }
 
     void parse() {
         imports();
@@ -58,7 +80,11 @@ public class Parser {
     private boolean recoverToDef() {
         int oldPos = pos;
         while (curt != TokenKind.eof) {
-            if (curt == TokenKind.classKeyword && curt == TokenKind.traitKeyword) {
+            if (curt == TokenKind.classKeyword ||
+                    curt == TokenKind.structKeyword ||
+                    curt == TokenKind.traitKeyword ||
+                    curt == TokenKind.enumKeyword ||
+                    curt == TokenKind.funKeyword) {
                 int curPos = this.pos;
                 while (isModifierFlags(tokens.get(curPos - 1)) && curPos > 0) {
                     --curPos;
@@ -79,15 +105,12 @@ public class Parser {
 // Usings
 //////////////////////////////////////////////////////////////////////////
     /**
-     ** Parse <using>* - note that we are just skipping them because * they are
-     * already parsed by ScanForUsingsAndTypes. * *   <using> :=  <usingPod> |
-     * <usingType> | <usingAs>
-     **   <usingPod> := "using" <podSpec> <eos>
-     **   <usingType> := "using" <podSpec> "::" <id> <eos>
-     **   <usingAs> := "using" <podSpec> "::" <id> "as" <id> <eos>
-     **   <podSpec> :=  <id> | <str> | <ffiPodSpec>
-     **   <ffiPodSpec> := "[" <id> "]" <id> ("." <id>)*
-  *
+     ** <using> :=  <usingPod> |
+     *  <usingType> | <usingAs>
+     **   <usingPod> := "import" <podSpec> <eos>
+     **   <usingType> := "import" <podSpec> "::" <id> <eos>
+     **   <usingAs> := "import" <podSpec> "::" <id> "as" <id> <eos>
+     **   <podSpec> :=  <id>
      */
     private void imports() {
         while (curt == TokenKind.importKeyword) {
@@ -98,7 +121,7 @@ public class Parser {
     private void parseImports() {
         consume(TokenKind.importKeyword);
         Import u = new Import();
-        u.loc = this.cur.loc;
+        u.loc = curLoc();
 
         // using podName
         u.podName = consumeId();
@@ -119,39 +142,55 @@ public class Parser {
 
     private AstNode topLevelDef() {
         // [<doc>]
-        Comment doc = doc();
-        //if (curt == TokenKind.usingKeyword) throw err("Cannot use ** doc comments before using statement");
+        Comments doc = doc();
+        if (curt == TokenKind.importKeyword) throw err("Cannot use ** doc comments before using statement");
         if (curt == TokenKind.eof) {
             return null;
         }
 
-        // <facets>
-//    facets = facets();
         // <flags>
         int flags = flags();
 
-//    loc := cur.loc;
-        if (curt == TokenKind.traitKeyword || curt == TokenKind.enumKeyword || curt == TokenKind.structKeyword) {
-            return typeDef(doc, flags);
+        switch (curt) {
+            case traitKeyword:
+            case enumKeyword:
+            case structKeyword:
+                return typeDef(doc, flags);
+            case funKeyword:
+            {
+                consume();
+                Loc loc = curLoc();
+                String sname = consumeId();
+                return methodDef(loc, doc, flags, null, sname);
+            }
+            default:
+            {
+                Loc loc = curLoc();
+                String sname = consumeId();
+                return fieldDef(loc, doc, flags, null, sname);
+            }
         }
+    }
+    
+    private AstNode slotDef(Comments doc) {
+        // <flags>
+        int flags = flags();
 
-        // otherwise must be field or method
-//    type := typeRef;
-//    name := consumeId;
-//    if (curt === TokenKind.lparen)
-//    {
-//      return methodDef(loc, curType, doc, facets, flags, type, name);
-//    }
-//    else
-//    {
-//      return fieldDef(loc, curType, doc, facets, flags, type, name);
-//    }
-        Comment sdoc = this.doc();
-        int flag = flags();
-        String sname = consumeId();
-        Type type = ctype();
-        AstNode slot = methodDef(cur.loc, sdoc, flag, type, sname);
-        return slot;
+        switch (curt) {
+            case funKeyword:
+            {
+                consume();
+                Loc loc = curLoc();
+                String sname = consumeId();
+                return methodDef(loc, doc, flags, null, sname);
+            }
+            default:
+            {
+                Loc loc = curLoc();
+                String sname = consumeId();
+                return fieldDef(loc, doc, flags, null, sname);
+            }
+        }
     }
 
 //////////////////////////////////////////////////////////////////////////
@@ -159,78 +198,77 @@ public class Parser {
 //////////////////////////////////////////////////////////////////////////
     /**
      ** TypeDef:
-     **   <typeDef> :=  <classDef> | <mixinDef> | <enumDef> | <facetDef>
+     **   <typeDef> :=  <classDef> | <mixinDef> | <enumDef>
      **
      **   <classDef> :=  <classHeader> <classBody>
      **   <classHeader> := [<doc>] <facets> <typeFlags> "class" [<inheritance>]
-     **   <classFlags> := [<protection>] ["abstract"] ["final"]
-     **   <classBody> := "{" <slotDefs> "}" * *   <enumDef> :=  <enumHeader>
-     * <enumBody>
+     **   <classFlags> := [<protection>] ["abstract"] ["virtual"]
+     **   <classBody> := "{" <slotDefs> "}"
+     **   <enumDef> :=  <enumHeader> * <enumBody>
      **   <enumHeader> := [<doc>] <facets> <protection> "enum" [<inheritance>]
      **   <enumBody> := "{" <enumDefs> <slotDefs> "}" * * <facetDef :=
-     *  <facetHeader> <enumBody>
-     **   <facetHeader> := [<doc>] <facets> [<protection>] "facet" "class" <id>
-     * [<inheritance>]
-     **   <facetBody> := "{" <slotDefs> "}" * *   <mixinDef> :=  <enumHeader>
-     * <enumBody>
      **   <mixinHeader> := [<doc>] <facets> <protection> "mixin" [<inheritance>]
-     **   <mixinBody> := "{" <slotDefs> "}" * *   <protection> := "public" |
-     * "protected" | "private" | "internal"
-     **   <inheritance> := ":" <typeList>
-  *
+     **   <mixinBody> := "{" <slotDefs> "}" 
+     **   <protection> := "public" | "protected" | "private" | "internal"
+     **   <inheritance> := ":" <typeList>*
      */
-    TypeDef typeDef(Comment doc, int flags) {
+    TypeDef typeDef(Comments doc, int flags) {
         // local working variables
-        Loc loc = cur.loc;
+        Loc loc = curLoc();
         boolean isMixin = false;
         boolean isEnum = false;
 
+        TypeDef typeDef = null;
+        StructDef structDef = null;
+        TraitDef traitDef = null;
         // mixin
         if (curt == TokenKind.traitKeyword) {
             if ((flags & AstNode.Abstract) != 0) {
                 err("The 'abstract' modifier is implied on mixin");
             }
-            if ((flags & AstNode.Final) != 0) {
-                err("Cannot use 'final' modifier on mixin");
-            }
             flags = flags | AstNode.Mixin | AstNode.Abstract;
             isMixin = true;
             consume();
+            
+            // name
+            String name = consumeId();
+            // lookup TypeDef
+            traitDef = new TraitDef(loc, doc, flags, name);
+            typeDef = traitDef;
         }
-        if (curt == TokenKind.enumKeyword) {
+        else if (curt == TokenKind.enumKeyword) {
             if ((flags & AstNode.Const) != 0) {
                 err("The 'const' modifier is implied on enum");
-            }
-            if ((flags & AstNode.Final) != 0) {
-                err("The 'final' modifier is implied on enum");
             }
             if ((flags & AstNode.Abstract) != 0) {
                 err("Cannot use 'abstract' modifier on enum");
             }
-            flags = flags | AstNode.Enum | AstNode.Const | AstNode.Final;
+            flags = AstNode.Enum;
             isEnum = true;
             consume();
+            
+            // name
+            String name = consumeId();
+            // lookup TypeDef
+            EnumDef def = new EnumDef(loc, doc, flags, name);
+            typeDef = def;
         } // class
         else {
             consume(TokenKind.structKeyword);
+            
+            // name
+            String name = consumeId();
+            // lookup TypeDef
+            structDef = new StructDef(loc, doc, flags, name);
+            typeDef = structDef;
         }
-
-        // name
-        String name = consumeId();
-        // lookup TypeDef
-        StructDef def = new StructDef();
-        def.name = name;
-        def.loc = loc;
-
-        def.comment = doc();
-        def.flags = flags();
 
         //GenericType Param
         if (curt == TokenKind.lt) {
             consume();
             ArrayList<GeneriParamDef> gparams = new ArrayList<GeneriParamDef>();
             while (true) {
-                Loc gloc = cur.loc;
+                Loc gloc = curLoc();
                 String paramName = consumeId();
                 GeneriParamDef param = new GeneriParamDef();
                 param.loc = gloc;
@@ -246,27 +284,22 @@ public class Parser {
                     err("Error token: " + curt);
                 }
             }
-            def.generiParamDefs = gparams;
+            typeDef.generiParamDefs = gparams;
         }
 
-        // open current type
-//    curType = def;
-//    closureCount = 0
-        // inheritance
-        if (curt == TokenKind.colon) {
-            // first inheritance type can be extends or mixin
-            consume();
-            Type first = inheritType();
-//      if (!first.isMixin)
-//        def.base = first
-//      else
-//        def.mixins.add(first)
-            def.inheritances.add(first);
-
-            // additional mixins
-            while (curt == TokenKind.comma) {
+        if (structDef != null) {
+            // inheritance
+            if (curt == TokenKind.colon) {
+                // first inheritance type can be extends or mixin
                 consume();
-                def.inheritances.add(inheritType());
+                Type first = inheritType();
+                structDef.inheritances.add(first);
+
+                // additional mixins
+                while (curt == TokenKind.comma) {
+                    consume();
+                    structDef.inheritances.add(inheritType());
+                }
             }
         }
 
@@ -275,33 +308,31 @@ public class Parser {
 
         // if enum, parse values
         if (isEnum) {
-            EnumDef enumDef = new EnumDef();
+            EnumDef enumDef = (EnumDef)typeDef;
             enumDefs(enumDef);
-            //TODO
         }
-
-        // slots
-        while (true) {
-            Comment sdoc = this.doc();
-            if (curt == TokenKind.rbrace) {
-                break;
+        else {
+            // slots
+            while (true) {
+                Comments sdoc = this.doc();
+                if (curt == TokenKind.rbrace) {
+                    break;
+                }
+                AstNode slot = slotDef(sdoc);
+                if (isMixin) {
+                    traitDef.addSlot(slot);
+                }
+                else {
+                    structDef.addSlot(slot);
+                }
             }
-
-            int flag = flags();
-            String sname = consumeId();
-            Type type = ctype();
-            AstNode slot = fieldDef(cur.loc, sdoc, flag, type, sname);
-            def.addSlot(slot);
         }
 
-        // close cur type
-//    closureCount = null
-//    curType = null;
         // end of class body
         consume(TokenKind.rbrace);
-        endLoc(def);
+        endLoc(typeDef);
 
-        return def;
+        return typeDef;
     }
 
     private Type inheritType() {
@@ -312,6 +343,7 @@ public class Parser {
 //////////////////////////////////////////////////////////////////////////
 // Flags
 //////////////////////////////////////////////////////////////////////////
+    
     private boolean isModifierFlags(Token t) {
         switch (t.kind) {
             case publicKeyword:
@@ -341,7 +373,6 @@ public class Parser {
     /**
      ** Parse any list of flags in any order, we will check invalid *
      * combinations in the CheckErrors step.
-  *
      */
     private int flags() {
 //    Loc loc = cur.loc;
@@ -352,38 +383,51 @@ public class Parser {
             switch (curt) {
                 case abstractKeyword:
                     flags = flags | (AstNode.Abstract);
+                    break;
                 case constKeyword:
                     flags = flags | (AstNode.Const);
+                    break;
                 case readonlyKeyword:
                     flags = flags | (AstNode.Readonly);
+                    break;
                 case finalKeyword:
                     flags = flags | (AstNode.Final);
+                    break;
                 case internalKeyword:
                     flags = flags | (AstNode.Internal);
                     protection = true;
+                    break;
                 case externKeyword:
                     flags = flags | (AstNode.Native);
-//        case onceKeyword:      flags = flags.or(FConst.Once); // Parser only flag
+                    break;
                 case extensionKeyword:
                     flags = flags | (AstNode.Extension);
+                    break;
                 case overrideKeyword:
                     flags = flags | (AstNode.Override);
+                    break;
                 case privateKeyword:
                     flags = flags | (AstNode.Private);
                     protection = true;
+                    break;
                 case protectedKeyword:
                     flags = flags | (AstNode.Protected);
                     protection = true;
+                    break;
                 case publicKeyword:
                     flags = flags | (AstNode.Public);
                     protection = true;
+                    break;
                 case staticKeyword:
                     flags = flags | (AstNode.Static);
+                    break;
                 case virtualKeyword:
                     flags = flags | (AstNode.Virtual);
+                    break;
                 //case TokenKind.rtconstKeyword:   flags = flags.or(FConst.RuntimeConst)
                 case asyncKeyword:
                     flags = flags | (AstNode.Async);
+                    break;
                 default:
                     done = true;
             }
@@ -403,46 +447,30 @@ public class Parser {
 //////////////////////////////////////////////////////////////////////////
 // Enum
 //////////////////////////////////////////////////////////////////////////
+    
     /**
      ** Enum definition list:
      **   <enumDefs> :=  <enumDef> ("," <enumDef>)* <eos>
-  *
      */
     private void enumDefs(EnumDef def) {
-        // create static$init to wrap enums in case
-        // they have closures
-//    sInit := MethodDef.makeStaticInit(def.loc, def, null)
-//    sInit.code = Block(def.loc)
-//    def.addSlot(sInit)
-//    curSlot = sInit
-
         // parse each enum def
         int ordinal = 0;
-        def.enumDefs.add(enumDef(ordinal++));
+        def.enumDefs.add(enumSlotDef(ordinal++));
         while (curt == TokenKind.comma) {
             consume();
-            FieldDef enumDef = enumDef(ordinal++);
+            FieldDef enumDef = enumSlotDef(ordinal++);
             def.enumDefs.add(enumDef);
         }
         endOfStmt();
-
-        // clear static$init scope
-//    curSlot = null;
     }
 
     /**
      ** Enum definition:
-     **   <enumDef> :=  <facets> <id> ["(" <args> ")"]
-  *
+     **   <enumDef> :=  <facets> <id> ["(" <args> ")"]*
      */
-    private FieldDef enumDef(int ordinal) {
-        Comment doc = doc();
-//    facets := facets();
-
-        FieldDef def = new FieldDef();
-        def.loc = cur.loc;
-        def.comment = doc;
-        def.name = consumeId();
+    private FieldDef enumSlotDef(int ordinal) {
+        Comments doc = doc();
+        FieldDef def = new FieldDef(curLoc(), doc, consumeId());
 
         // optional ctor args
         if (curt == TokenKind.assign) {
@@ -450,6 +478,7 @@ public class Parser {
             def.initExpr = expr();
         }
 
+        endLoc(def);
         return def;
     }
 
@@ -458,10 +487,8 @@ public class Parser {
 //////////////////////////////////////////////////////////////////////////
     /**
      ** Top level for blocks which must be surrounded by braces
-  *
      */
     Block block() {
-//    verify(TokenKind.lbrace)
         consume(TokenKind.lbrace);
         int deep = 1;
         while (deep > 0 && curt != TokenKind.eof) {
@@ -515,16 +542,12 @@ public class Parser {
             case identifier:
             case intLiteral:
             case strLiteral:
-//      case TokenKind.durationLiteral:
             case floatLiteral:
             case trueKeyword:
             case falseKeyword:
             case thisKeyword:
             case superKeyword:
             case itKeyword:
-//      case TokenKind.dsl:
-//      case TokenKind.uriLiteral:
-//      case TokenKind.decimalLiteral:
             case nullKeyword:
                 return true;
         }
@@ -610,18 +633,20 @@ public class Parser {
      * [<fieldGetter>] [<fieldSetter>] "}" ] <eos>
      **   <fieldFlags> := [<protection>] ["readonly"] ["static"]
      **   <fieldGetter> := "get" (<eos> | <block>)
-     **   <fieldSetter> :=  <protection> "set" (<eos> | <block>)
-  *
+     **   <fieldSetter> :=  <protection> "set" (<eos> | <block>)*
      */
-    private FieldDef fieldDef(Loc loc, Comment doc, int flags, Type type, String name) {
+    private FieldDef fieldDef(Loc loc, Comments doc, int flags, Type type, String name) {
+        return fieldDef(loc, doc, flags, type, name, false);
+    }
+    private FieldDef fieldDef(Loc loc, Comments doc, int flags, Type type, String name, boolean isLocalVar) {
         // define field itself
-        FieldDef field = new FieldDef();
-        field.loc = loc;
-        field.comment = doc;
+        FieldDef field = new FieldDef(loc, doc, name);
         field.flags = flags;
-        field.name = name;
-        if (type != null) {
-            field.fieldType = type;
+        field.fieldType = type;
+        
+        if (curt == TokenKind.colon) {
+            consume();
+            field.fieldType = typeRef();
         }
 
         // field initializer
@@ -638,14 +663,6 @@ public class Parser {
             err("Type inference not supported for fields");
         }
 
-        // explicit getter or setter
-//    if (curt === TokenKind.lbrace)
-//    {
-//      consume(TokenKind.lbrace)
-//      getOrSet(field)
-//      getOrSet(field)
-//      consume(TokenKind.rbrace)
-//    }
         endOfStmt();
         endLoc(field);
         return field;
@@ -662,17 +679,18 @@ public class Parser {
      * ["static"]
      **   <params> := [<param> ("," <param>)*]
      **   <param> :=  <type> <id> [":=" <expr>]
-     **   <methodBody> :=  <eos> | ( "{" <stmts> "}" )
-  *
+     **   <methodBody> :=  <eos> | ( "{" <stmts> "}" )*
      */
-    private FuncDef methodDef(Loc loc, Comment doc, int flags, Type ret, String name) {
+    private FuncDef methodDef(Loc loc, Comments doc, int flags, Type ret, String name) {
         FuncDef method = new FuncDef();
         method.loc = loc;
         method.comment = doc;
-//    method.facets = facets;
         method.flags = flags;
-        if (ret != null) {
-            method.prototype.returnType = ret;
+        method.prototype.returnType = ret;
+        
+        if (curt == TokenKind.colon) {
+            consume();
+            method.prototype.returnType = typeRef();
         }
 
         // parameters
@@ -727,15 +745,6 @@ public class Parser {
 //////////////////////////////////////////////////////////////////////////
 // Types
 //////////////////////////////////////////////////////////////////////////
-    /**
-     ** Parse a type production into a TypeRef and wrap it as AST TypeRef.
-  *
-     */
-    protected Type typeRef() {
-//    Loc loc := cur
-//    return TypeRef(loc, ctype(true))
-        return ctype(true);
-    }
 
     /**
      ** Type signature:
@@ -743,83 +752,73 @@ public class Parser {
      **   <listType> :=  <type> "[]"
   *
      */
-    protected Type ctype() {
-        return ctype(false);
+    protected Type typeRef() {
+        return typeRef(false);
     }
 
-    protected Type ctype(boolean isTypeRef) {
+    protected Type typeRef(boolean isTypeRef) {
         Type t = null;
-        Loc loc = cur.loc;
+
+        boolean isConst = false;
+        if (curt == TokenKind.constKeyword) {
+            isConst = true;
+            consume();
+        }
+        
+        Type.PointerType pointerType = null;
+        if (null != curt) switch (curt) {
+            case ownKeyword:
+                pointerType = Type.PointerType.own;
+                break;
+            case refKeyword:
+                pointerType = Type.PointerType.ref;
+                break;
+            case weakKeyword:
+                pointerType = Type.PointerType.weak;
+                break;
+            default:
+                break;
+        }
+        
+        Loc loc = curLoc();
 
         // Types can begin with:
         //   - id
-        //   - [k:v]
-        //   - |a, b -> r|
+        //   - [](a:T):T
         if (curt == TokenKind.identifier) {
             t = simpleType();
-        } else if (curt == TokenKind.lbracket) {
-            loc = consume(TokenKind.lbracket).loc;
-            t = ctype(isTypeRef);
-            // check for type?:type map (illegal);
-            if (curt == TokenKind.elvis && !cur.whitespace) {
-                err("Map type cannot have nullable key type");
-            }
-
-            // check for ":" for map type
-//        if (curt === TokenKind.colon)
-//        {
-//          if (t.isNullable) err("Map type cannot have nullable key type")
-//          consume(TokenKind.colon)
-//          key := t
-//          val := ctype(isTypeRef)
-//          //throw err("temp test")
-//        //      t = MapType(key, val)
-//          t = TypeRef.mapType(loc, key, val)
-//        }
-            consume(TokenKind.rbracket);
-            //if (!(t is MapType)) err("Invalid map type", loc)
-        } else if (curt == TokenKind.pipe) {
+        }
+        else if (curt == TokenKind.lbracket) {
             t = funcType(isTypeRef);
-        } else {
+        }
+        else {
             err("Expecting type name not $cur");
             consume();
+            return Type.placeHolder(loc);
         }
-
-        // check for ? nullable
-        if (curt == TokenKind.question && !cur.whitespace) {
-            consume(TokenKind.question);
-            t.isNullable = true;
-            if (curt == TokenKind.question && !cur.whitespace) {
-                throw err("Type cannot have multiple '?'");
-            }
-        }
-
-        // trailing [] for lists
-        while (curt == TokenKind.lbracket && peekt == TokenKind.rbracket) {
-            consume(TokenKind.lbracket);
-            consume(TokenKind.rbracket);
-            Type valT = t;
-            t = new Type();
-            t.loc = cur.loc;
-            t.genericArgs.add(valT);
-            if (curt == TokenKind.question && !cur.whitespace) {
-                consume(TokenKind.question);
-                t.isNullable = true;
-            }
-        }
-
-        if (curt == TokenKind.star || curt == TokenKind.amp) {
-//        if (curt == TokenKind.star) {
-//            t = TypeRef.ownerptrType(loc, t);
-//        }
-//        else {
-//            t = TypeRef.instantptrType(loc, t);
-//        }
-//TODO
+        
+        if (curt == TokenKind.star) {
             consume();
-            if (curt == TokenKind.question && !cur.whitespace) {
+            t = Type.pointerType(loc, t, pointerType);
+            
+            // check for ? nullable
+            if (curt == TokenKind.question) {
                 consume(TokenKind.question);
                 t.isNullable = true;
+                if (curt == TokenKind.question) {
+                    err("Type cannot have multiple '?'");
+                }
+            }
+        }
+
+        // trailing [] for array
+        if (curt == TokenKind.lbracket) {
+            consume(TokenKind.lbracket);            
+            if (curt == TokenKind.rbracket) {
+                t = Type.arrayRefType(loc, t);
+            }
+            else if (curt == TokenKind.intLiteral) {
+                t = Type.arrayType(loc, t, (Integer)cur.val);
             }
         }
 
@@ -829,8 +828,7 @@ public class Parser {
 
     /**
      ** Simple type signature:
-     **   <simpleType> :=  <id> ["::" <id>]
-  *
+     **   <simpleType> :=  <id> ["::" <id>]*
      */
     private Type simpleType() {
         Loc loc = cur.loc;
@@ -840,7 +838,6 @@ public class Parser {
         // fully qualified
         if (curt == TokenKind.doubleColon) {
             consume();
-//      return ResolveImports.resolveQualified(this, id, consumeId, loc) ?: ns.voidType
             type = new Type();
             type.loc = loc;
             type.name = consumeId();
@@ -910,17 +907,22 @@ public class Parser {
 //////////////////////////////////////////////////////////////////////////
     /**
      ** Parse fandoc or return null
-  *
+     *
      */
-    private Comment doc() {
-        Comment doc = null;
+    private Comments doc() {
+        Comments comments = null;
         while (curt == TokenKind.docComment || curt == TokenKind.cmdComment) {
             Loc loc = cur.loc;
             TokenKind kind = curt;
             String lines = (String) consume().val;
-            doc = new Comment(loc, lines, kind);
+            Comment doc = new Comment(loc, lines, kind);
+            if (comments == null) {
+                comments = new Comments();
+                comments.loc = loc;
+            }
+            comments.comments.add(doc);
         }
-        return doc;
+        return comments;
     }
 
 //////////////////////////////////////////////////////////////////////////
@@ -935,7 +937,7 @@ public class Parser {
 //////////////////////////////////////////////////////////////////////////
     /**
      ** Verify current is an identifier, consume it, and return it.
-  *
+     *
      */
     protected String consumeId() {
         if (curt != TokenKind.identifier) {
@@ -1005,7 +1007,7 @@ public class Parser {
 
     /**
      ** update loc.len field
-  *
+     *
      */
     protected void endLoc(AstNode node) {
         Token preToken = (pos > 0) ? tokens.get(pos - 1) : cur;
@@ -1031,7 +1033,7 @@ public class Parser {
   *
      */
     protected boolean endOfStmt() {
-        return endOfStmt("Expected end of statement: semicolon, newline, or end of block; not '" + cur + "'");
+        return endOfStmt("Expected end of statement with ';' not '" + cur + "'");
     }
 
     protected boolean endOfStmt(String errMsg) {
@@ -1040,12 +1042,12 @@ public class Parser {
             consume();
             return true;
         }
-        if (curt == TokenKind.rbrace) {
-            return true;
-        }
-        if (curt == TokenKind.eof) {
-            return true;
-        }
+//        if (curt == TokenKind.rbrace) {
+//            return true;
+//        }
+//        if (curt == TokenKind.eof) {
+//            return true;
+//        }
         if (errMsg == null) {
             return false;
         }

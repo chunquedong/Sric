@@ -33,12 +33,12 @@ public class AstNode {
     public static final int Virtual    = 0x00040000;
     public static final int Struct     = 0x00080000;
     public static final int Extension  = 0x00100000;
-    public static final int RuntimeConst= 0x00200000;
+    public static final int Mutable= 0x00200000;
     public static final int Readonly   = 0x00400000;
     public static final int Async      = 0x00800000;
     public static final int Overload   = 0x01000000;
     public static final int Closure    = 0x02000000;
-    public static final int Once       = 0x04000000;
+//    public static final int Once    = 0x04000000;
     public static final int FlagsMask  = 0x0fffffff;
   
     public Loc loc;
@@ -62,24 +62,41 @@ public class AstNode {
         }
     }
     
+    public static class Comments extends AstNode {
+        public ArrayList<Comment> comments = new ArrayList<Comment>();
+    }
+    
     public static abstract class TypeDef extends AstNode {
         public String name;
-        public Comment comment;
+        public String qname;
+        public Comments comment;
+        public ArrayList<GeneriParamDef> generiParamDefs;
     }
     
     public static class FieldDef extends Stmt {
         public String name;
-        public Comment comment;
+        public Comments comment;
         public Type fieldType;        // field type
         public Expr initExpr;         // init expression or null
+        
+        public FieldDef(Loc loc, Comments comment, String name) {
+            this.loc = loc;
+            this.comment = comment;
+            this.name = name;
+        }
     }
     
     public static class StructDef extends TypeDef {
-        public String qname;
-        public ArrayList<GeneriParamDef> generiParamDefs;
         public ArrayList<Type> inheritances;
         public ArrayList<FieldDef> fieldDefs;
         public ArrayList<FuncDef> funcDefs;
+        
+        public StructDef(Loc loc, Comments comment, int flags, String name) {
+            this.loc = loc;
+            this.comment = comment;
+            this.flags = flags;
+            this.name = name;
+        }
         
         public void addSlot(AstNode node) {
             node.parent = this;
@@ -88,10 +105,28 @@ public class AstNode {
     
     public static class EnumDef extends TypeDef {
         public ArrayList<FieldDef> enumDefs;
+        
+        public EnumDef(Loc loc, Comments comment, int flags, String name) {
+            this.loc = loc;
+            this.comment = comment;
+            this.flags = flags;
+            this.name = name;
+        }
     }
     
     public static class TraitDef extends TypeDef {
-        public ArrayList<FuncDef> slotDefList;
+        public ArrayList<FuncDef> funcDefs;
+        
+        public TraitDef(Loc loc, Comments comment, int flags, String name) {
+            this.loc = loc;
+            this.comment = comment;
+            this.flags = flags;
+            this.name = name;
+        }
+        
+        public void addSlot(AstNode node) {
+            node.parent = this;
+        }
     }
     
     public static class FuncPrototype {
@@ -101,7 +136,7 @@ public class AstNode {
     
     public static class FuncDef extends AstNode {
         public String name;
-        public Comment comment;
+        public Comments comment;
         public FuncPrototype prototype = new FuncPrototype();       // return type
         public Block code;            // code block
         public ArrayList<GeneriParamDef> generiParams;
