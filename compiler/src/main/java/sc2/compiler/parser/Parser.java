@@ -57,13 +57,23 @@ public class Parser {
 
     CompilerLog log;
     
+    public Parser(CompilerLog log, String code, FileUnit unit) {
+        this.log = log;
+        this.unit = unit;
+        Tokenizer toker = new Tokenizer(log, "sys.sc", code);
+        tokens = toker.tokenize();
+        
+        this.numTokens = tokens.size();
+        reset(0);
+    }
+    
     Loc curLoc() {
         return cur.loc;
     }
 
-    void parse() {
+    public void parse() {
         imports();
-        while (curt.equals(TokenKind.eof)) {
+        while (curt != TokenKind.eof) {
             try {
                 AstNode defNode = topLevelDef();
                 if (defNode != null) {
@@ -143,7 +153,10 @@ public class Parser {
     private AstNode topLevelDef() {
         // [<doc>]
         Comments doc = doc();
-        if (curt == TokenKind.importKeyword) throw err("Cannot use ** doc comments before using statement");
+        if (curt == TokenKind.importKeyword) {
+            err("Cannot use ** doc comments before using statement");
+            parseImports();
+        }
         if (curt == TokenKind.eof) {
             return null;
         }
@@ -224,7 +237,7 @@ public class Parser {
         // mixin
         if (curt == TokenKind.traitKeyword) {
             if ((flags & AstNode.Abstract) != 0) {
-                err("The 'abstract' modifier is implied on mixin");
+                err("The 'abstract' modifier is implied on trait");
             }
             flags = flags | AstNode.Mixin | AstNode.Abstract;
             isMixin = true;
@@ -281,7 +294,7 @@ public class Parser {
                     consume();
                     break;
                 } else {
-                    err("Error token: " + curt);
+                    throw err("Error token: " + curt);
                 }
             }
             typeDef.generiParamDefs = gparams;
@@ -320,7 +333,12 @@ public class Parser {
                 }
                 AstNode slot = slotDef(sdoc);
                 if (isMixin) {
-                    traitDef.addSlot(slot);
+                    if (slot instanceof FuncDef) {
+                        traitDef.addSlot((FuncDef)slot);
+                    }
+                    else {
+                        err("Can't define field in trait");
+                    }
                 }
                 else {
                     structDef.addSlot(slot);
@@ -659,7 +677,7 @@ public class Parser {
         // disable type inference for now - doing inference for literals is
         // pretty trivial, but other types is tricky;  I'm not sure it is such
         // a hot idea anyways so it may just stay disabled forever
-        if (type == null) {
+        if (field.fieldType == null) {
             err("Type inference not supported for fields");
         }
 
@@ -687,11 +705,7 @@ public class Parser {
         method.comment = doc;
         method.flags = flags;
         method.prototype.returnType = ret;
-        
-        if (curt == TokenKind.colon) {
-            consume();
-            method.prototype.returnType = typeRef();
-        }
+        method.name = name;
 
         // parameters
         consume(TokenKind.lparen);
@@ -706,6 +720,11 @@ public class Parser {
             }
         }
         consume(TokenKind.rparen);
+        
+        if (curt == TokenKind.colon) {
+            consume();
+            method.prototype.returnType = typeRef();
+        }
 
         // if This is returned, then we configure inheritedRet
         // right off the bat (this is actual signature we will use)
@@ -733,6 +752,7 @@ public class Parser {
         }
 
         ParamDef param = new ParamDef();
+        param.loc = curLoc();
         if (curt == TokenKind.assign) {
             //if (curt === TokenKind.assign) err("Must use := for parameter default");
             consume();
@@ -792,9 +812,9 @@ public class Parser {
             t = funcType(isTypeRef);
         }
         else {
-            err("Expecting type name not $cur");
-            consume();
-            return Type.placeHolder(loc);
+            throw err("Expecting type name not $cur");
+//            consume();
+//            return Type.placeHolder(loc);
         }
         
         if (curt == TokenKind.star) {
@@ -941,11 +961,9 @@ public class Parser {
      */
     protected String consumeId() {
         if (curt != TokenKind.identifier) {
-            CompilerErr e = err("Expected identifier, not '$cur'");
-            if (curt == TokenKind.eof) {
-                throw e;
-            }
-            return "";
+            throw err("Expected identifier, not '$cur'");
+            //consume();
+            //return "";
         }
         return (String) consume().val;
     }
@@ -953,7 +971,7 @@ public class Parser {
     /**
      ** Check that the current token matches the specified * type, but do not
      * consume it.
-  *
+     *
      */
     protected void verify(TokenKind kind) {
         if (!curt.equals(kind)) {

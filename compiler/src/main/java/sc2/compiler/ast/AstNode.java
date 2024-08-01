@@ -51,6 +51,10 @@ public class AstNode {
     public void getChildren(ArrayList<AstNode> list, Object options) {}
     
     
+    public void walk(Visitor visitor) {
+    }
+        
+    
     public static class Comment extends AstNode {
         public String content;
         public TokenKind type;
@@ -71,6 +75,16 @@ public class AstNode {
         public String qname;
         public Comments comment;
         public ArrayList<GeneriParamDef> generiParamDefs;
+        
+        @Override public void walk(Visitor visitor) {
+            visitor.enterTypeDef(this);
+            walkChildren(visitor);
+            visitor.exitTypeDef(this);
+        }
+        
+        protected void walkChildren(Visitor visitor) {
+            
+        }
     }
     
     public static class FieldDef extends Stmt {
@@ -84,12 +98,18 @@ public class AstNode {
             this.comment = comment;
             this.name = name;
         }
+        
+        @Override public void walk(Visitor visitor) {
+            visitor.enterField(this);
+            //walkChildren(visitor);
+            visitor.exitField(this);
+        }
     }
     
     public static class StructDef extends TypeDef {
         public ArrayList<Type> inheritances;
-        public ArrayList<FieldDef> fieldDefs;
-        public ArrayList<FuncDef> funcDefs;
+        public ArrayList<FieldDef> fieldDefs = new ArrayList<FieldDef>();
+        public ArrayList<FuncDef> funcDefs = new ArrayList<FuncDef>();
         
         public StructDef(Loc loc, Comments comment, int flags, String name) {
             this.loc = loc;
@@ -100,6 +120,21 @@ public class AstNode {
         
         public void addSlot(AstNode node) {
             node.parent = this;
+            if (node instanceof FieldDef) {
+                fieldDefs.add((FieldDef)node);
+            }
+            else if (node instanceof FuncDef) {
+                funcDefs.add((FuncDef)node);
+            }
+        }
+        
+        @Override protected void walkChildren(Visitor visitor) {
+            for (FieldDef field : fieldDefs) {
+                field.walk(visitor);
+            }
+            for (FuncDef func : funcDefs) {
+                func.walk(visitor);
+            }
         }
     }
     
@@ -111,6 +146,11 @@ public class AstNode {
             this.comment = comment;
             this.flags = flags;
             this.name = name;
+        }
+        
+        public void addSlot(FieldDef node) {
+            node.parent = this;
+            enumDefs.add(node);
         }
     }
     
@@ -124,14 +164,15 @@ public class AstNode {
             this.name = name;
         }
         
-        public void addSlot(AstNode node) {
+        public void addSlot(FuncDef node) {
             node.parent = this;
+            funcDefs.add(node);
         }
     }
     
     public static class FuncPrototype {
         public Type returnType;       // return type
-        public ArrayList<ParamDef> paramDefs;   // parameter definitions
+        public ArrayList<ParamDef> paramDefs = new ArrayList<ParamDef>();   // parameter definitions
     }
     
     public static class FuncDef extends AstNode {
@@ -140,17 +181,53 @@ public class AstNode {
         public FuncPrototype prototype = new FuncPrototype();       // return type
         public Block code;            // code block
         public ArrayList<GeneriParamDef> generiParams;
+        
+        @Override public void walk(Visitor visitor) {
+            visitor.enterFunc(this);
+            //walkChildren(visitor);
+            visitor.exitFunc(this);
+        }
     }
     
     public static class FileUnit extends AstNode {
         public String name;
-        public ArrayList<TypeDef> typeDefs;
-        public ArrayList<FieldDef> fieldDefs;
-        public ArrayList<FuncDef> funcDefs;
-        public ArrayList<FuncDef> usings;
+        public ArrayList<TypeDef> typeDefs = new ArrayList<TypeDef>();
+        public ArrayList<FieldDef> fieldDefs = new ArrayList<FieldDef>();
+        public ArrayList<FuncDef> funcDefs = new ArrayList<FuncDef>();
+        public ArrayList<Import> usings = new ArrayList<Import>();
+        
+        public FileUnit(String file) {
+            name = file;
+        }
         
         public void addDef(AstNode node) {
             node.parent = this;
+            if (node instanceof TypeDef) {
+                typeDefs.add((TypeDef)node);
+            }
+            else if (node instanceof FieldDef) {
+                fieldDefs.add((FieldDef)node);
+            }
+            else if (node instanceof FuncDef) {
+                funcDefs.add((FuncDef)node);
+            }
+            else if (node instanceof Import) {
+                usings.add((Import)node);
+            }
+        }
+        
+        @Override public void walk(Visitor visitor) {
+            visitor.enterUnit(this);
+            for (TypeDef typeDef : typeDefs) {
+                typeDef.walk(visitor);
+            }
+            for (FieldDef field : fieldDefs) {
+                field.walk(visitor);
+            }
+            for (FuncDef func : funcDefs) {
+                func.walk(visitor);
+            }
+            visitor.exitUnit(this);
         }
     }
     

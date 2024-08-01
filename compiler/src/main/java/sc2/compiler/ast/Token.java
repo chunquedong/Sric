@@ -151,9 +151,6 @@ public class Token {
         TokenKind(String symbol, boolean isKeyword) {
             this.symbol = symbol;
             this.keyword = isKeyword;
-            if (isKeyword) {
-                keywords.put(symbol, this);
-            }
         }
         
         @Override
@@ -163,6 +160,13 @@ public class Token {
     }
     
     public static HashMap<String, TokenKind> keywords = new HashMap<String, TokenKind>();
+    static {
+        for (TokenKind kind : TokenKind.class.getEnumConstants()) {
+            if (kind.keyword) {
+                keywords.put(kind.symbol, kind);
+            }
+        }
+    }
     
     public final TokenKind kind;      // enum for Token type
     public final Object val;        // Str, Int, Float, Duration, or Str[]

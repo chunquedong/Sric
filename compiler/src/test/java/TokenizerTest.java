@@ -43,7 +43,7 @@ public class TokenizerTest {
     }
 
     @Test
-    public void hello() throws IOException {
+    public void test() throws IOException {
         String src = Files.readString(Path.of("target/test-classes/sys.sc"));
         
         CompilerLog log = new CompilerLog();

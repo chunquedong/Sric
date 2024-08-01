@@ -27,7 +27,7 @@ import sc2.compiler.ast.ClosureExpr;
 public class DeepParser extends Parser {
 
     public DeepParser(CompilerLog log, String code, FileUnit unit) {
-
+        super(log, code, unit);
     }
 
     //////////////////////////////////////////////////////////////////////////
