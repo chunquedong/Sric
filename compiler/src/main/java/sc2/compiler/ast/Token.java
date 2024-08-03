@@ -73,7 +73,7 @@ public class Token {
         safeDot       ("?.", false),
         safeArrow     ("?->", false),
         safeTildeArrow("?~>", false),
-        rightShift    (">>", false),
+        rightShift    ("rightShif", false),
         leftShift     ("<<", false),
         docComment    ("/**", false),
         cmdComment    ("///", false),

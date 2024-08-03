@@ -167,7 +167,7 @@ public class AstNode {
     
     public static class FuncPrototype {
         public Type returnType;       // return type
-        public ArrayList<ParamDef> paramDefs = new ArrayList<ParamDef>();   // parameter definitions
+        public ArrayList<ParamDef> paramDefs = null;   // parameter definitions
     }
     
     public static class FuncDef extends AstNode {
@@ -227,8 +227,8 @@ public class AstNode {
     }
     
     public static class Import extends AstNode {
-        public String podName;
-        public String name;
+        public String namespace;
+        public Type type;
         public String asName;
     }
     

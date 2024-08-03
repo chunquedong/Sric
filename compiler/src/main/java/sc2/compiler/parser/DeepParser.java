@@ -22,6 +22,7 @@ import sc2.compiler.ast.Type;
 import sc2.compiler.ast.ClosureExpr;
 import static sc2.compiler.ast.Token.TokenKind.awaitKeyword;
 import static sc2.compiler.ast.Token.TokenKind.bang;
+import static sc2.compiler.ast.Token.TokenKind.colon;
 import static sc2.compiler.ast.Token.TokenKind.falseKeyword;
 import static sc2.compiler.ast.Token.TokenKind.floatLiteral;
 import static sc2.compiler.ast.Token.TokenKind.identifier;
@@ -116,7 +117,7 @@ public class DeepParser extends Parser {
         }
 
         // at this point we either have an expr or local var declaration
-        return exprOrLocalDefStmt(true);
+        return exprOrLocalDefStmt();
     }
 
     /**
@@ -124,12 +125,12 @@ public class DeepParser extends Parser {
      **   <exprStmt> =  <expr> <eos>
      **   <localDef> =  <id> ":" [<type>] ["=" <expr>] <eos>
      */
-    private Stmt exprOrLocalDefStmt(boolean isEndOfStmt) {
+    private Stmt exprOrLocalDefStmt() {
         // see if this statement begins with a type literal
         Loc loc = curLoc();
 
         if (curt == TokenKind.identifier && (peekt == TokenKind.colon || peekt == TokenKind.defAssign)) {
-            return localDefStmt(loc, null, isEndOfStmt);
+            return localDefStmt(loc, null);
         }
 
         // otherwise assume it's a stand alone expression statement
@@ -138,13 +139,9 @@ public class DeepParser extends Parser {
         // return expression as statement
         ExprStmt stmt = new ExprStmt();
         stmt.expr = e;
-        endLoc(stmt, loc);
-        
-        if (!isEndOfStmt) {
-            return stmt;
-        }
         
         endOfStmt();
+        endLoc(stmt, loc);
         return stmt;
     }
 
@@ -152,7 +149,7 @@ public class DeepParser extends Parser {
      ** Parse local variable declaration, the current token must be * the
      * identifier of the local variable.
      */
-    private FieldDef localDefStmt(Loc loc, Type localType, boolean isEndOfStmt) {
+    private FieldDef localDefStmt(Loc loc, Type localType) {
         // verify name doesn't conflict with an import type
         String name = consumeId();
         FieldDef stmt = new FieldDef(null, name);
@@ -171,9 +168,7 @@ public class DeepParser extends Parser {
             stmt.initExpr = expr();
         }
 
-        if (isEndOfStmt) {
-            endOfStmt();
-        }
+        endOfStmt();
         endLoc(stmt, loc);
         return stmt;
     }
@@ -209,10 +204,10 @@ public class DeepParser extends Parser {
         Loc loc = cur.loc;
         consume(TokenKind.returnKeyword);
 
-        if (!endOfStmt(null)) {
+        if (curt == TokenKind.semicolon) {
             stmt.expr = expr();
-            endOfStmt();
         }
+        endOfStmt();
         endLoc(stmt, loc);
         return stmt;
     }
@@ -262,10 +257,12 @@ public class DeepParser extends Parser {
         consume(TokenKind.lparen);
 
         if (curt != TokenKind.semicolon) {
-            stmt.init = exprOrLocalDefStmt(false);
+            stmt.init = exprOrLocalDefStmt();
         }
-        consume(TokenKind.semicolon);
-
+        else {
+            consume(TokenKind.semicolon);
+        }
+        
         if (curt != TokenKind.semicolon) {
             stmt.condition = expr();
         }
@@ -396,7 +393,7 @@ public class DeepParser extends Parser {
             }
         }
         consume(TokenKind.rbrace);
-        endOfStmt();
+        //endOfStmt();
         endLoc(stmt, loc);
         return stmt;
     }
@@ -610,8 +607,14 @@ public class DeepParser extends Parser {
     private Expr bitShiftExpr() {
         Loc loc = curLoc();
         Expr expr = addExpr();
-        if (curt == TokenKind.rightShift || curt == TokenKind.leftShift) {
+        if (curt == TokenKind.leftShift) {
             expr = new BinaryExpr(expr, consume().kind, addExpr());
+            endLoc(expr, loc);
+        }
+        if (curt == TokenKind.gt && peekt == TokenKind.gt) {
+            consume();
+            consume();
+            expr = new BinaryExpr(expr, TokenKind.rightShift, addExpr());
             endLoc(expr, loc);
         }
         return expr;
@@ -790,7 +793,7 @@ public class DeepParser extends Parser {
         CallExpr call = new CallExpr();
         call.loc = loc;
         call.target = target;
-        callArgs(call.args, TokenKind.rparen);
+        call.args = callArgs(TokenKind.rparen);
         
         consume(TokenKind.rparen);
         endLoc(call, loc);
@@ -802,8 +805,9 @@ public class DeepParser extends Parser {
      **   <args> = <arg> ("," <arg>)*
      **   <arg> = [<id> ":"] <expr>
      */
-    private void callArgs(ArrayList<ArgExpr> args, TokenKind right) {
+    private ArrayList<ArgExpr> callArgs(TokenKind right) {
         if (curt != right) {
+            ArrayList<ArgExpr> args = new ArrayList<ArgExpr>();
             while (true) {
                 Loc loc = curLoc();
                 ArgExpr arg = new ArgExpr();
@@ -822,8 +826,9 @@ public class DeepParser extends Parser {
                 }
                 consume(TokenKind.comma);
             }
+            return args;
         }
-
+        return null;
 //        if (closureOk) {
 //            Expr closure = closureExpr();
 //            if (closure != null) {
@@ -858,8 +863,13 @@ public class DeepParser extends Parser {
 // primary Expr
 //////////////////////////////////////////////////////////////////////////
     
+    /**
+     ** Paren grouped expression:
+     **   <typeExpr> =  ":" <type>
+     */
     private TypeExpr typeExpr() {
         Loc loc = curLoc();
+        consume(TokenKind.colon);
         Type type = typeRef();
         TypeExpr expr = new TypeExpr(type);
         endLoc(expr, loc);
@@ -1021,7 +1031,7 @@ public class DeepParser extends Parser {
         
         InitBlockExpr expr = new InitBlockExpr();
         expr.target = target;
-        callArgs(expr.args, TokenKind.rbrace);
+        expr.args = callArgs(TokenKind.rbrace);
 
         consume(TokenKind.rbrace);
 

@@ -14,7 +14,7 @@ import java.util.ArrayList;
 public class Type extends AstNode {
     public String namespace;
     public String name;
-    public ArrayList<Type> genericArgs;
+    public ArrayList<Type> genericArgs = null;
     
     //** array size or primitive type sized. the Int32 size is 32
     public int size;
@@ -22,11 +22,15 @@ public class Type extends AstNode {
     //** Is this is a nullable type (marked with trailing ?)
     public boolean isNullable = false;
     
-    public static enum PointerType {
+    public static enum PointerAttr {
         own, ref, raw, weak
     };
     
-    public boolean isConst = false;
+    public static enum ImutableAttr {
+        unknow, imu, mut
+    };
+    
+    public ImutableAttr imutable = ImutableAttr.unknow;
   
     public TypeDef resolvedTypeDef;
     
@@ -35,6 +39,12 @@ public class Type extends AstNode {
     }
     
     public static Type voidType(Loc loc) {
+        Type type = new Type();
+        type.loc = loc;
+        return type;
+    }
+    
+    public static Type funcType(Loc loc, FuncPrototype prototype) {
         Type type = new Type();
         type.loc = loc;
         return type;
@@ -59,7 +69,7 @@ public class Type extends AstNode {
         return type;
     }
     
-    public static Type pointerType(Loc loc, Type elemType, PointerType pointerType) {
+    public static Type pointerType(Loc loc, Type elemType, PointerAttr pointerAttr) {
         Type type = new Type();
         type.loc = loc;
         return type;

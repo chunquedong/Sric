@@ -106,7 +106,7 @@ public abstract class Expr extends AstNode {
     
     public static class CallExpr extends Expr {
         public Expr target;
-        public ArrayList<ArgExpr> args = new ArrayList<ArgExpr>();
+        public ArrayList<ArgExpr> args = null;
     }
     
     public static class ArgExpr extends Expr {
@@ -145,7 +145,7 @@ public abstract class Expr extends AstNode {
     
     public static class InitBlockExpr extends Expr {
         public Expr target;
-        public ArrayList<ArgExpr> args = new ArrayList<ArgExpr>();
+        public ArrayList<ArgExpr> args = null;
     }
     
     public static class LiteralExpr extends Expr {
@@ -155,14 +155,5 @@ public abstract class Expr extends AstNode {
             this.id = id;
             this.value = value;
         }
-    }
-    
-    public static class ListLiteralExpr extends Expr {
-        public Type explicitType;
-        public ArrayList<Expr> vals = new ArrayList<Expr>();
-    }
-    
-    public static class SizeOfExpr extends Expr {
-        public Type type;
     }
 }

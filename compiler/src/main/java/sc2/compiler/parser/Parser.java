@@ -115,12 +115,9 @@ public class Parser {
 // Usings
 //////////////////////////////////////////////////////////////////////////
     /**
-     ** <using> :=  <usingPod> |
-     *  <usingType> | <usingAs>
-     **   <usingPod> := "import" <podSpec> <eos>
-     **   <usingType> := "import" <podSpec> "::" <id> <eos>
-     **   <usingAs> := "import" <podSpec> "::" <id> "as" <id> <eos>
-     **   <podSpec> :=  <id>
+     ** <using> :=  <usingPod> | <usingType>
+     **   <usingPod> := "import" <id> <eos>
+     **   <usingType> := "import" <type>  ["as" <id>] <eos>
      */
     private void imports() {
         while (curt == TokenKind.importKeyword) {
@@ -134,10 +131,8 @@ public class Parser {
         Import u = new Import();
 
         // using podName
-        u.podName = consumeId();
-        if (curt == TokenKind.doubleColon) {
-            consume();
-            u.name = consumeId();
+        if (peekt == TokenKind.doubleColon) {
+            u.type = typeRef();
 
             // using pod::type as rename
             if (curt == TokenKind.asKeyword) {
@@ -145,7 +140,11 @@ public class Parser {
                 u.asName = consumeId();
             }
         }
+        else {
+            u.namespace = consumeId();
+        }
 
+        endOfStmt();
         endLoc(u, loc);
         unit.addDef(u);
     }
@@ -341,6 +340,11 @@ public class Parser {
                     }
                 }
                 else {
+                    if (slot instanceof FieldDef) {
+                        if (structDef.funcDefs.size() > 0) {
+                            err("Field should come before methods");
+                        }
+                    }
                     structDef.addSlot(slot);
                 }
             }
@@ -479,7 +483,7 @@ public class Parser {
             FieldDef enumDef = enumSlotDef(ordinal++);
             def.enumDefs.add(enumDef);
         }
-        endOfStmt();
+        //endOfStmt();
     }
 
     /**
@@ -648,11 +652,8 @@ public class Parser {
 //////////////////////////////////////////////////////////////////////////
     /**
      ** Field definition:
-     **   <fieldDef> :=  <facets> <fieldFlags> [<type>] <id> [":=" <expr>] * [ "{"
-     * [<fieldGetter>] [<fieldSetter>] "}" ] <eos>
+     **   <fieldDef> :=  <facets> <fieldFlags> <id> ":" [<type>] ["=" <expr>] eos
      **   <fieldFlags> := [<protection>] ["readonly"] ["static"]
-     **   <fieldGetter> := "get" (<eos> | <block>)
-     **   <fieldSetter> :=  <protection> "set" (<eos> | <block>)*
      */
     private FieldDef fieldDef(Loc loc, Comments doc, int flags, Type type, String name) {
         return fieldDef(loc, doc, flags, type, name, false);
@@ -728,6 +729,7 @@ public class Parser {
     protected void funcPrototype(FuncPrototype prototype) {
         consume(TokenKind.lparen);
         if (curt != TokenKind.rparen) {
+            prototype.paramDefs = new ArrayList<ParamDef>();
             while (true) {
                 ParamDef newParam = paramDef();
                 prototype.paramDefs.add(newParam);
@@ -771,48 +773,48 @@ public class Parser {
 
     /**
      ** Type signature:
-     **   <type> :=  <simpleType> | <listType> | <mapType> | <funcType>
-     **   <listType> :=  <type> "[]"
-  *
+     **   <type> :=  <simpleType> | <pointerType> | <funcType> | <arrayType> | <arrayRefType> | <constType>
      */
     protected Type typeRef() {
-        return typeRef(false);
-    }
+        Loc loc = curLoc();
+        Type type = null;
 
-    protected Type typeRef(boolean isTypeRef) {
-        Type t = null;
-
-        boolean isConst = false;
+        Type.ImutableAttr imutable = Type.ImutableAttr.unknow;
         if (curt == TokenKind.constKeyword) {
-            isConst = true;
             consume();
+            imutable = Type.ImutableAttr.imu;
+        }
+        else if (curt == TokenKind.mutKeyword) {
+            consume();
+            imutable = Type.ImutableAttr.mut;
         }
         
-        Type.PointerType pointerType = null;
+        Type.PointerAttr pointerAttr = null;
         if (null != curt) switch (curt) {
             case ownKeyword:
-                pointerType = Type.PointerType.own;
+                consume();
+                pointerAttr = Type.PointerAttr.own;
                 break;
             case refKeyword:
-                pointerType = Type.PointerType.ref;
+                consume();
+                pointerAttr = Type.PointerAttr.ref;
                 break;
             case weakKeyword:
-                pointerType = Type.PointerType.weak;
+                consume();
+                pointerAttr = Type.PointerAttr.weak;
                 break;
             default:
                 break;
         }
-        
-        Loc loc = curLoc();
 
         // Types can begin with:
         //   - id
-        //   - [](a:T):T
         if (curt == TokenKind.identifier) {
-            t = simpleType();
+            type = simpleType();
         }
+        //   - [](a:T):T
         else if (curt == TokenKind.lbracket) {
-            t = funcType(isTypeRef);
+            type = funcType();
         }
         else {
             throw err("Expecting type name not $cur");
@@ -822,12 +824,12 @@ public class Parser {
         
         if (curt == TokenKind.star) {
             consume();
-            t = Type.pointerType(loc, t, pointerType);
+            type = Type.pointerType(loc, type, pointerAttr);
             
             // check for ? nullable
             if (curt == TokenKind.question) {
                 consume(TokenKind.question);
-                t.isNullable = true;
+                type.isNullable = true;
                 if (curt == TokenKind.question) {
                     err("Type cannot have multiple '?'");
                 }
@@ -836,17 +838,24 @@ public class Parser {
 
         // trailing [] for array
         if (curt == TokenKind.lbracket) {
-            consume(TokenKind.lbracket);            
+            consume(TokenKind.lbracket);
             if (curt == TokenKind.rbracket) {
-                t = Type.arrayRefType(loc, t);
+                type = Type.arrayRefType(loc, type);
             }
             else if (curt == TokenKind.intLiteral) {
-                t = Type.arrayType(loc, t, (Integer)cur.val);
+                type = Type.arrayType(loc, type, (Integer)cur.val);
             }
+            else {
+                err("Array size must int literal");
+                expr();
+            }
+            consume(TokenKind.rbracket);
         }
+        
+        type.imutable = imutable;
 
-        endLoc(t, loc);
-        return t;
+        endLoc(type, loc);
+        return type;
     }
 
     /**
@@ -878,15 +887,12 @@ public class Parser {
             while (true) {
                 Type type1 = typeRef();
                 params.add(type1);
-                if (curt == TokenKind.comma) {
-                    consume();
-                    continue;
-                } else if (curt == TokenKind.gt) {
-                    consume();
+                if (curt == TokenKind.gt) {
                     break;
                 }
-                break;
+                consume(TokenKind.comma);
             }
+            consume(TokenKind.gt);
             type.genericArgs = params;
         }
 
@@ -897,31 +903,20 @@ public class Parser {
 
     /**
      ** Method type signature:
-     **   <funcType> := "|" ("->" | <funcTypeSig>) "|"
-     **   <funcTypeSig> :=  <formals> ["->" <type>]
-     **   <formals> := [<formal> ("," <formal>)*]
-     **   <formal> :=  <formFull> | <formalInferred> | <formalTypeOnly>
-     **   <formalFull> :=  <type> <id>
-     **   <formalInferred> :=  <id>
-     **   <formalTypeOnly> :=  <type>
-     **
-     ** If isTypeRef is true (slot signatures), then we requrie explicit *
-     * parameter types.
-  *
+     **   <funcType> := "[]" "(" <args> ")" [<type>]
      */
-    protected Type funcType(boolean isTypeRef) {
+    protected Type funcType() {
         Loc loc = cur.loc;
-        Type ret = Type.voidType(loc);
+        
+        consume(TokenKind.lbracket);
+        consume(TokenKind.rbracket);
+        
+        FuncPrototype prototype = new FuncPrototype();
+        funcPrototype(prototype);
+       
+        Type t = Type.funcType(loc, prototype);
 
-        // opening pipe
-        consume(TokenKind.pipe);
-
-        //TODO
-        // closing pipe
-        consume(TokenKind.pipe);
-
-        FuncPrototype ft = new FuncPrototype();
-        //endLoc(ft);
+        endLoc(t, loc);
         return null;
     }
 
@@ -956,6 +951,7 @@ public class Parser {
 //////////////////////////////////////////////////////////////////////////
 // Errors
 //////////////////////////////////////////////////////////////////////////
+    
     CompilerErr err(String msg) {
         return log.err(msg, cur.loc);
     }
@@ -1053,32 +1049,16 @@ public class Parser {
     }
 
     /**
-     ** Statements can be terminated with a semicolon, end of line * or } end
-     * of block. Return true on success. On failure * return false if errMsg is
-     * null or log/throw an exception.
-  *
+     ** Statements can be terminated with a semicolon
      */
-    protected boolean endOfStmt() {
-        return endOfStmt("Expected end of statement with ';' not '" + cur + "'");
-    }
-
-    protected boolean endOfStmt(String errMsg) {
+    protected void endOfStmt() {
         //if (cur.newline) return true;
         if (curt == TokenKind.semicolon) {
             consume();
-            return true;
         }
-//        if (curt == TokenKind.rbrace) {
-//            return true;
-//        }
-//        if (curt == TokenKind.eof) {
-//            return true;
-//        }
-        if (errMsg == null) {
-            return false;
-        }
+        
+        String errMsg = "Expected end of statement with ';' not '" + cur + "'";
         err(errMsg);
-        return false;
     }
 
     /**
