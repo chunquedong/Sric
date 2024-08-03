@@ -66,8 +66,7 @@ public abstract class Expr extends AstNode {
         public Token.TokenKind opToken;   // operator token type (Token.bang, etc)
         public Expr operand;    // operand expression
         
-        public UnaryExpr(Loc loc, TokenKind tok, Expr operand) {
-            this.loc = loc;
+        public UnaryExpr(TokenKind tok, Expr operand) {
             this.opToken = tok;
             this.operand = operand;
         }
@@ -78,8 +77,7 @@ public abstract class Expr extends AstNode {
         public Expr lhs;           // left hand side
         public Expr rhs;           // right hand side
         
-        public BinaryExpr(Loc loc, Expr lhs, TokenKind tok, Expr rhs) {
-            this.loc = loc;
+        public BinaryExpr(Expr lhs, TokenKind tok, Expr rhs) {
             this.lhs = lhs;
             this.opToken = tok;
             this.rhs = rhs;
@@ -90,13 +88,23 @@ public abstract class Expr extends AstNode {
         }
     }
     
+    /**
+     * wrap type for sizeof(t) or 'epxr is/as T'
+     */
+    public static class TypeExpr extends Expr {
+        public Type type;           // right hand side
+        
+        public TypeExpr(Type type) {
+            this.type = type;
+        }
+    }
+    
     public static class IndexExpr extends Expr {
         public Expr target;
         public Expr index;
     }
     
     public static class CallExpr extends Expr {
-        public String name;
         public Expr target;
         public ArrayList<ArgExpr> args = new ArrayList<ArgExpr>();
     }
@@ -104,9 +112,27 @@ public abstract class Expr extends AstNode {
     public static class ArgExpr extends Expr {
         public String name;
         public Expr argExpr;
+        
+        public ArgExpr() {
+        }
+        
+        public ArgExpr(Expr argExpr) {
+            this.argExpr = argExpr;
+            this.loc = argExpr.loc;
+            this.len = argExpr.len;
+        }
     }
     
     public static class IdExpr extends Expr {
+        public String namespace;
+        public String name;
+        
+        public IdExpr(String name) {
+            this.name = name;
+        }
+    }
+    
+    public static class AccessExpr extends Expr {
         public Expr target;
         public String name;
     }
@@ -119,14 +145,13 @@ public abstract class Expr extends AstNode {
     
     public static class InitBlockExpr extends Expr {
         public Expr target;
-        public Block block;
+        public ArrayList<ArgExpr> args = new ArrayList<ArgExpr>();
     }
     
     public static class LiteralExpr extends Expr {
         public Object value;
         
-        public LiteralExpr(Loc loc, ExprId id, Object value) {
-            this.loc = loc;
+        public LiteralExpr(ExprId id, Object value) {
             this.id = id;
             this.value = value;
         }

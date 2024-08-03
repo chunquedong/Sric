@@ -49,5 +49,6 @@ public class TokenizerTest {
         Tokenizer toker = new Tokenizer(log, "sys.sc", src);
         ArrayList<Token> toks = toker.tokenize();
         System.out.println(toks);
+        assertTrue(log.errors.size() == 0);
     }
 }

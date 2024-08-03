@@ -135,7 +135,7 @@ public class Tokenizer {
      */
     private Token find() {
         // skip whitespace
-        if (Character.isSpaceChar(cur)) {
+        if (Character.isWhitespace(cur)) {
             consume();
             whitespace = true;
             return null;

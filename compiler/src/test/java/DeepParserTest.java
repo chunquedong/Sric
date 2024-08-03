@@ -8,30 +8,30 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import sc2.compiler.CompilerLog;
-import sc2.compiler.ast.AstNode.FileUnit;
-import sc2.compiler.ast.Token;
+import sc2.compiler.ast.AstNode;
 import sc2.compiler.backend.CppGenerator;
+import sc2.compiler.parser.DeepParser;
 import sc2.compiler.parser.Parser;
-import sc2.compiler.parser.Tokenizer;
+
 
 /**
  *
  * @author yangjiandong
  */
-public class ParserTest {
+public class DeepParserTest {
     @Test
     public void testSys() throws IOException {
-        String file = "target/test-classes/sys.sc";
+        String file = "target/test-classes/testStruct.sc";
         String src = Files.readString(Path.of(file));
         
         CompilerLog log = new CompilerLog();
-        FileUnit unit = new FileUnit(file);
-        Parser parser = new Parser(log, src, unit);
+        AstNode.FileUnit unit = new AstNode.FileUnit(file);
+        DeepParser parser = new DeepParser(log, src, unit);
         parser.parse();
+        
         assertTrue(log.errors.size() == 0);
         
         CppGenerator generator = new CppGenerator(System.out);
@@ -49,8 +49,8 @@ public class ParserTest {
             String src = Files.readString(file.toPath());
         
             CompilerLog log = new CompilerLog();
-            FileUnit unit = new FileUnit(file.getPath());
-            Parser parser = new Parser(log, src, unit);
+            AstNode.FileUnit unit = new AstNode.FileUnit(file.getPath());
+            DeepParser parser = new DeepParser(log, src, unit);
             parser.parse();
             assertTrue(log.errors.size() == 0);
 
@@ -60,7 +60,7 @@ public class ParserTest {
             
             String str = stream.toString("UTF-8");
             String name = file.getName().substring(0, file.getName().lastIndexOf("."));
-            GoldenTest.verifyGolden(str, "parser", name+".cpp");
+            GoldenTest.verifyGolden(str, "deepParser", name+".cpp");
         }
     }
 }

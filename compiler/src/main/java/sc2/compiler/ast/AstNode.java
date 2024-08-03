@@ -59,8 +59,7 @@ public class AstNode {
         public String content;
         public TokenKind type;
         
-        public Comment(Loc loc, String content, TokenKind type) {
-            this.loc = loc;
+        public Comment(String content, TokenKind type) {
             this.content = content;
             this.type = type;
         }
@@ -93,8 +92,7 @@ public class AstNode {
         public Type fieldType;        // field type
         public Expr initExpr;         // init expression or null
         
-        public FieldDef(Loc loc, Comments comment, String name) {
-            this.loc = loc;
+        public FieldDef(Comments comment, String name) {
             this.comment = comment;
             this.name = name;
         }
@@ -111,8 +109,7 @@ public class AstNode {
         public ArrayList<FieldDef> fieldDefs = new ArrayList<FieldDef>();
         public ArrayList<FuncDef> funcDefs = new ArrayList<FuncDef>();
         
-        public StructDef(Loc loc, Comments comment, int flags, String name) {
-            this.loc = loc;
+        public StructDef(Comments comment, int flags, String name) {
             this.comment = comment;
             this.flags = flags;
             this.name = name;
@@ -141,8 +138,7 @@ public class AstNode {
     public static class EnumDef extends TypeDef {
         public ArrayList<FieldDef> enumDefs;
         
-        public EnumDef(Loc loc, Comments comment, int flags, String name) {
-            this.loc = loc;
+        public EnumDef(Comments comment, int flags, String name) {
             this.comment = comment;
             this.flags = flags;
             this.name = name;
@@ -157,8 +153,7 @@ public class AstNode {
     public static class TraitDef extends TypeDef {
         public ArrayList<FuncDef> funcDefs;
         
-        public TraitDef(Loc loc, Comments comment, int flags, String name) {
-            this.loc = loc;
+        public TraitDef(Comments comment, int flags, String name) {
             this.comment = comment;
             this.flags = flags;
             this.name = name;
@@ -243,7 +238,7 @@ public class AstNode {
     }
     
     public static class Block extends AstNode {
-        public ArrayList<Stmt> stmts;
+        public ArrayList<Stmt> stmts = new ArrayList<Stmt>();
     }
     
     public static class GeneriParamDef extends TypeDef {

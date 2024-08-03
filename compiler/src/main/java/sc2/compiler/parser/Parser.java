@@ -60,7 +60,7 @@ public class Parser {
     public Parser(CompilerLog log, String code, FileUnit unit) {
         this.log = log;
         this.unit = unit;
-        Tokenizer toker = new Tokenizer(log, "sys.sc", code);
+        Tokenizer toker = new Tokenizer(log, unit.name, code);
         tokens = toker.tokenize();
         
         this.numTokens = tokens.size();
@@ -129,9 +129,9 @@ public class Parser {
     }
 
     private void parseImports() {
+        Loc loc = curLoc();
         consume(TokenKind.importKeyword);
         Import u = new Import();
-        u.loc = curLoc();
 
         // using podName
         u.podName = consumeId();
@@ -146,7 +146,7 @@ public class Parser {
             }
         }
 
-        endLoc(u);
+        endLoc(u, loc);
         unit.addDef(u);
     }
 
@@ -246,7 +246,7 @@ public class Parser {
             // name
             String name = consumeId();
             // lookup TypeDef
-            traitDef = new TraitDef(loc, doc, flags, name);
+            traitDef = new TraitDef(doc, flags, name);
             typeDef = traitDef;
         }
         else if (curt == TokenKind.enumKeyword) {
@@ -263,7 +263,7 @@ public class Parser {
             // name
             String name = consumeId();
             // lookup TypeDef
-            EnumDef def = new EnumDef(loc, doc, flags, name);
+            EnumDef def = new EnumDef(doc, flags, name);
             typeDef = def;
         } // class
         else {
@@ -272,7 +272,7 @@ public class Parser {
             // name
             String name = consumeId();
             // lookup TypeDef
-            structDef = new StructDef(loc, doc, flags, name);
+            structDef = new StructDef(doc, flags, name);
             typeDef = structDef;
         }
 
@@ -348,7 +348,7 @@ public class Parser {
 
         // end of class body
         consume(TokenKind.rbrace);
-        endLoc(typeDef);
+        endLoc(typeDef, loc);
 
         return typeDef;
     }
@@ -488,7 +488,8 @@ public class Parser {
      */
     private FieldDef enumSlotDef(int ordinal) {
         Comments doc = doc();
-        FieldDef def = new FieldDef(curLoc(), doc, consumeId());
+        Loc loc = curLoc();
+        FieldDef def = new FieldDef(doc, consumeId());
 
         // optional ctor args
         if (curt == TokenKind.assign) {
@@ -496,7 +497,7 @@ public class Parser {
             def.initExpr = expr();
         }
 
-        endLoc(def);
+        endLoc(def, loc);
         return def;
     }
 
@@ -658,7 +659,7 @@ public class Parser {
     }
     private FieldDef fieldDef(Loc loc, Comments doc, int flags, Type type, String name, boolean isLocalVar) {
         // define field itself
-        FieldDef field = new FieldDef(loc, doc, name);
+        FieldDef field = new FieldDef(doc, name);
         field.flags = flags;
         field.fieldType = type;
         
@@ -682,7 +683,7 @@ public class Parser {
         }
 
         endOfStmt();
-        endLoc(field);
+        endLoc(field, loc);
         return field;
     }
 
@@ -707,24 +708,7 @@ public class Parser {
         method.prototype.returnType = ret;
         method.name = name;
 
-        // parameters
-        consume(TokenKind.lparen);
-        if (curt != TokenKind.rparen) {
-            while (true) {
-                ParamDef newParam = paramDef();
-                method.prototype.paramDefs.add(newParam);
-                if (curt == TokenKind.rparen) {
-                    break;
-                }
-                consume(TokenKind.comma);
-            }
-        }
-        consume(TokenKind.rparen);
-        
-        if (curt == TokenKind.colon) {
-            consume();
-            method.prototype.returnType = typeRef();
-        }
+        funcPrototype(method.prototype);
 
         // if This is returned, then we configure inheritedRet
         // right off the bat (this is actual signature we will use)
@@ -737,28 +721,47 @@ public class Parser {
             endOfStmt();
         }
 
-        endLoc(method);
+        endLoc(method, loc);
         return method;
+    }
+    
+    protected void funcPrototype(FuncPrototype prototype) {
+        consume(TokenKind.lparen);
+        if (curt != TokenKind.rparen) {
+            while (true) {
+                ParamDef newParam = paramDef();
+                prototype.paramDefs.add(newParam);
+                if (curt == TokenKind.rparen) {
+                    break;
+                }
+                consume(TokenKind.comma);
+            }
+        }
+        consume(TokenKind.rparen);
+        
+        if (curt == TokenKind.colon) {
+            consume();
+            prototype.returnType = typeRef();
+        }
     }
 
     private ParamDef paramDef() {
+        Loc loc = curLoc();
         if (curt == TokenKind.dotDotDot) {
             consume();
             ParamDef param = new ParamDef();
-            param.loc = cur.loc;
             param.name = consumeId();
-            endLoc(param);
+            endLoc(param, loc);
             return param;
         }
 
         ParamDef param = new ParamDef();
-        param.loc = curLoc();
         if (curt == TokenKind.assign) {
             //if (curt === TokenKind.assign) err("Must use := for parameter default");
             consume();
             param.defualtValue = expr();
         }
-        endLoc(param);
+        endLoc(param, loc);
         return param;
     }
 
@@ -842,7 +845,7 @@ public class Parser {
             }
         }
 
-        endLoc(t);
+        endLoc(t, loc);
         return t;
     }
 
@@ -888,7 +891,7 @@ public class Parser {
         }
 
         // got it
-        endLoc(type);
+        endLoc(type, loc);
         return type;
     }
 
@@ -930,17 +933,22 @@ public class Parser {
      *
      */
     private Comments doc() {
+        Loc loc0 = cur.loc;
         Comments comments = null;
         while (curt == TokenKind.docComment || curt == TokenKind.cmdComment) {
             Loc loc = cur.loc;
             TokenKind kind = curt;
             String lines = (String) consume().val;
-            Comment doc = new Comment(loc, lines, kind);
+            Comment doc = new Comment(lines, kind);
             if (comments == null) {
                 comments = new Comments();
                 comments.loc = loc;
             }
             comments.comments.add(doc);
+            endLoc(doc, loc);
+        }
+        if (comments != null) {
+            endLoc(comments, loc0);
         }
         return comments;
     }
@@ -1027,7 +1035,7 @@ public class Parser {
      ** update loc.len field
      *
      */
-    protected void endLoc(AstNode node) {
+    protected void endLoc(AstNode node, Loc loc) {
         Token preToken = (pos > 0) ? tokens.get(pos - 1) : cur;
         int lastEnd = preToken.loc.offset + preToken.len;
         Loc self = node.loc;
