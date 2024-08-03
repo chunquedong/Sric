@@ -33,3 +33,5 @@
 /compiler/build/
 /compiler/nbproject/
 /compiler/target/
+/compiler/dist/
+compiler/goldenFile/

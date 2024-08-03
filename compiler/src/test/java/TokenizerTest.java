@@ -1,8 +1,7 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/UnitTests/JUnit5TestClass.java to edit this template
- */
-
+//
+// Copyright (c) 2024, chunquedong
+// Licensed under the Academic Free License version 3.0
+//
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
