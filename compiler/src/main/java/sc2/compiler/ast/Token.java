@@ -76,7 +76,7 @@ public class Token {
         rightShift    ("rightShif", false),
         leftShift     ("<<", false),
         docComment    ("/**", false),
-        cmdComment    ("///", false),
+        cmdComment    ("//!", false),
         slComment     ("//", false),
         mlComment     ("/*", false),
         dollar        ("$", false),
@@ -147,6 +147,7 @@ public class Token {
         rawKeyword("raw", true),
         unsafeKeyword("unsafe", true),
         typealiasKeyword("typealias", true),
+        varKeyword("var", true),
         
         // misc
         eof("eof", false);

@@ -1,6 +1,6 @@
 
-struct A<T> {
-    i: T ;
+struct A$<T> {
+    var i: T ;
     fun foo(): T* {
        return &i;
     }
@@ -8,7 +8,7 @@ struct A<T> {
 
 fun main()
 {
-    a := A<Int>{};
+    var a = A$<Int>{};
     a.i = 2;
-    b : Int* = a.foo();
+    var b : Int* = a.foo();
 }

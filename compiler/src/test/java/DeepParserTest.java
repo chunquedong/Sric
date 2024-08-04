@@ -52,7 +52,12 @@ public class DeepParserTest {
             AstNode.FileUnit unit = new AstNode.FileUnit(file.getPath());
             DeepParser parser = new DeepParser(log, src, unit);
             parser.parse();
-            assertTrue(log.errors.size() == 0);
+            
+            if (log.errors.size() > 0) {
+                String name = file.getName().substring(0, file.getName().lastIndexOf("."));
+                GoldenTest.verifyGolden(log.toString(), "parser", name+".cpp");
+                return;
+            }
 
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
             CppGenerator generator = new CppGenerator(new PrintStream(stream));

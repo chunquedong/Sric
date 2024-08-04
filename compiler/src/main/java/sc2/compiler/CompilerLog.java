@@ -25,6 +25,19 @@ public class CompilerLog {
     }
     
     public CompilerErr err(String msg, Loc loc) {
-        return new CompilerErr(loc, msg);
+        CompilerErr e = new CompilerErr(loc, msg);
+        errors.add(e);
+        return e;
+    }
+    
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (CompilerErr e : errors) {
+            sb.append(e.loc).append(": ");
+            sb.append(e.msg);
+            sb.append('\n');
+        }
+        return sb.toString();
     }
 }

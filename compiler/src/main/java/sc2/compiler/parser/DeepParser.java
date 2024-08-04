@@ -107,7 +107,7 @@ public class DeepParser extends Parser {
         // see if this statement begins with a type literal
         Loc loc = curLoc();
 
-        if (curt == TokenKind.identifier && (peekt == TokenKind.colon || peekt == TokenKind.defAssign)) {
+        if (curt == TokenKind.varKeyword || curt == TokenKind.constKeyword) {
             return localDefStmt(loc, null);
         }
 
@@ -128,10 +128,22 @@ public class DeepParser extends Parser {
      * identifier of the local variable.
      */
     private FieldDef localDefStmt(Loc loc, Type localType) {
+        boolean isConst = false;
+        if (curt == TokenKind.constKeyword) {
+            isConst = true;
+            consume();
+        }
+        else {
+            consume(TokenKind.varKeyword);
+        }
+        
         // verify name doesn't conflict with an import type
         String name = consumeId();
         FieldDef stmt = new FieldDef(null, name);
-        if (peekt == TokenKind.colon) {
+        if (isConst) {
+            stmt.flags = AstNode.Const;
+        }
+        if (curt == TokenKind.colon) {
             consume();
             localType = typeRef();
             stmt.fieldType = localType;
@@ -142,7 +154,7 @@ public class DeepParser extends Parser {
             }
         }
         else {
-            consume(TokenKind.defAssign);
+            consume(TokenKind.assign);
             stmt.initExpr = expr();
         }
 
@@ -193,7 +205,7 @@ public class DeepParser extends Parser {
         Loc loc = cur.loc;
         consume(TokenKind.returnKeyword);
 
-        if (curt == TokenKind.semicolon) {
+        if (curt != TokenKind.semicolon) {
             stmt.expr = expr();
         }
         endOfStmt();
@@ -441,10 +453,7 @@ public class DeepParser extends Parser {
             Expr condition = expr;
             consume(TokenKind.question);
             Expr trueExpr = condOrExpr();
-            // nice error checking for Foo? x =
-            if (curt == TokenKind.defAssign && expr.id == ExprId.unknownVar && trueExpr.id == ExprId.unknownVar) {
-                throw err("Unknown type '$expr' for local declaration");
-            }
+
             consume(TokenKind.colon);
             Expr falseExpr = condOrExpr();
             IfExpr ifExpr = new IfExpr();
@@ -747,14 +756,14 @@ public class DeepParser extends Parser {
      */
     private Expr accessExpr(Expr target) {
         Loc loc = target.loc;
-        TokenKind token = curt;
+        TokenKind token = consume().kind;
         String name = consumeId();
 
         // at this point we are parsing a single identifier, but
         // if it looks like it was expected to be a type we can
         // provide a more meaningful error
         if (curt == TokenKind.pound) {
-            throw err("Unknown type '$name' for type literal" + loc);
+            throw err("Unknown type '"+name+"' for type literal" + loc);
         }
 
         AccessExpr expr = new AccessExpr();

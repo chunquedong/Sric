@@ -72,6 +72,10 @@ public class Type extends AstNode {
     public static Type pointerType(Loc loc, Type elemType, PointerAttr pointerAttr) {
         Type type = new Type();
         type.loc = loc;
+        type.namespace = "sys";
+        type.name = "Ptr";
+        type.genericArgs = new ArrayList<>();
+        type.genericArgs.add(elemType);
         return type;
     }
     

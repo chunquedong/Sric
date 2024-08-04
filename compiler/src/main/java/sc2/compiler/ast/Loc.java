@@ -4,6 +4,8 @@
 //
 package sc2.compiler.ast;
 
+import sc2.compiler.CompilerLog;
+
 /**
  *
  * @author yangjiandong
@@ -22,4 +24,10 @@ public class Loc {
         this.offset = offset;
     }
    
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(file).append("(").append(line).append(",").append(col).append(")");
+        return sb.toString();
+    }
 }

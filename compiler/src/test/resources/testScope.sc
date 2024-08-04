@@ -1,15 +1,15 @@
 
 fun main1()
 {
-    i := 1;
-    p: Int* = &i;
+    var i = 1;
+    var p: Int* = &i;
 }
 
 fun main2()
 {
-    p: Int*?;
+    var p: Int*?;
     if (true) {
-        a : Int = 1;
+        var a : Int = 1;
         p = &a;
     }
 }

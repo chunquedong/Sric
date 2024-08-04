@@ -53,7 +53,7 @@ public class Parser {
     }
 
     public void parse() {
-        imports();
+        usings();
         while (curt != TokenKind.eof) {
             try {
                 AstNode defNode = topLevelDef();
@@ -100,9 +100,13 @@ public class Parser {
      **   <usingPod> := "import" <id> <eos>
      **   <usingType> := "import" <type>  ["as" <id>] <eos>
      */
-    private void imports() {
+    private void usings() {
         while (curt == TokenKind.importKeyword) {
             parseImports();
+        }
+        
+        while (curt == TokenKind.typealiasKeyword) {
+            parseTypeAlias();
         }
     }
     
@@ -112,7 +116,7 @@ public class Parser {
         TypeAlias u = new TypeAlias();
         u.asName = consumeId();
         
-        consume(TokenKind.defAssign);
+        consume(TokenKind.assign);
         u.type = typeRef();
 
         endOfStmt();
@@ -135,12 +139,10 @@ public class Parser {
     }
 
     private AstNode topLevelDef() {
+        Loc loc = curLoc();
         // [<doc>]
         Comments doc = doc();
-        if (curt == TokenKind.importKeyword) {
-            err("Cannot use ** doc comments before using statement");
-            parseImports();
-        }
+
         if (curt == TokenKind.eof) {
             return null;
         }
@@ -156,20 +158,25 @@ public class Parser {
             case funKeyword:
             {
                 consume();
-                Loc loc = curLoc();
                 String sname = consumeId();
                 return methodDef(loc, doc, flags, null, sname);
             }
-            default:
+            case varKeyword:
+            case constKeyword:
             {
-                Loc loc = curLoc();
+                if (curt == TokenKind.constKeyword) {
+                    flags |= AstNode.Const;
+                }
+                consume();
                 String sname = consumeId();
                 return fieldDef(loc, doc, flags, null, sname);
             }
         }
+        throw err("Expected var,const,fun keyword");
     }
     
     private AstNode slotDef(Comments doc) {
+        Loc loc = curLoc();
         // <flags>
         int flags = flags();
 
@@ -177,17 +184,21 @@ public class Parser {
             case funKeyword:
             {
                 consume();
-                Loc loc = curLoc();
                 String sname = consumeId();
                 return methodDef(loc, doc, flags, null, sname);
             }
-            default:
+            case varKeyword:
+            case constKeyword:
             {
-                Loc loc = curLoc();
+                if (curt == TokenKind.constKeyword) {
+                    flags |= AstNode.Const;
+                }
+                consume();
                 String sname = consumeId();
                 return fieldDef(loc, doc, flags, null, sname);
             }
         }
+        throw err("Expected var,const,fun keyword");
     }
             
     /**
@@ -704,9 +715,6 @@ public class Parser {
      **   <fieldFlags> := [<protection>] ["readonly"] ["static"]
      */
     private FieldDef fieldDef(Loc loc, Comments doc, int flags, Type type, String name) {
-        return fieldDef(loc, doc, flags, type, name, false);
-    }
-    private FieldDef fieldDef(Loc loc, Comments doc, int flags, Type type, String name, boolean isLocalVar) {
         // define field itself
         FieldDef field = new FieldDef(doc, name);
         field.flags = flags;
@@ -802,15 +810,19 @@ public class Parser {
 
     private ParamDef paramDef() {
         Loc loc = curLoc();
-        if (curt == TokenKind.dotDotDot) {
-            consume();
-            ParamDef param = new ParamDef();
-            param.name = consumeId();
-            endLoc(param, loc);
-            return param;
-        }
 
         ParamDef param = new ParamDef();
+        param.name = consumeId();
+        
+        consume(TokenKind.colon);
+        
+        if (curt == TokenKind.dotDotDot) {
+            consume();
+        }
+        else {
+            param.paramType = typeRef();
+        }
+        
         if (curt == TokenKind.assign) {
             //if (curt === TokenKind.assign) err("Must use := for parameter default");
             consume();
@@ -857,7 +869,7 @@ public class Parser {
         }
         
         if (pointerAttr != null) {
-            Type type = typeRef();
+            Type type = arrayType();
             consume(TokenKind.star);
             type = Type.pointerType(loc, type, pointerAttr);
 
@@ -1050,7 +1062,7 @@ public class Parser {
      */
     protected String consumeId() {
         if (curt != TokenKind.identifier) {
-            throw err("Expected identifier, not '$cur'");
+            throw err("Expected identifier, not '"+cur+"'");
             //consume();
             //return "";
         }
@@ -1064,7 +1076,7 @@ public class Parser {
      */
     protected void verify(TokenKind kind) {
         if (!curt.equals(kind)) {
-            throw err("Expected '$kind.symbol', not '$cur'");
+            throw err("Expected '"+kind.symbol+"', not '"+cur+"'");
         }
     }
 
@@ -1117,19 +1129,16 @@ public class Parser {
      *
      */
     protected void endLoc(AstNode node, Loc loc) {
+        node.loc = loc;
+        
         Token preToken = (pos > 0) ? tokens.get(pos - 1) : cur;
-        int lastEnd = preToken.loc.offset + preToken.len;
-        Loc self = node.loc;
-        int selfEnd = self.offset + node.len;
-        if (lastEnd == selfEnd) {
+        int end = preToken.loc.offset + preToken.len;
+        int begin = loc.offset;
+        int len = end - begin;
+        
+        if (len <= 0) {
             return;
         }
-        if (lastEnd < selfEnd) {
-            return;
-        }
-
-        int len = lastEnd - self.offset;
-        //loc := Loc.make(self.file, self.line, self.col, self.offset, lastEnd-self.offset)
         node.len = len;
     }
 
@@ -1140,6 +1149,7 @@ public class Parser {
         //if (cur.newline) return true;
         if (curt == TokenKind.semicolon) {
             consume();
+            return;
         }
         
         String errMsg = "Expected end of statement with ';' not '" + cur + "'";
