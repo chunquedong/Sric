@@ -104,12 +104,17 @@ public abstract class Expr extends AstNode {
         public Expr index;
     }
     
+    public static class GenericInstance extends Expr {
+        public Expr target;
+        public ArrayList<Type> genericArgs = new ArrayList<Type>();
+    }
+    
     public static class CallExpr extends Expr {
         public Expr target;
         public ArrayList<ArgExpr> args = null;
     }
     
-    public static class ArgExpr extends Expr {
+    public static class ArgExpr extends AstNode {
         public String name;
         public Expr argExpr;
         
@@ -122,6 +127,7 @@ public abstract class Expr extends AstNode {
             this.len = argExpr.len;
         }
     }
+
     
     public static class IdExpr extends Expr {
         public String namespace;
@@ -135,6 +141,7 @@ public abstract class Expr extends AstNode {
     public static class AccessExpr extends Expr {
         public Expr target;
         public String name;
+        public Token.TokenKind opToken;
     }
     
     public static class IfExpr extends Expr {

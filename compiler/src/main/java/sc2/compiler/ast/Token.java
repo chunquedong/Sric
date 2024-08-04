@@ -144,7 +144,9 @@ public class Token {
         refKeyword("ref", true),
         moveKeyword("move", true),
         weakKeyword("weak", true),
+        rawKeyword("raw", true),
         unsafeKeyword("unsafe", true),
+        typealiasKeyword("typealias", true),
         
         // misc
         eof("eof", false);

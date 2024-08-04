@@ -11,33 +11,11 @@ package sc2.compiler.parser;
 import java.util.ArrayList;
 import sc2.compiler.ast.AstNode.*;
 import sc2.compiler.CompilerLog;
-import sc2.compiler.ast.Expr;
 import sc2.compiler.ast.Expr.*;
-import sc2.compiler.ast.Loc;
-import sc2.compiler.ast.Stmt;
 import sc2.compiler.ast.Stmt.*;
-import sc2.compiler.ast.Token;
+import sc2.compiler.ast.*;
 import sc2.compiler.ast.Token.TokenKind;
-import sc2.compiler.ast.Type;
-import sc2.compiler.ast.ClosureExpr;
-import static sc2.compiler.ast.Token.TokenKind.awaitKeyword;
-import static sc2.compiler.ast.Token.TokenKind.bang;
-import static sc2.compiler.ast.Token.TokenKind.colon;
-import static sc2.compiler.ast.Token.TokenKind.falseKeyword;
-import static sc2.compiler.ast.Token.TokenKind.floatLiteral;
-import static sc2.compiler.ast.Token.TokenKind.identifier;
-import static sc2.compiler.ast.Token.TokenKind.intLiteral;
-import static sc2.compiler.ast.Token.TokenKind.itKeyword;
-import static sc2.compiler.ast.Token.TokenKind.lbracket;
-import static sc2.compiler.ast.Token.TokenKind.lparen;
-import static sc2.compiler.ast.Token.TokenKind.nullKeyword;
-import static sc2.compiler.ast.Token.TokenKind.offsetofKeyword;
-import static sc2.compiler.ast.Token.TokenKind.pipe;
-import static sc2.compiler.ast.Token.TokenKind.sizeofKeyword;
-import static sc2.compiler.ast.Token.TokenKind.strLiteral;
-import static sc2.compiler.ast.Token.TokenKind.superKeyword;
-import static sc2.compiler.ast.Token.TokenKind.thisKeyword;
-import static sc2.compiler.ast.Token.TokenKind.trueKeyword;
+import static sc2.compiler.ast.Token.TokenKind.*;
 
 /**
  *
@@ -169,6 +147,17 @@ public class DeepParser extends Parser {
         }
 
         endOfStmt();
+        endLoc(stmt, loc);
+        return stmt;
+    }
+    
+    private UnsafeBlock unsafeStmt() {
+        Loc loc = cur.loc;
+        consume(TokenKind.unsafeKeyword);
+
+        UnsafeBlock stmt = new UnsafeBlock();
+        stmt.block = stmtOrBlock();
+
         endLoc(stmt, loc);
         return stmt;
     }
@@ -716,27 +705,21 @@ public class DeepParser extends Parser {
     **/
     private Expr termChainExpr(Expr target) {
 
-        // handle various call operators: . -> ?. ?->
+        // handle various call operators: . -> ~>
         switch (curt) {
-            // if ".id" field access or ".id" call
             case dot:
-                consume();
-                return accessExpr(target, false, false, true);
-
-            // if "->id" dynamic call
-            case arrow: 
-                consume();
-                return accessExpr(target, true, false, false);
-            // if "~>" checked dynamic call
+            case arrow:
             case tildeArrow:
-                consume();
-                return accessExpr(target, true, false, true);
-            /*
-            // if "?.id" safe call
-            case safeDot:
-                consume();
-                return idExpr(target, false, true, true);
-            */
+                return accessExpr(target);
+        }
+        
+        // target$<...>
+        if (cur.kind == TokenKind.dollar && peekt == TokenKind.lt) {
+            GenericInstance gi = new GenericInstance();
+            gi.target = target;
+            gi.genericArgs = genericArgs();
+            endLoc(gi, target.loc);
+            return gi;
         }
 
         // target[...]
@@ -762,8 +745,9 @@ public class DeepParser extends Parser {
      ** Identifier expression:
      **   <accessExpr> = ("." | "->" | "~>") <id>
      */
-    private Expr accessExpr(Expr target, boolean dynamicCall, boolean safeCall, boolean checkedCall) {
+    private Expr accessExpr(Expr target) {
         Loc loc = target.loc;
+        TokenKind token = curt;
         String name = consumeId();
 
         // at this point we are parsing a single identifier, but
@@ -774,7 +758,7 @@ public class DeepParser extends Parser {
         }
 
         AccessExpr expr = new AccessExpr();
-        expr.loc = loc;
+        expr.opToken = token;
         expr.name = name;
         expr.target = target;
         endLoc(expr, loc);
@@ -891,30 +875,6 @@ public class DeepParser extends Parser {
         return expr;
     }
     
-    /**
-     ** Identifier expression:
-     **   <idExpr> =  [(<id>"::")*] <id>
-     */
-    private Expr idExpr() {
-        Loc loc = curLoc();
-        IdExpr e = new IdExpr(null);
-        
-        String id = consumeId();
-        while (curt == TokenKind.doubleColon) {
-            if (e.namespace != null) {
-                e.namespace += "::" + id;
-            }
-            else {
-                e.namespace = id;
-            }
-            id = consumeId();
-        }
-        e.name = id;
-        
-        endLoc(e, loc);
-        return e;
-    }
-    
     private Expr sizeofExpr() {
         Loc loc = cur.loc;
         TokenKind tokt = curt;
@@ -957,9 +917,6 @@ public class DeepParser extends Parser {
                 break;
             case identifier:
                 expr = idExpr();
-                break;
-            case colon:
-                expr = typeExpr();
                 break;
             case intLiteral:
                 expr = new LiteralExpr(ExprId.intLiteral, consume().val);

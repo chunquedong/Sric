@@ -5,6 +5,7 @@
 package sc2.compiler.ast;
 
 import java.util.ArrayList;
+import sc2.compiler.ast.Expr.IdExpr;
 import sc2.compiler.ast.Token.TokenKind;
 
 /**
@@ -33,12 +34,12 @@ public class AstNode {
     public static final int Virtual    = 0x00040000;
     public static final int Struct     = 0x00080000;
     public static final int Extension  = 0x00100000;
-    public static final int Mutable= 0x00200000;
+    public static final int Mutable    = 0x00200000;
     public static final int Readonly   = 0x00400000;
     public static final int Async      = 0x00800000;
     public static final int Overload   = 0x01000000;
     public static final int Closure    = 0x02000000;
-//    public static final int Once    = 0x04000000;
+    public static final int Throws     = 0x04000000;
     public static final int FlagsMask  = 0x0fffffff;
   
     public Loc loc;
@@ -71,9 +72,7 @@ public class AstNode {
     
     public static abstract class TypeDef extends AstNode {
         public String name;
-        public String qname;
         public Comments comment;
-        public ArrayList<GeneriParamDef> generiParamDefs;
         
         @Override public void walk(Visitor visitor) {
             visitor.enterTypeDef(this);
@@ -108,6 +107,7 @@ public class AstNode {
         public ArrayList<Type> inheritances;
         public ArrayList<FieldDef> fieldDefs = new ArrayList<FieldDef>();
         public ArrayList<FuncDef> funcDefs = new ArrayList<FuncDef>();
+        public ArrayList<GeneriParamDef> generiParamDefs = null;
         
         public StructDef(Comments comment, int flags, String name) {
             this.comment = comment;
@@ -168,6 +168,7 @@ public class AstNode {
     public static class FuncPrototype {
         public Type returnType;       // return type
         public ArrayList<ParamDef> paramDefs = null;   // parameter definitions
+        public int postFlags = 0;
     }
     
     public static class FuncDef extends AstNode {
@@ -175,7 +176,7 @@ public class AstNode {
         public Comments comment;
         public FuncPrototype prototype = new FuncPrototype();       // return type
         public Block code;            // code block
-        public ArrayList<GeneriParamDef> generiParams;
+        public ArrayList<GeneriParamDef> generiParams = null;
         
         @Override public void walk(Visitor visitor) {
             visitor.enterFunc(this);
@@ -189,7 +190,8 @@ public class AstNode {
         public ArrayList<TypeDef> typeDefs = new ArrayList<TypeDef>();
         public ArrayList<FieldDef> fieldDefs = new ArrayList<FieldDef>();
         public ArrayList<FuncDef> funcDefs = new ArrayList<FuncDef>();
-        public ArrayList<Import> usings = new ArrayList<Import>();
+        public ArrayList<Import> imports = new ArrayList<Import>();
+        public ArrayList<TypeAlias> typeAlias = new ArrayList<TypeAlias>();
         
         public FileUnit(String file) {
             name = file;
@@ -207,7 +209,10 @@ public class AstNode {
                 funcDefs.add((FuncDef)node);
             }
             else if (node instanceof Import) {
-                usings.add((Import)node);
+                imports.add((Import)node);
+            }
+            else if (node instanceof TypeAlias) {
+                typeAlias.add((TypeAlias)node);
             }
         }
         
@@ -227,7 +232,11 @@ public class AstNode {
     }
     
     public static class Import extends AstNode {
-        public String namespace;
+        public IdExpr name;
+        public boolean star = false;
+    }
+    
+    public static class TypeAlias extends AstNode {
         public Type type;
         public String asName;
     }

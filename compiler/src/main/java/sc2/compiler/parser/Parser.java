@@ -9,34 +9,15 @@
 package sc2.compiler.parser;
 
 import sc2.compiler.CompilerLog;
-import sc2.compiler.ast.Token;
-import sc2.compiler.ast.AstNode;
-import sc2.compiler.ast.Loc;
-import sc2.compiler.ast.Expr;
-import sc2.compiler.ast.Type;
+import sc2.compiler.ast.*;
 import sc2.compiler.ast.AstNode.FileUnit;
 import sc2.compiler.ast.AstNode.*;
 import sc2.compiler.ast.Token.TokenKind;
 import sc2.compiler.CompilerLog.CompilerErr;
 import java.util.ArrayList;
-import static sc2.compiler.ast.Token.TokenKind.abstractKeyword;
-import static sc2.compiler.ast.Token.TokenKind.asyncKeyword;
-import static sc2.compiler.ast.Token.TokenKind.constKeyword;
-import static sc2.compiler.ast.Token.TokenKind.enumKeyword;
-import static sc2.compiler.ast.Token.TokenKind.extensionKeyword;
-import static sc2.compiler.ast.Token.TokenKind.externKeyword;
-import static sc2.compiler.ast.Token.TokenKind.finalKeyword;
-import static sc2.compiler.ast.Token.TokenKind.funKeyword;
-import static sc2.compiler.ast.Token.TokenKind.internalKeyword;
-import static sc2.compiler.ast.Token.TokenKind.overrideKeyword;
-import static sc2.compiler.ast.Token.TokenKind.privateKeyword;
-import static sc2.compiler.ast.Token.TokenKind.protectedKeyword;
-import static sc2.compiler.ast.Token.TokenKind.publicKeyword;
-import static sc2.compiler.ast.Token.TokenKind.readonlyKeyword;
-import static sc2.compiler.ast.Token.TokenKind.staticKeyword;
-import static sc2.compiler.ast.Token.TokenKind.structKeyword;
-import static sc2.compiler.ast.Token.TokenKind.traitKeyword;
-import static sc2.compiler.ast.Token.TokenKind.virtualKeyword;
+import sc2.compiler.ast.Expr.IdExpr;
+import static sc2.compiler.ast.Token.TokenKind.*;
+
 
 /**
  *
@@ -124,24 +105,28 @@ public class Parser {
             parseImports();
         }
     }
+    
+    private void parseTypeAlias() {
+        Loc loc = curLoc();
+        consume(TokenKind.typealiasKeyword);
+        TypeAlias u = new TypeAlias();
+        u.asName = consumeId();
+        
+        consume(TokenKind.defAssign);
+        u.type = typeRef();
+
+        endOfStmt();
+        endLoc(u, loc);
+        unit.addDef(u);
+    }
 
     private void parseImports() {
         Loc loc = curLoc();
         consume(TokenKind.importKeyword);
         Import u = new Import();
-
-        // using podName
-        if (peekt == TokenKind.doubleColon) {
-            u.type = typeRef();
-
-            // using pod::type as rename
-            if (curt == TokenKind.asKeyword) {
-                consume();
-                u.asName = consumeId();
-            }
-        }
-        else {
-            u.namespace = consumeId();
+        u.name = idExpr();
+        if (curt == TokenKind.doubleColon && peekt == TokenKind.star) {
+            u.star = true;
         }
 
         endOfStmt();
@@ -204,10 +189,67 @@ public class Parser {
             }
         }
     }
+            
+    /**
+     ** Identifier expression:
+     **   <idExpr> =  [(<id>"::")*] <id>
+     */
+    protected IdExpr idExpr() {
+        Loc loc = curLoc();
+        Expr.IdExpr e = new Expr.IdExpr(null);
+        
+        String id = consumeId();
+        while (curt == TokenKind.doubleColon) {
+            //a::* for import
+            if (peekt == TokenKind.star) {
+                break;
+            }
+            if (e.namespace != null) {
+                e.namespace += "::" + id;
+            }
+            else {
+                e.namespace = id;
+            }
+            consume();
+            id = consumeId();
+        }
+        e.name = id;
+        
+        endLoc(e, loc);
+        return e;
+    }
 
 //////////////////////////////////////////////////////////////////////////
 // TypeDef
 //////////////////////////////////////////////////////////////////////////
+    
+    private ArrayList<GeneriParamDef> tryGenericParamDef() {
+        if (curt == TokenKind.dollar && !cur.whitespace && peekt == TokenKind.lt) {
+            consume();
+            consume();
+            ArrayList<GeneriParamDef> gparams = new ArrayList<GeneriParamDef>();
+            while (true) {
+                Loc gloc = curLoc();
+                String paramName = consumeId();
+                GeneriParamDef param = new GeneriParamDef();
+                param.loc = gloc;
+                param.name = paramName;
+                gparams.add(param);
+                if (curt == TokenKind.comma) {
+                    consume();
+                    continue;
+                } else if (curt == TokenKind.gt) {
+                    consume();
+                    break;
+                } else {
+                    throw err("Error token: " + curt);
+                }
+            }
+            return gparams;
+        }
+        return null;
+    }
+    
     /**
      ** TypeDef:
      **   <typeDef> :=  <classDef> | <mixinDef> | <enumDef>
@@ -273,31 +315,11 @@ public class Parser {
             // lookup TypeDef
             structDef = new StructDef(doc, flags, name);
             typeDef = structDef;
+            
+            //GenericType Param
+            structDef.generiParamDefs = tryGenericParamDef();
         }
 
-        //GenericType Param
-        if (curt == TokenKind.lt) {
-            consume();
-            ArrayList<GeneriParamDef> gparams = new ArrayList<GeneriParamDef>();
-            while (true) {
-                Loc gloc = curLoc();
-                String paramName = consumeId();
-                GeneriParamDef param = new GeneriParamDef();
-                param.loc = gloc;
-                param.name = paramName;
-                gparams.add(param);
-                if (curt == TokenKind.comma) {
-                    consume();
-                    continue;
-                } else if (curt == TokenKind.gt) {
-                    consume();
-                    break;
-                } else {
-                    throw err("Error token: " + curt);
-                }
-            }
-            typeDef.generiParamDefs = gparams;
-        }
 
         if (structDef != null) {
             // inheritance
@@ -391,11 +413,7 @@ public class Parser {
         }
         return false;
     }
-
-    /**
-     ** Parse any list of flags in any order, we will check invalid *
-     * combinations in the CheckErrors step.
-     */
+    
     private int flags() {
 //    Loc loc = cur.loc;
         int flags = 0;
@@ -449,6 +467,36 @@ public class Parser {
                 //case TokenKind.rtconstKeyword:   flags = flags.or(FConst.RuntimeConst)
                 case asyncKeyword:
                     flags = flags | (AstNode.Async);
+                    break;
+                default:
+                    done = true;
+            }
+            if (done) {
+                break;
+            }
+            if (oldFlags == flags) {
+                err("Repeated modifier");
+            }
+            oldFlags = flags;
+            consume();
+        }
+
+        return flags;
+    }
+    
+    private int funcPostFlags() {
+        int flags = 0;
+        for (boolean done = false; !done;) {
+            int oldFlags = flags;
+            switch (curt) {
+                case constKeyword:
+                    flags = flags | (AstNode.Const);
+                    break;
+                case mutKeyword:
+                    flags = flags | (AstNode.Mutable);
+                    break;
+                case throwsKeyword:
+                    flags = flags | (AstNode.Throws);
                     break;
                 default:
                     done = true;
@@ -708,7 +756,8 @@ public class Parser {
         method.flags = flags;
         method.prototype.returnType = ret;
         method.name = name;
-
+        method.generiParams = tryGenericParamDef();
+        
         funcPrototype(method.prototype);
 
         // if This is returned, then we configure inheritedRet
@@ -740,6 +789,10 @@ public class Parser {
             }
         }
         consume(TokenKind.rparen);
+        
+        if (curt == TokenKind.mutKeyword) {
+            prototype.postFlags = funcPostFlags();
+        }
         
         if (curt == TokenKind.colon) {
             consume();
@@ -776,19 +829,11 @@ public class Parser {
      **   <type> :=  <simpleType> | <pointerType> | <funcType> | <arrayType> | <arrayRefType> | <constType>
      */
     protected Type typeRef() {
+        return pointerType();
+    }
+    
+    private Type pointerType() {
         Loc loc = curLoc();
-        Type type = null;
-
-        Type.ImutableAttr imutable = Type.ImutableAttr.unknow;
-        if (curt == TokenKind.constKeyword) {
-            consume();
-            imutable = Type.ImutableAttr.imu;
-        }
-        else if (curt == TokenKind.mutKeyword) {
-            consume();
-            imutable = Type.ImutableAttr.mut;
-        }
-        
         Type.PointerAttr pointerAttr = null;
         if (null != curt) switch (curt) {
             case ownKeyword:
@@ -803,29 +848,19 @@ public class Parser {
                 consume();
                 pointerAttr = Type.PointerAttr.weak;
                 break;
+            case rawKeyword:
+                consume();
+                pointerAttr = Type.PointerAttr.weak;
+                break;
             default:
                 break;
         }
-
-        // Types can begin with:
-        //   - id
-        if (curt == TokenKind.identifier) {
-            type = simpleType();
-        }
-        //   - [](a:T):T
-        else if (curt == TokenKind.lbracket) {
-            type = funcType();
-        }
-        else {
-            throw err("Expecting type name not $cur");
-//            consume();
-//            return Type.placeHolder(loc);
-        }
         
-        if (curt == TokenKind.star) {
-            consume();
+        if (pointerAttr != null) {
+            Type type = typeRef();
+            consume(TokenKind.star);
             type = Type.pointerType(loc, type, pointerAttr);
-            
+
             // check for ? nullable
             if (curt == TokenKind.question) {
                 consume(TokenKind.question);
@@ -834,8 +869,30 @@ public class Parser {
                     err("Type cannot have multiple '?'");
                 }
             }
+            return type;
         }
+        else {
+            Type type = arrayType();
+            if (curt == TokenKind.star) {
+                consume();
+                type = Type.pointerType(loc, type, pointerAttr);
 
+                // check for ? nullable
+                if (curt == TokenKind.question) {
+                    consume(TokenKind.question);
+                    type.isNullable = true;
+                    if (curt == TokenKind.question) {
+                        err("Type cannot have multiple '?'");
+                    }
+                }
+            }
+            return type;
+        }
+    }
+    
+    private Type arrayType() {
+        Loc loc = curLoc();
+        Type type = imutableType();
         // trailing [] for array
         if (curt == TokenKind.lbracket) {
             consume(TokenKind.lbracket);
@@ -850,12 +907,32 @@ public class Parser {
                 expr();
             }
             consume(TokenKind.rbracket);
+            endLoc(type, loc);
+        }
+        return type;
+    }
+    
+    private Type imutableType() {
+        Type.ImutableAttr imutable = Type.ImutableAttr.auto;
+        if (curt == TokenKind.constKeyword) {
+            consume();
+            imutable = Type.ImutableAttr.imu;
+        }
+        else if (curt == TokenKind.mutKeyword) {
+            consume();
+            imutable = Type.ImutableAttr.mut;
         }
         
+        Type type = funcOrSimpleType();
         type.imutable = imutable;
-
-        endLoc(type, loc);
         return type;
+    }
+
+    private Type funcOrSimpleType() {
+        if (curt == TokenKind.lbracket) {
+            return funcType();
+        }
+        return simpleType();
     }
 
     /**
@@ -882,30 +959,38 @@ public class Parser {
 
         //generic param
         if (curt == TokenKind.lt) {
-            consume();
-            ArrayList<Type> params = new ArrayList<Type>();
-            while (true) {
-                Type type1 = typeRef();
-                params.add(type1);
-                if (curt == TokenKind.gt) {
-                    break;
-                }
-                consume(TokenKind.comma);
-            }
-            consume(TokenKind.gt);
-            type.genericArgs = params;
+            type.genericArgs = genericArgs();
         }
 
         // got it
         endLoc(type, loc);
         return type;
     }
+    
+    protected ArrayList<Type> genericArgs() {
+        if (cur.whitespace) {
+            err("Expected $<");
+        }
+        consume(TokenKind.dollar);
+        consume(TokenKind.lt);
+        ArrayList<Type> params = new ArrayList<Type>();
+        while (true) {
+            Type type1 = typeRef();
+            params.add(type1);
+            if (curt == TokenKind.gt) {
+                break;
+            }
+            consume(TokenKind.comma);
+        }
+        consume(TokenKind.gt);
+        return params;
+    }
 
     /**
      ** Method type signature:
      **   <funcType> := "[]" "(" <args> ")" [<type>]
      */
-    protected Type funcType() {
+    private Type funcType() {
         Loc loc = cur.loc;
         
         consume(TokenKind.lbracket);

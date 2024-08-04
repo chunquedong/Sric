@@ -27,10 +27,10 @@ public class Type extends AstNode {
     };
     
     public static enum ImutableAttr {
-        unknow, imu, mut
+        auto, imu, mut
     };
     
-    public ImutableAttr imutable = ImutableAttr.unknow;
+    public ImutableAttr imutable = ImutableAttr.auto;
   
     public TypeDef resolvedTypeDef;
     

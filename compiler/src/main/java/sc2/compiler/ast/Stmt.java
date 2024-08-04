@@ -64,4 +64,7 @@ public abstract class Stmt extends AstNode {
         public FieldDef errVariable;// name of err local variable
         public Block block;         // body of catch block
     }
+    public static class UnsafeBlock extends Stmt {
+        public Block block;
+    }
 }
