@@ -71,7 +71,10 @@ public class CppGenerator implements Visitor {
         print(type.name);
     }
 
-    
+    @Override
+    public boolean deepLevel() {
+        return true;
+    }
 
     @Override
     public void enterUnit(AstNode.FileUnit v) {

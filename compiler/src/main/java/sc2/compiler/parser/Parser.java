@@ -69,22 +69,13 @@ public class Parser {
     }
 
     private boolean recoverToDef() {
-        int oldPos = pos;
         while (curt != TokenKind.eof) {
-            if (curt == TokenKind.classKeyword ||
-                    curt == TokenKind.structKeyword ||
-                    curt == TokenKind.traitKeyword ||
-                    curt == TokenKind.enumKeyword ||
-                    curt == TokenKind.funKeyword) {
-                int curPos = this.pos;
-                while (isModifierFlags(tokens.get(curPos - 1)) && curPos > 0) {
-                    --curPos;
-                }
-
-                if (curPos <= oldPos) {
-                    return false;
-                }
-                reset(curPos);
+            if (curt == TokenKind.colon) {
+                consume();
+                return true;
+            }
+            else if (curt == TokenKind.rbrace) {
+                consume();
                 return true;
             }
             consume();

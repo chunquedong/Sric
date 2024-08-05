@@ -11,6 +11,8 @@ import sc2.compiler.ast.AstNode.*;
  * @author yangjiandong
  */
 public interface Visitor {
+    
+    boolean deepLevel();
 
     void enterUnit(FileUnit v);
     void exitUnit(FileUnit v);
