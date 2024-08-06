@@ -130,8 +130,9 @@ public abstract class Expr extends AstNode {
 
     
     public static class IdExpr extends Expr {
-        public String namespace;
+        public IdExpr namespace;
         public String name;
+        public AstNode resolvedDef;
         
         public IdExpr(String name) {
             this.name = name;

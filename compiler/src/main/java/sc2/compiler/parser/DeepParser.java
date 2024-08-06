@@ -107,7 +107,7 @@ public class DeepParser extends Parser {
         // see if this statement begins with a type literal
         Loc loc = curLoc();
 
-        if (curt == TokenKind.varKeyword || curt == TokenKind.constKeyword) {
+        if (curt == TokenKind.varKeyword) {
             return localDefStmt(loc, null);
         }
 
@@ -128,21 +128,15 @@ public class DeepParser extends Parser {
      * identifier of the local variable.
      */
     private FieldDef localDefStmt(Loc loc, Type localType) {
-        boolean isConst = false;
-        if (curt == TokenKind.constKeyword) {
-            isConst = true;
-            consume();
-        }
-        else {
-            consume(TokenKind.varKeyword);
-        }
+//        boolean isConst = false;
+        consume(TokenKind.varKeyword);
         
         // verify name doesn't conflict with an import type
         String name = consumeId();
         FieldDef stmt = new FieldDef(null, name);
-        if (isConst) {
-            stmt.flags = AstNode.Const;
-        }
+//        if (isConst) {
+//            stmt.flags = AstNode.Const;
+//        }
         if (curt == TokenKind.colon) {
             consume();
             localType = typeRef();

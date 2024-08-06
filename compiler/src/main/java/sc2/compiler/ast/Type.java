@@ -6,14 +6,14 @@ package sc2.compiler.ast;
 
 import sc2.compiler.ast.AstNode.TypeDef;
 import java.util.ArrayList;
+import sc2.compiler.ast.Expr.IdExpr;
 
 /**
  *
  * @author yangjiandong
  */
 public class Type extends AstNode {
-    public String namespace;
-    public String name;
+    public IdExpr id;
     public ArrayList<Type> genericArgs = null;
     
     //** array size or primitive type sized. the Int32 size is 32
@@ -31,9 +31,7 @@ public class Type extends AstNode {
     };
     
     public ImutableAttr imutable = ImutableAttr.auto;
-  
-    public TypeDef resolvedTypeDef;
-    
+      
     public boolean isPointer() {
         return false;
     }
@@ -72,8 +70,7 @@ public class Type extends AstNode {
     public static Type pointerType(Loc loc, Type elemType, PointerAttr pointerAttr) {
         Type type = new Type();
         type.loc = loc;
-        type.namespace = "sys";
-        type.name = "Ptr";
+        type.id = new IdExpr("Ptr");
         type.genericArgs = new ArrayList<>();
         type.genericArgs.add(elemType);
         return type;

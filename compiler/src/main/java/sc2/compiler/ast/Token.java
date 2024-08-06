@@ -76,7 +76,7 @@ public class Token {
         rightShift    ("rightShif", false),
         leftShift     ("<<", false),
         docComment    ("/**", false),
-        cmdComment    ("//!", false),
+        cmdComment    ("//@", false),
         slComment     ("//", false),
         mlComment     ("/*", false),
         dollar        ("$", false),
@@ -98,12 +98,12 @@ public class Token {
         doKeyword("do", true),
         elseKeyword("else", true),
         falseKeyword("false", true),
-        finalKeyword("final", true),
+        //finalKeyword("final", true),
         finallyKeyword("finally", true),
         forKeyword("for", true),
         foreachKeyword("foreach", true),
         ifKeyword("if", true),
-        internalKeyword("internal", true),
+        //internalKeyword("internal", true),
         isKeyword("is", true),
         itKeyword("it", true),
         traitKeyword("trait", true),
@@ -148,6 +148,7 @@ public class Token {
         unsafeKeyword("unsafe", true),
         typealiasKeyword("typealias", true),
         varKeyword("var", true),
+        reflectKeyword("reflect", true),
         
         // misc
         eof("eof", false);

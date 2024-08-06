@@ -95,31 +95,29 @@ public class Parser {
         while (curt == TokenKind.importKeyword) {
             parseImports();
         }
-        
-        while (curt == TokenKind.typealiasKeyword) {
-            parseTypeAlias();
-        }
     }
     
-    private void parseTypeAlias() {
+    private TypeAlias parseTypeAlias(Comments doc, int flags) {
         Loc loc = curLoc();
         consume(TokenKind.typealiasKeyword);
         TypeAlias u = new TypeAlias();
         u.asName = consumeId();
+        u.flags = flags;
+        u.comment = doc;
         
         consume(TokenKind.assign);
         u.type = typeRef();
 
         endOfStmt();
         endLoc(u, loc);
-        unit.addDef(u);
+        return u;
     }
 
     private void parseImports() {
         Loc loc = curLoc();
         consume(TokenKind.importKeyword);
         Import u = new Import();
-        u.name = idExpr();
+        u.id = idExpr();
         if (curt == TokenKind.doubleColon && peekt == TokenKind.star) {
             u.star = true;
         }
@@ -153,15 +151,16 @@ public class Parser {
                 return methodDef(loc, doc, flags, null, sname);
             }
             case varKeyword:
-            case constKeyword:
             {
-                if (curt == TokenKind.constKeyword) {
-                    flags |= AstNode.Const;
-                }
+//                if (curt == TokenKind.constKeyword) {
+//                    flags |= AstNode.Const;
+//                }
                 consume();
                 String sname = consumeId();
                 return fieldDef(loc, doc, flags, null, sname);
             }
+            case typealiasKeyword:
+                return parseTypeAlias(doc, flags);
         }
         throw err("Expected var,const,fun keyword");
     }
@@ -179,11 +178,10 @@ public class Parser {
                 return methodDef(loc, doc, flags, null, sname);
             }
             case varKeyword:
-            case constKeyword:
             {
-                if (curt == TokenKind.constKeyword) {
-                    flags |= AstNode.Const;
-                }
+//                if (curt == TokenKind.constKeyword) {
+//                    flags |= AstNode.Const;
+//                }
                 consume();
                 String sname = consumeId();
                 return fieldDef(loc, doc, flags, null, sname);
@@ -199,25 +197,21 @@ public class Parser {
     protected IdExpr idExpr() {
         Loc loc = curLoc();
         Expr.IdExpr e = new Expr.IdExpr(null);
-        
         String id = consumeId();
+        e.name = id;
+        endLoc(e, loc);
+        
         while (curt == TokenKind.doubleColon) {
             //a::* for import
             if (peekt == TokenKind.star) {
                 break;
             }
-            if (e.namespace != null) {
-                e.namespace += "::" + id;
-            }
-            else {
-                e.namespace = id;
-            }
+            
             consume();
-            id = consumeId();
+            IdExpr idexpr = idExpr();
+            idexpr.namespace = e;
+            e = idexpr;
         }
-        e.name = id;
-        
-        endLoc(e, loc);
         return e;
     }
 
@@ -390,32 +384,6 @@ public class Parser {
 // Flags
 //////////////////////////////////////////////////////////////////////////
     
-    private boolean isModifierFlags(Token t) {
-        switch (t.kind) {
-            case publicKeyword:
-            case internalKeyword:
-            case privateKeyword:
-            case protectedKeyword:
-
-            case abstractKeyword:
-            case constKeyword:
-            case finalKeyword:
-            case virtualKeyword:
-            case externKeyword:
-                return true;
-
-            case readonlyKeyword:
-            case extensionKeyword:
-            case overrideKeyword:
-            case staticKeyword:
-            case asyncKeyword:
-            case funKeyword:
-            case mutKeyword:
-                return true;
-        }
-        return false;
-    }
-    
     private int flags() {
 //    Loc loc = cur.loc;
         int flags = 0;
@@ -432,13 +400,13 @@ public class Parser {
                 case readonlyKeyword:
                     flags = flags | (AstNode.Readonly);
                     break;
-                case finalKeyword:
-                    flags = flags | (AstNode.Final);
-                    break;
-                case internalKeyword:
-                    flags = flags | (AstNode.Internal);
-                    protection = true;
-                    break;
+//                case finalKeyword:
+//                    flags = flags | (AstNode.Final);
+//                    break;
+//                case internalKeyword:
+//                    flags = flags | (AstNode.Internal);
+//                    protection = true;
+//                    break;
                 case externKeyword:
                     flags = flags | (AstNode.Native);
                     break;
@@ -470,6 +438,15 @@ public class Parser {
                 case asyncKeyword:
                     flags = flags | (AstNode.Async);
                     break;
+                case reflectKeyword:
+                    flags = flags | (AstNode.Reflect);
+                    break;
+                case unsafeKeyword:
+                    flags = flags | (AstNode.Unsafe);
+                    break;
+                case throwKeyword:
+                    flags = flags | (AstNode.Throws);
+                    break;
                 default:
                     done = true;
             }
@@ -496,9 +473,6 @@ public class Parser {
                     break;
                 case mutKeyword:
                     flags = flags | (AstNode.Mutable);
-                    break;
-                case throwsKeyword:
-                    flags = flags | (AstNode.Throws);
                     break;
                 default:
                     done = true;
@@ -829,89 +803,77 @@ public class Parser {
 
     /**
      ** Type signature:
-     **   <type> :=  <simpleType> | <pointerType> | <funcType> | <arrayType> | <arrayRefType> | <constType>
+     **   <type> :=  <simpleType> | <pointerType> | <funcType> | <arrayType> | <constType>
      */
     protected Type typeRef() {
-        return pointerType();
-    }
-    
-    private Type pointerType() {
         Loc loc = curLoc();
-        Type.PointerAttr pointerAttr = null;
-        if (null != curt) switch (curt) {
+        Type type;
+        switch (curt) {
             case ownKeyword:
                 consume();
-                pointerAttr = Type.PointerAttr.own;
-                break;
-            case refKeyword:
-                consume();
-                pointerAttr = Type.PointerAttr.ref;
-                break;
-            case weakKeyword:
-                consume();
-                pointerAttr = Type.PointerAttr.weak;
-                break;
+                return pointerType(Type.PointerAttr.own);
             case rawKeyword:
                 consume();
-                pointerAttr = Type.PointerAttr.weak;
-                break;
+                return pointerType(Type.PointerAttr.raw);
+            case refKeyword:
+                consume();
+                return pointerType(Type.PointerAttr.ref);
+            case weakKeyword:
+                consume();
+                return pointerType(Type.PointerAttr.weak);
+            case star:
+                return pointerType(Type.PointerAttr.raw);
+            case constKeyword:
+                return imutableType();
+            case mutKeyword:
+                return imutableType();
+            case lbracket:
+                return arrayType();
             default:
                 break;
         }
         
-        if (pointerAttr != null) {
-            Type type = arrayType();
-            consume(TokenKind.star);
-            type = Type.pointerType(loc, type, pointerAttr);
-
-            // check for ? nullable
+        return funcOrSimpleType();
+    }
+    
+    private Type pointerType(Type.PointerAttr pointerAttr) {
+        Loc loc = curLoc();
+        consume(TokenKind.star);
+        boolean isNullable = false;
+        if (curt == TokenKind.question) {
+            consume(TokenKind.question);
+            isNullable = true;
             if (curt == TokenKind.question) {
-                consume(TokenKind.question);
-                type.isNullable = true;
-                if (curt == TokenKind.question) {
-                    err("Type cannot have multiple '?'");
-                }
+                err("Type cannot have multiple '?'");
             }
-            return type;
         }
-        else {
-            Type type = arrayType();
-            if (curt == TokenKind.star) {
-                consume();
-                type = Type.pointerType(loc, type, pointerAttr);
-
-                // check for ? nullable
-                if (curt == TokenKind.question) {
-                    consume(TokenKind.question);
-                    type.isNullable = true;
-                    if (curt == TokenKind.question) {
-                        err("Type cannot have multiple '?'");
-                    }
-                }
-            }
-            return type;
-        }
+        
+        Type type = typeRef();
+        type = Type.pointerType(loc, type, pointerAttr);
+        endLoc(type, loc);
+        return type;
     }
     
     private Type arrayType() {
         Loc loc = curLoc();
-        Type type = imutableType();
-        // trailing [] for array
-        if (curt == TokenKind.lbracket) {
-            consume(TokenKind.lbracket);
-            if (curt == TokenKind.rbracket) {
-                type = Type.arrayRefType(loc, type);
-            }
-            else if (curt == TokenKind.intLiteral) {
-                type = Type.arrayType(loc, type, (Integer)cur.val);
-            }
-            else {
-                err("Array size must int literal");
-                expr();
-            }
-            consume(TokenKind.rbracket);
-            endLoc(type, loc);
+        consume(TokenKind.lbracket);
+
+        int size = 0;
+        if (curt == TokenKind.intLiteral) {
+            size = (Integer)cur.val;
         }
+        else if (curt == TokenKind.rbracket) {
+            err("Array size must int literal");
+        }
+        else {
+            err("Array size must int literal");
+            expr();
+        }
+        consume(TokenKind.rbracket);
+        
+        Type type = typeRef();
+        type = Type.arrayType(loc, type, size);
+        endLoc(type, loc);
         return type;
     }
     
@@ -926,7 +888,7 @@ public class Parser {
             imutable = Type.ImutableAttr.mut;
         }
         
-        Type type = funcOrSimpleType();
+        Type type = typeRef();
         type.imutable = imutable;
         return type;
     }
@@ -944,21 +906,10 @@ public class Parser {
      */
     private Type simpleType() {
         Loc loc = cur.loc;
-        String id = consumeId();
+        IdExpr id = idExpr();
 
-        Type type;
-        // fully qualified
-        if (curt == TokenKind.doubleColon) {
-            consume();
-            type = new Type();
-            type.loc = loc;
-            type.name = consumeId();
-            type.namespace = id;
-        } else {
-            type = new Type();
-            type.loc = loc;
-            type.name = id;
-        }
+        Type type = new Type();
+        type.id = id;
 
         //generic param
         if (curt == TokenKind.lt) {

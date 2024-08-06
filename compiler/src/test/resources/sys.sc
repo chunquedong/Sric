@@ -13,4 +13,4 @@ extern public struct WeakPtr$<T> {}
 extern public struct RawPtr$<T> {}
 extern public struct Func$<T> {}
 
-extern public fun printf(format: Int8*, args: ...);
+extern public fun printf(format: *const Int8, args: ...);

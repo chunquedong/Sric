@@ -13,6 +13,7 @@ import java.io.Writer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import sc2.compiler.ast.AstNode;
+import sc2.compiler.ast.Expr.*;
 import sc2.compiler.ast.Stmt;
 import sc2.compiler.ast.Type;
 import sc2.compiler.ast.Visitor;
@@ -68,7 +69,7 @@ public class CppGenerator implements Visitor {
             print("void");
             return;
         }
-        print(type.name);
+        printIdExpr(type.id);
     }
 
     @Override
@@ -146,6 +147,15 @@ public class CppGenerator implements Visitor {
     @Override
     public void exitExpr(Stmt v) {
         
+    }
+    
+    
+    private void printIdExpr(IdExpr id) {
+        if (id.namespace != null) {
+            printIdExpr(id.namespace);
+            print("::");
+        }
+        print(id.name);
     }
     
 }

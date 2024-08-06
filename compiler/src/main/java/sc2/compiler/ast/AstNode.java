@@ -5,6 +5,7 @@
 package sc2.compiler.ast;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import sc2.compiler.ast.Expr.IdExpr;
 import sc2.compiler.ast.Token.TokenKind;
 
@@ -18,7 +19,7 @@ public class AstNode {
     public static final int Ctor       = 0x00000004;
     public static final int Enum       = 0x00000008;
     public static final int Facet      = 0x00000010;
-    public static final int Final      = 0x00000020;
+    public static final int Unsafe     = 0x00000020;
     public static final int Getter     = 0x00000040;
     public static final int Internal   = 0x00000080;
     public static final int Mixin      = 0x00000100;
@@ -40,7 +41,7 @@ public class AstNode {
     public static final int Overload   = 0x01000000;
     public static final int Closure    = 0x02000000;
     public static final int Throws     = 0x04000000;
-    public static final int FlagsMask  = 0x0fffffff;
+    public static final int Reflect    = 0x08000000;
   
     public Loc loc;
     public int len = 0;
@@ -108,6 +109,7 @@ public class AstNode {
         public ArrayList<FieldDef> fieldDefs = new ArrayList<FieldDef>();
         public ArrayList<FuncDef> funcDefs = new ArrayList<FuncDef>();
         public ArrayList<GeneriParamDef> generiParamDefs = null;
+        public Scope scope = null;
         
         public StructDef(Comments comment, int flags, String name) {
             this.comment = comment;
@@ -132,6 +134,20 @@ public class AstNode {
             for (FuncDef func : funcDefs) {
                 func.walk(visitor);
             }
+        }
+        
+        public Scope getScope() {
+            if (scope == null) {
+                scope = new Scope();
+                
+                for (FieldDef f : fieldDefs) {
+                    scope.put(f.name, f);
+                }
+                for (FuncDef f : funcDefs) {
+                    scope.put(f.name, f);
+                }
+            }
+            return scope;
         }
     }
     
@@ -184,6 +200,7 @@ public class AstNode {
             visitor.exitFunc(this);
         }
     }
+
     
     public static class FileUnit extends AstNode {
         public String name;
@@ -192,6 +209,8 @@ public class AstNode {
         public ArrayList<FuncDef> funcDefs = new ArrayList<FuncDef>();
         public ArrayList<Import> imports = new ArrayList<Import>();
         public ArrayList<TypeAlias> typeAlias = new ArrayList<TypeAlias>();
+        
+        public Scope importScope = null;
         
         public FileUnit(String file) {
             name = file;
@@ -231,19 +250,16 @@ public class AstNode {
         }
     }
     
+    
     public static class Import extends AstNode {
-        public IdExpr name;
+        public IdExpr id;
         public boolean star = false;
     }
     
     public static class TypeAlias extends AstNode {
         public Type type;
         public String asName;
-    }
-    
-    public static class Module extends AstNode {
-        public String name;
-        public ArrayList<FileUnit> fileUints;
+        public Comments comment;
     }
     
     public static class Block extends AstNode {
