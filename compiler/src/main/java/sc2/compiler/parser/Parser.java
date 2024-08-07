@@ -119,6 +119,8 @@ public class Parser {
         Import u = new Import();
         u.id = idExpr();
         if (curt == TokenKind.doubleColon && peekt == TokenKind.star) {
+            consume();
+            consume();
             u.star = true;
         }
 
@@ -917,37 +919,49 @@ public class Parser {
                 case "Int8":
                     type.id.name = "Int";
                     type.size = 8;
+                    break;
                 case "Int16":
                     type.id.name = "Int";
                     type.size = 16;
+                    break;
                 case "Int32":
                     type.id.name = "Int";
                     type.size = 32;
+                    break;
                 case "Int64":
                     type.id.name = "Int";
                     type.size = 64;
+                    break;
                 case "UInt8":
                     type.id.name = "Int";
                     type.size = 8;
+                    break;
                 case "UInt16":
                     type.id.name = "Int";
                     type.size = 16;
+                    break;
                 case "UInt32":
                     type.id.name = "Int";
                     type.size = 32;
+                    break;
                 case "UInt64":
                     type.id.name = "Int";
                     type.size = 64;
+                    break;
                 case "Float32":
                     type.id.name = "Int";
                     type.size = 32;
+                    break;
                 case "Float64":
                     type.id.name = "Int";
                     type.size = 64;
+                    break;
                 case "Int":
                     type.size = 32;
+                    break;
                 case "Float":
                     type.size = 64;
+                    break;
             }
         }
 

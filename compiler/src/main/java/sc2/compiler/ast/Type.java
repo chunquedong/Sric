@@ -61,10 +61,6 @@ public class Type extends AstNode {
         this.id = new IdExpr(name);
         this.id.loc = loc;
     }
-
-    public boolean isPointer() {
-        return false;
-    }
     
     public static Type voidType(Loc loc) {
         Type type = new Type(loc, "Void");

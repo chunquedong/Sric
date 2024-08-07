@@ -135,7 +135,7 @@ public class SlotTypeResolver implements Visitor {
         }
     }
     
-    private void getImportScope(AstNode.Import i, Scope importScope) {
+    private void importToScope(AstNode.Import i, Scope importScope) {
 
         resolveImportId(i.id);
         
@@ -167,17 +167,9 @@ public class SlotTypeResolver implements Visitor {
     @Override
     public void enterUnit(AstNode.FileUnit v) {
         v.importScope = new Scope();
- 
-        //build-in import
-        if (!module.name.equals("std")) {
-            Import defImport = new Import();
-            defImport.id = new IdExpr("std");
-            defImport.star = true;
-            getImportScope(defImport, v.importScope);
-        }
-        
+
         for (AstNode.Import i : v.imports) {
-            getImportScope(i, v.importScope);
+            importToScope(i, v.importScope);
         }
         this.scopes.add(v.importScope);
         

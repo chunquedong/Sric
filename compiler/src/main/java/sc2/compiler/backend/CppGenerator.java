@@ -68,10 +68,29 @@ public class CppGenerator implements Visitor {
     }
     
     private void printType(Type type) {
-        if (type == null) {
-            print("void");
-            return;
+        switch (type.id.name) {
+            case "Void":
+                print("void");
+                return;
+            case "*":
+                print("Ptr");
+                return;
+            case "Int":
+                print("int"+type.size+"_t");
+                return;
+            case "Float":
+                if (type.size == 64) {
+                    print("double");
+                }
+                else {
+                    print("float");
+                }
+                return;
+            case "Bool":
+                print("bool");
+                return;
         }
+        
         printIdExpr(type.id);
     }
 
