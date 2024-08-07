@@ -28,8 +28,11 @@ public class CppGenerator implements Visitor {
     private boolean needIndent = false;
     private int indentation = 0;
     
-    public CppGenerator(String file) throws IOException {
+    boolean headMode = true;
+    
+    public CppGenerator(String file, boolean headMode) throws IOException {
         writer = new PrintStream(new FileOutputStream(file), true, "UTF-8");
+        this.headMode = headMode;
     }
     
     public CppGenerator(PrintStream writer) {

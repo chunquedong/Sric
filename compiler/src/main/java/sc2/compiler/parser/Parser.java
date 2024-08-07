@@ -771,6 +771,9 @@ public class Parser {
             consume();
             prototype.returnType = typeRef();
         }
+        else {
+            prototype.returnType = Type.voidType(cur.loc);
+        }
     }
 
     private ParamDef paramDef() {
@@ -782,6 +785,7 @@ public class Parser {
         consume(TokenKind.colon);
         
         if (curt == TokenKind.dotDotDot) {
+            param.paramType = Type.varArgType(cur.loc);
             consume();
         }
         else {
@@ -822,7 +826,7 @@ public class Parser {
                 consume();
                 return pointerType(Type.PointerAttr.weak);
             case star:
-                return pointerType(Type.PointerAttr.raw);
+                return pointerType(Type.PointerAttr.ref);
             case constKeyword:
                 return imutableType();
             case mutKeyword:
@@ -843,13 +847,10 @@ public class Parser {
         if (curt == TokenKind.question) {
             consume(TokenKind.question);
             isNullable = true;
-            if (curt == TokenKind.question) {
-                err("Type cannot have multiple '?'");
-            }
         }
         
         Type type = typeRef();
-        type = Type.pointerType(loc, type, pointerAttr);
+        type = Type.pointerType(loc, type, pointerAttr, isNullable);
         endLoc(type, loc);
         return type;
     }
@@ -889,7 +890,7 @@ public class Parser {
         }
         
         Type type = typeRef();
-        type.imutable = imutable;
+        type.imutableAttr = imutable;
         return type;
     }
 
@@ -908,8 +909,47 @@ public class Parser {
         Loc loc = cur.loc;
         IdExpr id = idExpr();
 
-        Type type = new Type();
-        type.id = id;
+        Type type = new Type(id);
+        
+        //type name rewrite
+        if (id.namespace == null) {
+            switch (id.name) {
+                case "Int8":
+                    type.id.name = "Int";
+                    type.size = 8;
+                case "Int16":
+                    type.id.name = "Int";
+                    type.size = 16;
+                case "Int32":
+                    type.id.name = "Int";
+                    type.size = 32;
+                case "Int64":
+                    type.id.name = "Int";
+                    type.size = 64;
+                case "UInt8":
+                    type.id.name = "Int";
+                    type.size = 8;
+                case "UInt16":
+                    type.id.name = "Int";
+                    type.size = 16;
+                case "UInt32":
+                    type.id.name = "Int";
+                    type.size = 32;
+                case "UInt64":
+                    type.id.name = "Int";
+                    type.size = 64;
+                case "Float32":
+                    type.id.name = "Int";
+                    type.size = 32;
+                case "Float64":
+                    type.id.name = "Int";
+                    type.size = 64;
+                case "Int":
+                    type.size = 32;
+                case "Float":
+                    type.size = 64;
+            }
+        }
 
         //generic param
         if (curt == TokenKind.lt) {

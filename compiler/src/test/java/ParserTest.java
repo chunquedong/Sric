@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import sc2.compiler.CompilerLog;
+import sc2.compiler.Util;
 import sc2.compiler.ast.AstNode.FileUnit;
 import sc2.compiler.ast.Token;
 import sc2.compiler.backend.CppGenerator;
@@ -25,7 +26,7 @@ import sc2.compiler.parser.Tokenizer;
 public class ParserTest {
     @Test
     public void testSys() throws IOException {
-        String file = "target/test-classes/sys.sc";
+        String file = "res/code/testStruct.sc";
         String src = Files.readString(Path.of(file));
         
         CompilerLog log = new CompilerLog();
@@ -41,7 +42,7 @@ public class ParserTest {
     
     @Test
     public void testAll() throws IOException {
-        File[] list = new File("target/test-classes").listFiles();
+        File[] list = new File("res/code").listFiles();
         for (File file : list) {
             if (!file.getName().endsWith(".sc")) {
                 continue;
@@ -53,8 +54,8 @@ public class ParserTest {
             Parser parser = new Parser(log, src, unit);
             parser.parse();
             
-            if (log.errors.size() > 0) {
-                String name = file.getName().substring(0, file.getName().lastIndexOf("."));
+            if (log.hasError()) {
+                String name = Util.getBaseName(file.getName());
                 GoldenTest.verifyGolden(log.toString(), "parser", name+".cpp");
                 return;
             }

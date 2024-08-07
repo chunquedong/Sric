@@ -4,7 +4,9 @@
  */
 package sc2.compiler.ast;
 
+import java.io.File;
 import java.util.ArrayList;
+import sc2.compiler.Util;
 
 /**
  *
@@ -15,6 +17,19 @@ public class SModule extends AstNode {
     public static class Depend {
         public String name;
         public String version;
+        public SModule cache;
+        
+        public static Depend fromFile(File file) {
+            String basename = Util.getBaseName(file.getName());
+            String[] fs = basename.split("-");
+            if (fs.length == 2) {
+                Depend depend = new Depend();
+                depend.name = fs[0];
+                depend.version = fs[1];
+                return depend;
+            }
+            return null;
+        }
     }
     
     public String name;

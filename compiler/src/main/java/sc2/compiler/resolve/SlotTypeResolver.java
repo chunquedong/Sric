@@ -7,6 +7,7 @@ package sc2.compiler.resolve;
 import java.util.ArrayList;
 import java.util.HashMap;
 import sc2.compiler.CompilerLog;
+import sc2.compiler.Compiler;
 import sc2.compiler.ast.AstNode;
 import sc2.compiler.ast.AstNode.*;
 import sc2.compiler.ast.Expr.IdExpr;
@@ -17,15 +18,17 @@ import sc2.compiler.ast.SModule.Depend;
  *
  * @author yangjiandong
  */
-public class ResolveSlotType implements Visitor {
+public class SlotTypeResolver implements Visitor {
     
     private ArrayList<Scope> scopes = new ArrayList<>();
     private SModule module;
     private CompilerLog log;
+    private Compiler compiler;
     
-    public ResolveSlotType(SModule module, CompilerLog log) {
+    public SlotTypeResolver(SModule module, CompilerLog log, Compiler compiler) {
         this.module = module;
         this.log = log;
+        this.compiler = compiler;
     }
     
     public void run() {
@@ -43,11 +46,6 @@ public class ResolveSlotType implements Visitor {
         return null;
     }
     
-    private SModule importModule(String namespace) {
-        //TODO
-        return null;
-    }
-    
     private CompilerLog.CompilerErr err(String msg, Loc loc) {
         return log.err(msg, loc);
     }
@@ -55,12 +53,15 @@ public class ResolveSlotType implements Visitor {
     private void resolveImportId(IdExpr idExpr) {
         if (idExpr.namespace == null) {
             for (Depend d : module.depends) {
-                if (idExpr.namespace.equals(d.name)) {
-                    idExpr.resolvedDef = importModule(d.name);
+                if (idExpr.name.equals(d.name)) {
+                    if (d.cache == null) {
+                        d.cache = compiler.importModule(d.name, d.version);
+                    }
+                    idExpr.resolvedDef = d.cache;
                     return;
                 }
             }
-            err("Unknow symbol "+idExpr.name, idExpr.loc);
+            err("Unknow depends "+idExpr.name, idExpr.loc);
             return;
         }
         resolveImportId(idExpr.namespace);
@@ -119,7 +120,11 @@ public class ResolveSlotType implements Visitor {
         }
     }
         
-    private void resolveType(Type type) {
+    private void resolveType(Type type, Loc loc) {
+        if (type == null) {
+            err("Type inference not support for top level node", loc);
+            return;
+        }
         resolveId(type.id);
         if (type.id.resolvedDef != null) {
             if (!(type.id.resolvedDef instanceof TypeDef)) {
@@ -130,30 +135,28 @@ public class ResolveSlotType implements Visitor {
         }
     }
     
-    private Scope getImportScope(AstNode.FileUnit v) {
-        v.importScope = new Scope();
-        for (AstNode.Import i : v.imports) {
-            resolveImportId(i.id);
-            if (i.id.resolvedDef != null) {
-                if (!i.star) {
-                    v.importScope.put(i.id.name, i.id.resolvedDef);
+    private void getImportScope(AstNode.Import i, Scope importScope) {
+
+        resolveImportId(i.id);
+        
+        if (i.id.resolvedDef != null) {
+            if (!i.star) {
+                importScope.put(i.id.name, i.id.resolvedDef);
+            }
+            else {
+                if (i.id.resolvedDef instanceof SModule m) {
+                    Scope mcope = m.getScope();
+                    importScope.addAll(mcope);
+                }
+                else if (i.id.resolvedDef instanceof StructDef c) {
+                    Scope mcope = c.getScope();
+                    importScope.addAll(mcope);
                 }
                 else {
-                    if (i.id.resolvedDef instanceof SModule m) {
-                        Scope mcope = m.getScope();
-                        v.importScope.addAll(mcope);
-                    }
-                    else if (i.id.resolvedDef instanceof StructDef c) {
-                        Scope mcope = c.getScope();
-                        v.importScope.addAll(mcope);
-                    }
-                    else {
-                        err("Unsupport ::* for "+i.id.name, i.loc);
-                    }
+                    err("Unsupport ::* for "+i.id.name, i.loc);
                 }
             }
         }
-        return v.importScope;
     }
     
     @Override
@@ -163,11 +166,25 @@ public class ResolveSlotType implements Visitor {
 
     @Override
     public void enterUnit(AstNode.FileUnit v) {
-        Scope scope1 = getImportScope(v);
-        this.scopes.add(scope1);
+        v.importScope = new Scope();
+ 
+        //build-in import
+        if (!module.name.equals("std")) {
+            Import defImport = new Import();
+            defImport.id = new IdExpr("std");
+            defImport.star = true;
+            getImportScope(defImport, v.importScope);
+        }
+        
+        for (AstNode.Import i : v.imports) {
+            getImportScope(i, v.importScope);
+        }
+        this.scopes.add(v.importScope);
         
         Scope scope2 = module.getScope();
         this.scopes.add(scope2);
+        
+        this.scopes.add(Buildin.getBuildinScope());
     }
 
     @Override
@@ -178,7 +195,7 @@ public class ResolveSlotType implements Visitor {
 
     @Override
     public void enterField(AstNode.FieldDef v) {
-        resolveType(v.fieldType);
+        resolveType(v.fieldType, v.loc);
     }
 
     @Override
@@ -188,12 +205,10 @@ public class ResolveSlotType implements Visitor {
 
     @Override
     public void enterFunc(AstNode.FuncDef v) {
-        if (v.prototype.returnType != null) {
-            resolveType(v.prototype.returnType);
-        }
+        resolveType(v.prototype.returnType, v.loc);
         if (v.prototype.paramDefs != null) {
             for (AstNode.ParamDef p : v.prototype.paramDefs) {
-                resolveType(p.paramType);
+                resolveType(p.paramType, v.loc);
             }
         }
     }

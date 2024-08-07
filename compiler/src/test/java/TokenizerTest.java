@@ -43,12 +43,14 @@ public class TokenizerTest {
 
     @Test
     public void test() throws IOException {
-        String src = Files.readString(Path.of("target/test-classes/sys.sc"));
+        Path path = Path.of("res/code/testStruct.sc");
+        String src = Files.readString(path);
         
         CompilerLog log = new CompilerLog();
-        Tokenizer toker = new Tokenizer(log, "sys.sc", src);
+        Tokenizer toker = new Tokenizer(log, path.toString(), src);
         ArrayList<Token> toks = toker.tokenize();
         System.out.println(toks);
+        log.printError();
         assertTrue(log.errors.size() == 0);
     }
 }

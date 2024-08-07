@@ -35,3 +35,4 @@
 /compiler/target/
 /compiler/dist/
 compiler/goldenFile/
+compiler/res/output/

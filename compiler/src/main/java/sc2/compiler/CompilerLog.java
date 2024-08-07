@@ -30,6 +30,18 @@ public class CompilerLog {
         return e;
     }
     
+    public boolean hasError() {
+        return errors.size() > 0;
+    }
+    
+    public boolean printError() {
+        if (hasError()) {
+            System.err.print(toString());
+            return true;
+        }
+        return false;
+    }
+    
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

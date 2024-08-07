@@ -16,13 +16,13 @@ import sc2.compiler.ast.*;
  *
  * @author yangjiandong
  */
-public class ResolveExprType implements Visitor {
+public class ExprTypeResolver implements Visitor {
     
     private ArrayList<Scope> scopes = new ArrayList<>();
     private SModule module;
     public CompilerLog log;
     
-    public ResolveExprType(SModule module, CompilerLog log) {
+    public ExprTypeResolver(SModule module, CompilerLog log) {
         this.module = module;
         this.log = log;
     }
@@ -106,10 +106,12 @@ public class ResolveExprType implements Visitor {
     public void enterUnit(FileUnit v) {
         scopes.add(v.importScope);
         scopes.add(module.getScope());
+        this.scopes.add(Buildin.getBuildinScope());
     }
 
     @Override
     public void exitUnit(FileUnit v) {
+        popScope();
         popScope();
         popScope();
     }

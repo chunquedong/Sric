@@ -9,7 +9,7 @@ import java.util.HashMap;
 import sc2.compiler.CompilerLog;
 import sc2.compiler.ast.AstNode;
 import sc2.compiler.ast.Loc;
-import sc2.compiler.resolve.ResolveExprType;
+import sc2.compiler.resolve.ExprTypeResolver;
 
 /**
  *
@@ -24,6 +24,11 @@ public class Scope extends AstNode {
         if (nodes == null) {
             nodes = new ArrayList<AstNode>();
             symbolTable.put(name, nodes);
+        }
+        for (AstNode anode : nodes) {
+            if (anode == node) {
+                return;
+            }
         }
         nodes.add(node);
     }
@@ -41,12 +46,9 @@ public class Scope extends AstNode {
     
     public void addAll(Scope other) {
         for (HashMap.Entry<String, ArrayList<AstNode>> entry : other.symbolTable.entrySet()) {
-            ArrayList<AstNode> list = symbolTable.get(entry.getKey());
-            if (list == null) {
-                list = new ArrayList<AstNode>();
-                symbolTable.put(entry.getKey(), list);
+            for (AstNode anode : entry.getValue()) {
+                put(entry.getKey(), anode);
             }
-            list.addAll(entry.getValue());
         }
     }
     

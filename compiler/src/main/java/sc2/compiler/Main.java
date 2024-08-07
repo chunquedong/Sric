@@ -12,12 +12,22 @@ import java.io.IOException;
  */
 public class Main {
     
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
-        // TODO code application logic here
+
+    public static void main(String[] args) throws IOException {
+        String sourceDir = "res/code/testStruct.sc";
+        String libPath = "res/lib";
         
-        System.out.println("Hello");
+        for (int i = 1; i<args.length; ++i) {
+            if (args[i].equals("-lib")) {
+                ++i;
+                libPath = args[i];
+            }
+            else {
+                sourceDir = args[i];
+            }
+        }
+        
+        Compiler compiler = Compiler.makeDefault(sourceDir, libPath);
+        compiler.run();
     }
 }
