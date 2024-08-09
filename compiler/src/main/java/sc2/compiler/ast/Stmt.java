@@ -7,6 +7,7 @@ package sc2.compiler.ast;
 import sc2.compiler.ast.AstNode.Block;
 import sc2.compiler.ast.AstNode.FieldDef;
 import java.util.ArrayList;
+import sc2.compiler.ast.Token.TokenKind;
 
 /**
  *
@@ -43,16 +44,18 @@ public abstract class Stmt extends AstNode {
         public Block block;      // code to run inside loop
     }
     public static class CaseBlock extends AstNode {
-        public ArrayList<Expr> cases;     // list of case target (literal expressions)
+        public boolean fallthrough = false;
+        public Expr caseExpr;   // list of case target (literal expressions)
         public Block block;     // code to run for case
     }
     public static class SwitchStmt extends Stmt {
         public Expr condition;        // test expression
-        public ArrayList<CaseBlock> cases;          // list of case blocks
+        public ArrayList<CaseBlock> cases = new ArrayList<CaseBlock>();          // list of case blocks
         public Block defaultBlock;
     }
     //break, continue
     public static class JumpStmt extends Stmt {
+        public TokenKind opToken;
         public Stmt target;   // loop to continue
     }
     public static class TryStmt extends Stmt {

@@ -6,6 +6,7 @@ package sc2.compiler.resolve;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import sc2.compiler.CompilePass;
 import sc2.compiler.CompilerLog;
 import sc2.compiler.Compiler;
 import sc2.compiler.ast.AstNode;
@@ -18,21 +19,21 @@ import sc2.compiler.ast.SModule.Depend;
  *
  * @author yangjiandong
  */
-public class SlotTypeResolver implements Visitor {
+public class SlotTypeResolver  extends CompilePass {
     
     private ArrayList<Scope> scopes = new ArrayList<>();
     private SModule module;
-    private CompilerLog log;
     private Compiler compiler;
     
-    public SlotTypeResolver(SModule module, CompilerLog log, Compiler compiler) {
+    public SlotTypeResolver(CompilerLog log, SModule module, Compiler compiler) {
+        super(log);
         this.module = module;
         this.log = log;
         this.compiler = compiler;
     }
     
     public void run() {
-        module.walk(this);
+        module.walkChildren(this);
     }
     
     private AstNode findSymbol(String name, Loc loc) {
@@ -44,10 +45,6 @@ public class SlotTypeResolver implements Visitor {
         }
         err("Unknow symbol "+name, loc);
         return null;
-    }
-    
-    private CompilerLog.CompilerErr err(String msg, Loc loc) {
-        return log.err(msg, loc);
     }
     
     private void resolveImportId(IdExpr idExpr) {
@@ -159,13 +156,9 @@ public class SlotTypeResolver implements Visitor {
         }
     }
     
-    @Override
-    public boolean deepLevel() {
-        return false;
-    }
 
     @Override
-    public void enterUnit(AstNode.FileUnit v) {
+    public void visitUnit(AstNode.FileUnit v) {
         v.importScope = new Scope();
 
         for (AstNode.Import i : v.imports) {
@@ -177,26 +170,19 @@ public class SlotTypeResolver implements Visitor {
         this.scopes.add(scope2);
         
         this.scopes.add(Buildin.getBuildinScope());
-    }
-
-    @Override
-    public void exitUnit(AstNode.FileUnit v) {
+        
+        v.walkChildren(this);
+        
         this.scopes.clear();
     }
 
-
     @Override
-    public void enterField(AstNode.FieldDef v) {
+    public void visitField(AstNode.FieldDef v) {
         resolveType(v.fieldType, v.loc);
     }
 
     @Override
-    public void exitField(AstNode.FieldDef v) {
-
-    }
-
-    @Override
-    public void enterFunc(AstNode.FuncDef v) {
+    public void visitFunc(AstNode.FuncDef v) {
         resolveType(v.prototype.returnType, v.loc);
         if (v.prototype.paramDefs != null) {
             for (AstNode.ParamDef p : v.prototype.paramDefs) {
@@ -206,38 +192,17 @@ public class SlotTypeResolver implements Visitor {
     }
 
     @Override
-    public void exitFunc(AstNode.FuncDef v) {
-
+    public void visitTypeDef(AstNode.TypeDef v) {
+        v.walkChildren(this);
     }
 
     @Override
-    public void enterTypeDef(AstNode.TypeDef v) {
-
-    }
-
-    @Override
-    public void exitTypeDef(AstNode.TypeDef v) {
-
-    }
-
-    @Override
-    public void enterStmt(Stmt v) {
+    public void visitStmt(Stmt v) {
         
     }
 
     @Override
-    public void exitStmt(Stmt v) {
+    public void visitExpr(Expr v) {
         
     }
-
-    @Override
-    public void enterExpr(Stmt v) {
-        
-    }
-
-    @Override
-    public void exitExpr(Stmt v) {
-        
-    }
-    
 }

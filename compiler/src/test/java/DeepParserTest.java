@@ -25,7 +25,7 @@ import sc2.compiler.parser.Parser;
 public class DeepParserTest {
     @Test
     public void testSys() throws IOException {
-        String file = "res/code/testVarArgs.sc";
+        String file = "res/code/testStmt.sc";
         String src = Files.readString(Path.of(file));
         
         CompilerLog log = new CompilerLog();
@@ -33,10 +33,11 @@ public class DeepParserTest {
         DeepParser parser = new DeepParser(log, src, unit);
         parser.parse();
         
+        log.printError();
         assertTrue(log.errors.size() == 0);
         
-        CppGenerator generator = new CppGenerator(System.out);
-        unit.walk(generator);
+        CppGenerator generator = new CppGenerator(log, System.out);
+        unit.walkChildren(generator);
         //System.out.println(file);
     }
     
@@ -61,8 +62,8 @@ public class DeepParserTest {
             }
 
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            CppGenerator generator = new CppGenerator(new PrintStream(stream));
-            unit.walk(generator);
+            CppGenerator generator = new CppGenerator(log, new PrintStream(stream));
+            unit.walkChildren(generator);
             
             String str = stream.toString("UTF-8");
             String name = file.getName().substring(0, file.getName().lastIndexOf("."));

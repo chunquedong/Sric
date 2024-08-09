@@ -35,8 +35,8 @@ public class ParserTest {
         parser.parse();
         assertTrue(log.errors.size() == 0);
         
-        CppGenerator generator = new CppGenerator(System.out);
-        unit.walk(generator);
+        CppGenerator generator = new CppGenerator(log, System.out);
+        unit.walkChildren(generator);
         //System.out.println(file);
     }
     
@@ -61,8 +61,8 @@ public class ParserTest {
             }
 
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            CppGenerator generator = new CppGenerator(new PrintStream(stream));
-            unit.walk(generator);
+            CppGenerator generator = new CppGenerator(log, new PrintStream(stream));
+            unit.walkChildren(generator);
             
             String str = stream.toString("UTF-8");
             String name = file.getName().substring(0, file.getName().lastIndexOf("."));

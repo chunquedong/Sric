@@ -449,6 +449,12 @@ public class Parser {
                 case throwKeyword:
                     flags = flags | (AstNode.Throws);
                     break;
+                case inlineKeyword:
+                    flags = flags | (AstNode.Inline);
+                    break;
+                case packedKeyword:
+                    flags = flags | (AstNode.Packed);
+                    break;
                 default:
                     done = true;
             }
@@ -741,7 +747,7 @@ public class Parser {
         // if no body expected
         //if (parent.isNative) flags = flags.or(FConst.Native)
         if (curt == TokenKind.lbrace) {
-            block();  // keep parsing
+            method.code = block();  // keep parsing
         } else {
             endOfStmt();
         }

@@ -58,9 +58,9 @@ public class SModule extends AstNode {
     }
     
     @java.lang.Override
-    public void walk(Visitor visitor) {
+    public void walkChildren(Visitor visitor) {
         for (FileUnit v : fileUnits) {
-            v.walk(visitor);
+            visitor.visit(v);
         }
     }
 }

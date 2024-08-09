@@ -42,6 +42,8 @@ public class AstNode {
     public static final int Closure    = 0x02000000;
     public static final int Throws     = 0x04000000;
     public static final int Reflect    = 0x08000000;
+    public static final int Inline     = 0x10000000;
+    public static final int Packed     = 0x20000000;
   
     public Loc loc;
     public int len = 0;
@@ -52,10 +54,12 @@ public class AstNode {
     
     public void getChildren(ArrayList<AstNode> list, Object options) {}
     
-    
-    public void walk(Visitor visitor) {
+    public interface Visitor {
+        public void visit(AstNode node);
     }
-        
+    
+    public void walkChildren(Visitor visitor) {
+    }
     
     public static class Comment extends AstNode {
         public String content;
@@ -74,16 +78,6 @@ public class AstNode {
     public static abstract class TypeDef extends AstNode {
         public String name;
         public Comments comment;
-        
-        @Override public void walk(Visitor visitor) {
-            visitor.enterTypeDef(this);
-            walkChildren(visitor);
-            visitor.exitTypeDef(this);
-        }
-        
-        protected void walkChildren(Visitor visitor) {
-            
-        }
     }
     
     public static class FieldDef extends Stmt {
@@ -95,12 +89,6 @@ public class AstNode {
         public FieldDef(Comments comment, String name) {
             this.comment = comment;
             this.name = name;
-        }
-        
-        @Override public void walk(Visitor visitor) {
-            visitor.enterField(this);
-            //walkChildren(visitor);
-            visitor.exitField(this);
         }
     }
     
@@ -127,12 +115,12 @@ public class AstNode {
             }
         }
         
-        @Override protected void walkChildren(Visitor visitor) {
+        @Override public void walkChildren(Visitor visitor) {
             for (FieldDef field : fieldDefs) {
-                field.walk(visitor);
+                visitor.visit(field);
             }
             for (FuncDef func : funcDefs) {
-                func.walk(visitor);
+                visitor.visit(func);
             }
         }
         
@@ -193,12 +181,6 @@ public class AstNode {
         public FuncPrototype prototype = new FuncPrototype();       // return type
         public Block code;            // code block
         public ArrayList<GeneriParamDef> generiParams = null;
-        
-        @Override public void walk(Visitor visitor) {
-            visitor.enterFunc(this);
-            //walkChildren(visitor);
-            visitor.exitFunc(this);
-        }
     }
 
     
@@ -235,18 +217,16 @@ public class AstNode {
             }
         }
         
-        @Override public void walk(Visitor visitor) {
-            visitor.enterUnit(this);
+        @Override public void walkChildren(Visitor visitor) {
             for (TypeDef typeDef : typeDefs) {
-                typeDef.walk(visitor);
+                visitor.visit(typeDef);
             }
             for (FieldDef field : fieldDefs) {
-                field.walk(visitor);
+                visitor.visit(field);
             }
             for (FuncDef func : funcDefs) {
-                func.walk(visitor);
+                visitor.visit(func);
             }
-            visitor.exitUnit(this);
         }
     }
     
@@ -262,8 +242,13 @@ public class AstNode {
         public Comments comment;
     }
     
-    public static class Block extends AstNode {
+    public static class Block extends Stmt {
         public ArrayList<Stmt> stmts = new ArrayList<Stmt>();
+        @Override public void walkChildren(Visitor visitor) {
+            for (Stmt s : stmts) {
+                visitor.visit(s);
+            }
+        }
     }
     
     public static class GeneriParamDef extends TypeDef {

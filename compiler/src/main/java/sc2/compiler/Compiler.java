@@ -105,14 +105,14 @@ public class Compiler {
     }
     
     private void typeCheck() {
-        SlotTypeResolver slotResolver = new SlotTypeResolver(module, log, this);
+        SlotTypeResolver slotResolver = new SlotTypeResolver(log, module, this);
         slotResolver.run();
         
         if (log.hasError()) {
             return;
         }
         
-        ExprTypeResolver exprResolver = new ExprTypeResolver(module, log);
+        ExprTypeResolver exprResolver = new ExprTypeResolver(log, module);
         exprResolver.run();
         
         if (log.hasError()) {
@@ -134,11 +134,11 @@ public class Compiler {
         new File(outputDir).mkdirs();
         
         String outputFile = outputDir + "/" + this.module.name;
-        CppGenerator generator = new CppGenerator(outputFile+".h", true);
-        module.walk(generator);
+        CppGenerator generator = new CppGenerator(log, outputFile+".h", true);
+        module.walkChildren(generator);
         
-        CppGenerator generator2 = new CppGenerator(outputFile+".cpp", false);
-        module.walk(generator2);
+        CppGenerator generator2 = new CppGenerator(log, outputFile+".cpp", false);
+        module.walkChildren(generator2);
     }
     
 }

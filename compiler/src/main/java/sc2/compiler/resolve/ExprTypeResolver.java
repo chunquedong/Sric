@@ -7,6 +7,7 @@ package sc2.compiler.resolve;
 import sc2.compiler.ast.Scope;
 import java.util.ArrayList;
 import java.util.HashMap;
+import sc2.compiler.CompilePass;
 import sc2.compiler.CompilerLog;
 import sc2.compiler.ast.AstNode;
 import sc2.compiler.ast.AstNode.*;
@@ -16,19 +17,19 @@ import sc2.compiler.ast.*;
  *
  * @author yangjiandong
  */
-public class ExprTypeResolver implements Visitor {
+public class ExprTypeResolver extends CompilePass {
     
     private ArrayList<Scope> scopes = new ArrayList<>();
     private SModule module;
-    public CompilerLog log;
     
-    public ExprTypeResolver(SModule module, CompilerLog log) {
+    public ExprTypeResolver(CompilerLog log, SModule module) {
+        super(log);
         this.module = module;
         this.log = log;
     }
     
     public void run() {
-        module.walk(this);
+        module.walkChildren(this);
     }
     
     private Scope pushScope() {
@@ -50,10 +51,6 @@ public class ExprTypeResolver implements Visitor {
         }
         err("Unknow symbol "+name, loc);
         return null;
-    }
-    
-    private CompilerLog.CompilerErr err(String msg, Loc loc) {
-        return log.err(msg, loc);
     }
     
     private void resolveId(Expr.IdExpr idExpr) {
@@ -96,64 +93,39 @@ public class ExprTypeResolver implements Visitor {
             return;
         }
     }
-    
-    @Override
-    public boolean deepLevel() {
-        return true;
-    }
 
     @Override
-    public void enterUnit(FileUnit v) {
+    public void visitUnit(FileUnit v) {
         scopes.add(v.importScope);
         scopes.add(module.getScope());
         this.scopes.add(Buildin.getBuildinScope());
-    }
-
-    @Override
-    public void exitUnit(FileUnit v) {
+        
+        v.walkChildren(this);
+        
         popScope();
         popScope();
         popScope();
     }
 
     @Override
-    public void enterField(FieldDef v) {
+    public void visitField(FieldDef v) {
     }
 
     @Override
-    public void exitField(FieldDef v) {
+    public void visitFunc(FuncDef v) {
     }
 
     @Override
-    public void enterFunc(FuncDef v) {
+    public void visitTypeDef(TypeDef v) {
+        v.walkChildren(this);
     }
 
     @Override
-    public void exitFunc(FuncDef v) {
+    public void visitStmt(Stmt v) {
     }
 
     @Override
-    public void enterTypeDef(TypeDef v) {
+    public void visitExpr(Expr v) {
     }
 
-    @Override
-    public void exitTypeDef(TypeDef v) {
-    }
-
-    @Override
-    public void enterStmt(Stmt v) {
-    }
-
-    @Override
-    public void exitStmt(Stmt v) {
-    }
-
-    @Override
-    public void enterExpr(Stmt v) {
-    }
-
-    @Override
-    public void exitExpr(Stmt v) {
-    }
-    
 }

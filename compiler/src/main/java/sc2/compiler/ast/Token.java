@@ -134,7 +134,7 @@ public class Token {
         mutKeyword("mut", true),
         asyncKeyword("async", true),
         yieldKeyword("yield", true),
-        lretKeyword("lret", true),
+        //lretKeyword("lret", true),
         awaitKeyword("await", true),
         sizeofKeyword("sizeof", true),
         offsetofKeyword("offsetof", true),
@@ -149,6 +149,8 @@ public class Token {
         typealiasKeyword("typealias", true),
         varKeyword("var", true),
         reflectKeyword("reflect", true),
+        packedKeyword("packed", true),
+        fallthroughKeyword("fallthrough", true),
         
         // misc
         eof("eof", false);

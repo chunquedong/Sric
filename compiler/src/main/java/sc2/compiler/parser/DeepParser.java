@@ -32,32 +32,31 @@ public class DeepParser extends Parser {
 //////////////////////////////////////////////////////////////////////////
     /**
      ** Top level for blocks which must be surrounded by braces
+     * <block> =  <stmt> | ( "{" <stmts> "}" )
      */
     @Override
     Block block() {
-        verify(TokenKind.lbrace);
-        return stmtOrBlock();
-    }
-
-    /**
-     ** <block> =  <stmt> | ( "{" <stmts> "}" )
-     ** <stmts> =  <stmt>*
-     */
-    private Block stmtOrBlock() {
         Block block = new Block();
         Loc loc = cur.loc;
-
-        if (curt != TokenKind.lbrace) {
+        consume(TokenKind.lbrace);
+        while (curt != TokenKind.rbrace) {
             block.stmts.add(stmt());
-        } else {
-            consume(TokenKind.lbrace);
-            while (curt != TokenKind.rbrace) {
-                block.stmts.add(stmt());
-            }
-            consume(TokenKind.rbrace);
         }
-
+        consume(TokenKind.rbrace);
         endLoc(block, loc);
+        return block;
+    }
+
+    private Block stmtAsBlock() {
+        Stmt st = stmt();
+        
+        if (st instanceof Block) {
+            return (Block)st;
+        }
+        
+        Block block = new Block();
+        block.stmts.add(st);
+        endLoc(block, st.loc);
         return block;
     }
 
@@ -67,31 +66,35 @@ public class DeepParser extends Parser {
     /**
      ** Statement:
      **   <stmt> =  <break> | <continue> | <for> | <if> | <return> | <switch> |
-     **               <throw> | <while> | <try> | <exprStmt> | <localDef> | <itAdd>
+     **               <throw> | <while> | <try> | <exprStmt> | <localDef> | <itAdd> | <block>
      */
     private Stmt stmt() {
         // check for statement keywords
         switch (curt) {
             case breakKeyword:
-                return breakStmt();
             case continueKeyword:
-                return continueStmt();
+//            case fallthroughKeyword:
+                return jumpStmt();
             case forKeyword:
                 return forStmt();
             case ifKeyword:
                 return ifStmt();
             case returnKeyword:
                 return returnStmt();
-            case lretKeyword:
-                return returnStmt();
+//            case lretKeyword:
+//                return returnStmt();
             case switchKeyword:
                 return switchStmt();
-            case throwKeyword:
-                return throwStmt();
-            case tryKeyword:
-                return tryStmt();
+//            case throwKeyword:
+//                return throwStmt();
+//            case tryKeyword:
+//                return tryStmt();
             case whileKeyword:
                 return whileStmt();
+            case unsafeKeyword:
+                return unsafeStmt();
+            case lbrace:
+                return block();
         }
 
         // at this point we either have an expr or local var declaration
@@ -162,7 +165,7 @@ public class DeepParser extends Parser {
         consume(TokenKind.unsafeKeyword);
 
         UnsafeBlock stmt = new UnsafeBlock();
-        stmt.block = stmtOrBlock();
+        stmt.block = block();
 
         endLoc(stmt, loc);
         return stmt;
@@ -178,14 +181,14 @@ public class DeepParser extends Parser {
         consume(TokenKind.lparen);
         Expr cond = expr();
         consume(TokenKind.rparen);
-        Block trueBlock = stmtOrBlock();
+        Block trueBlock = stmtAsBlock();
         IfStmt stmt = new IfStmt();
         stmt.loc = loc;
         stmt.condition = cond;
         stmt.block = trueBlock;
         if (curt == TokenKind.elseKeyword) {
             consume(TokenKind.elseKeyword);
-            stmt.elseBlock = stmtOrBlock();
+            stmt.elseBlock = stmtAsBlock();
         }
         return stmt;
     }
@@ -235,7 +238,7 @@ public class DeepParser extends Parser {
         WhileStmt stmt = new WhileStmt();
         stmt.loc = loc;
         stmt.condition = cond;
-        stmt.block = stmtOrBlock();
+        stmt.block = stmtAsBlock();
         endLoc(stmt, loc);
         return stmt;
     }
@@ -268,32 +271,19 @@ public class DeepParser extends Parser {
         }
         consume(TokenKind.rparen);
 
-        stmt.block = stmtOrBlock();
+        stmt.block = stmtAsBlock();
         endLoc(stmt, loc);
         return stmt;
     }
 
     /**
      ** Break statement:
-     **   <break> = "break" <eos>
+     **   <jump> = ("break"|"continue"|"fallthrough") <eos>
      */
-    private JumpStmt breakStmt() {
+    private JumpStmt jumpStmt() {
         JumpStmt stmt = new JumpStmt();
         Loc loc = cur.loc;
-        consume(TokenKind.breakKeyword);
-        endOfStmt();
-        endLoc(stmt, loc);
-        return stmt;
-    }
-
-    /**
-     ** Continue statement:
-     **   <continue> = "continue" <eos>
-     */
-    private JumpStmt continueStmt() {
-        JumpStmt stmt = new JumpStmt();
-        Loc loc = cur.loc;
-        consume(TokenKind.continueKeyword);
+        stmt.opToken = consume().kind;
         endOfStmt();
         endLoc(stmt, loc);
         return stmt;
@@ -310,7 +300,7 @@ public class DeepParser extends Parser {
         TryStmt stmt = new TryStmt();
         Loc loc = cur.loc;
         consume(TokenKind.tryKeyword);
-        stmt.block = stmtOrBlock();
+        stmt.block = stmtAsBlock();
 //    if (curt != TokenKind.catchKeyword && curt != TokenKind.finallyKeyword);
 //      throw err("Expecting catch or finally block");
         while (curt == TokenKind.catchKeyword) {
@@ -318,7 +308,7 @@ public class DeepParser extends Parser {
         }
         if (curt == TokenKind.finallyKeyword) {
             consume();
-            stmt.finallyBlock = stmtOrBlock();
+            stmt.finallyBlock = stmtAsBlock();
         }
         endLoc(stmt, loc);
         return stmt;
@@ -340,7 +330,7 @@ public class DeepParser extends Parser {
             consume(TokenKind.rparen);
         }
 
-        c.block = stmtOrBlock();
+        c.block = stmtAsBlock();
 
         endLoc(c, loc);
         return c;
@@ -363,19 +353,19 @@ public class DeepParser extends Parser {
         consume(TokenKind.lbrace);
         while (curt != TokenKind.rbrace) {
             if (curt == TokenKind.caseKeyword) {
+                consume();
                 CaseBlock c = new CaseBlock();
                 Loc loc2 = cur.loc;
-                while (curt == TokenKind.caseKeyword) {
+                c.caseExpr = expr();
+                consume(TokenKind.colon);
+                if (curt == TokenKind.fallthroughKeyword) {
+                    c.fallthrough = true;
                     consume();
-                    c.cases.add(expr());
-                    consume(TokenKind.colon);
+                    consume(TokenKind.semicolon);
                 }
-                if (curt != TokenKind.defaultKeyword) // optimize away case fall-thru to default
-                {
-                    c.block = switchBlock();
-                    endLoc(c, loc2);
-                    stmt.cases.add(c);
-                }
+                c.block = switchBlock();
+                endLoc(c, loc2);
+                stmt.cases.add(c);
             } else if (curt == TokenKind.defaultKeyword) {
                 if (stmt.defaultBlock != null) {
                     err("Duplicate default blocks");
@@ -396,7 +386,9 @@ public class DeepParser extends Parser {
     private Block switchBlock() {
         Block block = new Block();
         Loc loc = cur.loc;
-        while (curt != TokenKind.caseKeyword && curt != TokenKind.defaultKeyword && curt != TokenKind.rbrace) {
+        while (curt != TokenKind.caseKeyword && curt != TokenKind.defaultKeyword &&
+                curt != TokenKind.rbrace /*end of switch*/ &&
+                curt != TokenKind.fallthroughKeyword) {
             block.stmts.add(stmt());
         }
 
