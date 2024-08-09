@@ -163,6 +163,27 @@ public class CppGenerator extends CompilePass {
 
     @Override
     public void visitTypeDef(AstNode.TypeDef v) {
+        if (v instanceof EnumDef edef) {
+            print("enum class ");
+            print(v.name);
+            print(" {").newLine();
+            indent();
+
+            for (FieldDef f : edef.enumDefs) {
+                print(f.name);
+                if (f.initExpr != null) {
+                    print(" = ");
+                    this.visit(f.initExpr);
+                    print(";");
+                }
+                print(",").newLine();
+            }
+
+            unindent();
+            print("};").newLine();
+            return;
+        }
+        
         print("struct ");
         print(v.name);
         print(" {").newLine();

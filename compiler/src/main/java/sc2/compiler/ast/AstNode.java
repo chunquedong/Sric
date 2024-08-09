@@ -48,10 +48,6 @@ public class AstNode {
     public Loc loc;
     public int len = 0;
     
-    public AstNode parent;
-    
-    public int flags;
-    
     public void getChildren(ArrayList<AstNode> list, Object options) {}
     
     public interface Visitor {
@@ -78,9 +74,12 @@ public class AstNode {
     public static abstract class TypeDef extends AstNode {
         public String name;
         public Comments comment;
+        public int flags;
     }
     
     public static class FieldDef extends Stmt {
+        public int flags;
+        public TypeDef parent;
         public String name;
         public Comments comment;
         public Type fieldType;        // field type
@@ -106,12 +105,13 @@ public class AstNode {
         }
         
         public void addSlot(AstNode node) {
-            node.parent = this;
-            if (node instanceof FieldDef) {
-                fieldDefs.add((FieldDef)node);
+            if (node instanceof FieldDef f) {
+                fieldDefs.add(f);
+                f.parent = this;
             }
-            else if (node instanceof FuncDef) {
-                funcDefs.add((FuncDef)node);
+            else if (node instanceof FuncDef f) {
+                funcDefs.add(f);
+                f.parent = this;
             }
         }
         
@@ -140,7 +140,7 @@ public class AstNode {
     }
     
     public static class EnumDef extends TypeDef {
-        public ArrayList<FieldDef> enumDefs;
+        public ArrayList<FieldDef> enumDefs = new ArrayList<FieldDef>();
         
         public EnumDef(Comments comment, int flags, String name) {
             this.comment = comment;
@@ -176,6 +176,8 @@ public class AstNode {
     }
     
     public static class FuncDef extends AstNode {
+        public int flags;
+        public TypeDef parent;
         public String name;
         public Comments comment;
         public FuncPrototype prototype = new FuncPrototype();       // return type
@@ -199,7 +201,6 @@ public class AstNode {
         }
         
         public void addDef(AstNode node) {
-            node.parent = this;
             if (node instanceof TypeDef) {
                 typeDefs.add((TypeDef)node);
             }
@@ -237,6 +238,7 @@ public class AstNode {
     }
     
     public static class TypeAlias extends AstNode {
+        public int flags;
         public Type type;
         public String asName;
         public Comments comment;

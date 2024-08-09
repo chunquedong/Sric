@@ -1,5 +1,8 @@
 
 
+enum Color {
+    Red, Blue, Green
+}
 
 struct A {
     var i : Int;
