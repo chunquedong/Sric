@@ -71,17 +71,17 @@ public class AstNode {
         public ArrayList<Comment> comments = new ArrayList<Comment>();
     }
     
-    public static abstract class TypeDef extends AstNode {
-        public String name;
-        public Comments comment;
+    public static abstract class TopLevelDef extends AstNode {
+        public AstNode parent;
         public int flags;
+        public Comments comment;
+        public String name;
     }
     
-    public static class FieldDef extends Stmt {
-        public int flags;
-        public TypeDef parent;
-        public String name;
-        public Comments comment;
+    public static abstract class TypeDef extends TopLevelDef {
+    }
+    
+    public static class FieldDef extends TopLevelDef {
         public Type fieldType;        // field type
         public Expr initExpr;         // init expression or null
         
@@ -175,11 +175,7 @@ public class AstNode {
         public int postFlags = 0;
     }
     
-    public static class FuncDef extends AstNode {
-        public int flags;
-        public TypeDef parent;
-        public String name;
-        public Comments comment;
+    public static class FuncDef extends TopLevelDef {
         public FuncPrototype prototype = new FuncPrototype();       // return type
         public Block code;            // code block
         public ArrayList<GeneriParamDef> generiParams = null;
@@ -200,7 +196,8 @@ public class AstNode {
             name = file;
         }
         
-        public void addDef(AstNode node) {
+        public void addDef(TopLevelDef node) {
+
             if (node instanceof TypeDef) {
                 typeDefs.add((TypeDef)node);
             }
@@ -209,9 +206,6 @@ public class AstNode {
             }
             else if (node instanceof FuncDef) {
                 funcDefs.add((FuncDef)node);
-            }
-            else if (node instanceof Import) {
-                imports.add((Import)node);
             }
             else if (node instanceof TypeAlias) {
                 typeAlias.add((TypeAlias)node);
@@ -237,11 +231,8 @@ public class AstNode {
         public boolean star = false;
     }
     
-    public static class TypeAlias extends AstNode {
-        public int flags;
+    public static class TypeAlias extends TopLevelDef {
         public Type type;
-        public String asName;
-        public Comments comment;
     }
     
     public static class Block extends Stmt {

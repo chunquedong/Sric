@@ -56,7 +56,7 @@ public class Parser {
         usings();
         while (curt != TokenKind.eof) {
             try {
-                AstNode defNode = topLevelDef();
+                TopLevelDef defNode = topLevelDef();
                 if (defNode != null) {
                     unit.addDef(defNode);
                 }
@@ -101,7 +101,7 @@ public class Parser {
         Loc loc = curLoc();
         consume(TokenKind.typealiasKeyword);
         TypeAlias u = new TypeAlias();
-        u.asName = consumeId();
+        u.name = consumeId();
         u.flags = flags;
         u.comment = doc;
         
@@ -126,10 +126,10 @@ public class Parser {
 
         endOfStmt();
         endLoc(u, loc);
-        unit.addDef(u);
+        unit.imports.add(u);
     }
 
-    private AstNode topLevelDef() {
+    private TopLevelDef topLevelDef() {
         Loc loc = curLoc();
         // [<doc>]
         Comments doc = doc();

@@ -70,4 +70,11 @@ public abstract class Stmt extends AstNode {
     public static class UnsafeBlock extends Stmt {
         public Block block;
     }
+    public static class LocalDefStmt extends Stmt {
+        public FieldDef fieldDef;
+        public LocalDefStmt(FieldDef f) {
+            fieldDef = f;
+            this.loc = f.loc;
+        }
+    }
 }

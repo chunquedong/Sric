@@ -18,7 +18,7 @@ import sc2.compiler.ast.SModule.Depend;
 import sc2.compiler.backend.CppGenerator;
 import sc2.compiler.parser.DeepParser;
 import sc2.compiler.resolve.ExprTypeResolver;
-import sc2.compiler.resolve.SlotTypeResolver;
+import sc2.compiler.resolve.TopLevelTypeResolver;
 
 /**
  *
@@ -105,7 +105,7 @@ public class Compiler {
     }
     
     private void typeCheck() {
-        SlotTypeResolver slotResolver = new SlotTypeResolver(log, module, this);
+        TopLevelTypeResolver slotResolver = new TopLevelTypeResolver(log, module, this);
         slotResolver.run();
         
         if (log.hasError()) {

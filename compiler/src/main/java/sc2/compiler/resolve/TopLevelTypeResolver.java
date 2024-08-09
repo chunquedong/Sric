@@ -19,13 +19,13 @@ import sc2.compiler.ast.SModule.Depend;
  *
  * @author yangjiandong
  */
-public class SlotTypeResolver  extends CompilePass {
+public class TopLevelTypeResolver  extends CompilePass {
     
     private ArrayList<Scope> scopes = new ArrayList<>();
     private SModule module;
     private Compiler compiler;
     
-    public SlotTypeResolver(CompilerLog log, SModule module, Compiler compiler) {
+    public TopLevelTypeResolver(CompilerLog log, SModule module, Compiler compiler) {
         super(log);
         this.module = module;
         this.log = log;

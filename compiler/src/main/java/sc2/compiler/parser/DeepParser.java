@@ -130,7 +130,7 @@ public class DeepParser extends Parser {
      ** Parse local variable declaration, the current token must be * the
      * identifier of the local variable.
      */
-    private FieldDef localDefStmt(Loc loc, Type localType) {
+    private LocalDefStmt localDefStmt(Loc loc, Type localType) {
 //        boolean isConst = false;
         consume(TokenKind.varKeyword);
         
@@ -157,7 +157,10 @@ public class DeepParser extends Parser {
 
         endOfStmt();
         endLoc(stmt, loc);
-        return stmt;
+        
+        LocalDefStmt s = new LocalDefStmt(stmt);
+        endLoc(s, loc);
+        return s;
     }
     
     private UnsafeBlock unsafeStmt() {

@@ -223,8 +223,8 @@ public class CppGenerator extends CompilePass {
         else if (v instanceof ForStmt fors) {
             print("for (");
             if (fors.init != null) {
-                if (fors.init instanceof FieldDef varDef) {
-                    printLocalFieldDefAsExpr(varDef);
+                if (fors.init instanceof LocalDefStmt varDef) {
+                    printLocalFieldDefAsExpr(varDef.fieldDef);
                 }
                 else if (fors.init instanceof ExprStmt s) {
                     this.visit(s.expr);
