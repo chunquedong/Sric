@@ -51,6 +51,14 @@ public class Type extends AstNode {
         }
     }
     
+    public static class MetaType extends Type {
+        public Type type;
+        public MetaType(Loc loc, Type type) {
+            super(loc, "Type");
+            this.type = type;
+        }
+    }
+    
     public Type(IdExpr id) {
         this.id = id;
         this.loc = id.loc;
@@ -69,6 +77,47 @@ public class Type extends AstNode {
         return id.name.equals("Void");
     }
     
+    public boolean isBool() {
+        if (id.namespace != null) {
+            return false;
+        }
+        return id.name.equals("Bool");
+    }
+    
+    public boolean isInt() {
+        if (id.namespace != null) {
+            return false;
+        }
+        return id.name.equals("Int");
+    }
+    
+    public boolean isFloat() {
+        if (id.namespace != null) {
+            return false;
+        }
+        return id.name.equals("Float");
+    }
+    
+    public boolean isArray() {
+        if (id.namespace != null) {
+            return false;
+        }
+        return id.name.equals("[]");
+    }
+    
+    public boolean fit(Type target) {
+        if (this == target) {
+            return true;
+        }
+        if (this.id.namespace == target.id.namespace && this.id.name.equals(target.id.name)) {
+            return true;
+        }
+        if (this.id.resolvedDef == target.id.resolvedDef) {
+            return true;
+        }
+        return false;
+    }
+    
     public static Type voidType(Loc loc) {
         Type type = new Type(loc, "Void");
         return type;
@@ -77,6 +126,25 @@ public class Type extends AstNode {
     public static Type boolType(Loc loc) {
         Type type = new Type(loc, "Bool");
         return type;
+    }
+    
+    public static Type intType(Loc loc) {
+        Type type = new Type(loc, "Int");
+        type.size = 64;
+        return type;
+    }
+    
+    public static Type floatType(Loc loc) {
+        Type type = new Type(loc, "Float");
+        type.size = 64;
+        return type;
+    }
+    
+    public static Type strType(Loc loc) {
+        Type type = new Type(loc, "Int");
+        type.size = 8;
+        type.imutableAttr = ImutableAttr.imu;
+        return pointerType(loc, type, PointerAttr.raw, false);
     }
     
     public static FuncType funcType(Loc loc, FuncPrototype prototype) {
@@ -105,6 +173,11 @@ public class Type extends AstNode {
     public static Type varArgType(Loc loc) {
         Type type = new Type(loc, "...");
         return type;
+    }
+    
+    public static Type metaType(Loc loc, Type type) {
+        MetaType t = new MetaType(loc, type);
+        return t;
     }
     
 //    public static Type placeHolder(Loc loc) {

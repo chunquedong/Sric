@@ -79,11 +79,14 @@ public class AstNode {
     }
     
     public static abstract class TypeDef extends TopLevelDef {
+        protected Scope scope = null;
+        public abstract Scope getScope();
     }
     
     public static class FieldDef extends TopLevelDef {
         public Type fieldType;        // field type
         public Expr initExpr;         // init expression or null
+        public boolean isLocalVar = false;
         
         public FieldDef(Comments comment, String name) {
             this.comment = comment;
@@ -96,7 +99,6 @@ public class AstNode {
         public ArrayList<FieldDef> fieldDefs = new ArrayList<FieldDef>();
         public ArrayList<FuncDef> funcDefs = new ArrayList<FuncDef>();
         public ArrayList<GeneriParamDef> generiParamDefs = null;
-        public Scope scope = null;
         
         public StructDef(Comments comment, int flags, String name) {
             this.comment = comment;
@@ -152,6 +154,17 @@ public class AstNode {
             node.parent = this;
             enumDefs.add(node);
         }
+        
+        public Scope getScope() {
+            if (scope == null) {
+                scope = new Scope();
+                
+                for (FieldDef f : enumDefs) {
+                    scope.put(f.name, f);
+                }
+            }
+            return scope;
+        }
     }
     
     public static class TraitDef extends TypeDef {
@@ -166,6 +179,17 @@ public class AstNode {
         public void addSlot(FuncDef node) {
             node.parent = this;
             funcDefs.add(node);
+        }
+        
+        public Scope getScope() {
+            if (scope == null) {
+                scope = new Scope();
+
+                for (FuncDef f : funcDefs) {
+                    scope.put(f.name, f);
+                }
+            }
+            return scope;
         }
     }
     
@@ -247,6 +271,11 @@ public class AstNode {
     public static class GeneriParamDef extends TypeDef {
         public Type bound;
         public TypeDef parent;
+
+        @Override
+        public Scope getScope() {
+            return scope;
+        }
     }
     
     public static class ParamDef extends AstNode {

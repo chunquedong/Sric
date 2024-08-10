@@ -377,7 +377,7 @@ public class CppGenerator extends BaseGenerator {
     @Override
     public void visitExpr(Expr v) {
         boolean isPrimitive = false;
-        if (v instanceof IdExpr || v instanceof LiteralExpr || v instanceof CallExpr) {
+        if (v instanceof IdExpr || v instanceof LiteralExpr || v instanceof CallExpr || v instanceof AccessExpr) {
             isPrimitive = true;
         }
         else {

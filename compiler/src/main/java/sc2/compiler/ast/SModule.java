@@ -52,6 +52,9 @@ public class SModule extends AstNode {
                 for (TypeDef f : v.typeDefs) {
                     scope.put(f.name, f);
                 }
+                for (TypeAlias f : v.typeAlias) {
+                    scope.put(f.name, f);
+                }
             }
         }
         return scope;

@@ -37,7 +37,8 @@ public class TopLevelTypeResolver  extends CompilePass {
     }
     
     private AstNode findSymbol(String name, Loc loc) {
-        for (Scope scope : scopes) {
+        for (int i = scopes.size()-1; i >=0; --i) {
+            Scope scope = scopes.get(i);
             AstNode node = scope.get(name, loc, log);
             if (node != null) {
                 return node;
@@ -74,7 +75,7 @@ public class TopLevelTypeResolver  extends CompilePass {
             idExpr.resolvedDef = node;
             return;
         }
-        else if (idExpr.namespace.resolvedDef instanceof StructDef m) {
+        else if (idExpr.namespace.resolvedDef instanceof TypeDef m) {
             AstNode node = m.getScope().get(idExpr.name, idExpr.loc, log);
             if (node == null) {
                 err("Unknow symbol "+idExpr.name, idExpr.loc);
@@ -104,7 +105,7 @@ public class TopLevelTypeResolver  extends CompilePass {
             idExpr.resolvedDef = node;
             return;
         }
-        else if (idExpr.namespace.resolvedDef instanceof StructDef m) {
+        else if (idExpr.namespace.resolvedDef instanceof TypeDef m) {
             AstNode node = m.getScope().get(idExpr.name, idExpr.loc, log);
             if (node == null) {
                 err("Unknow symbol "+idExpr.name, idExpr.loc);

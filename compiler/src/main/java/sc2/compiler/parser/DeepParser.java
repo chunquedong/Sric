@@ -157,6 +157,7 @@ public class DeepParser extends Parser {
 
         endOfStmt();
         endLoc(stmt, loc);
+        stmt.isLocalVar = true;
         
         LocalDefStmt s = new LocalDefStmt(stmt);
         endLoc(s, loc);

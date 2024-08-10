@@ -25,7 +25,7 @@ import sc2.compiler.parser.Tokenizer;
  */
 public class ParserTest {
     @Test
-    public void testSys() throws IOException {
+    public void test() throws IOException {
         String file = "res/code/testStruct.sc";
         String src = Files.readString(Path.of(file));
         

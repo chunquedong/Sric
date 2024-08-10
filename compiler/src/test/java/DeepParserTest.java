@@ -24,7 +24,7 @@ import sc2.compiler.parser.Parser;
  */
 public class DeepParserTest {
     @Test
-    public void testSys() throws IOException {
+    public void test() throws IOException {
         String file = "res/code/testExpr.sc";
         String src = Files.readString(Path.of(file));
         
