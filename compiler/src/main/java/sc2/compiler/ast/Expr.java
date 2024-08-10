@@ -15,6 +15,12 @@ import java.util.ArrayList;
 public abstract class Expr extends AstNode {
 
     public Type resolvedType;
+    public boolean inLeftSide = false;
+    public boolean isStmt = false;
+    
+    public boolean isResolved() {
+        return resolvedType != null;
+    }
     
     public static class UnaryExpr extends Expr {
         public Token.TokenKind opToken;   // operator token type (Token.bang, etc)
@@ -86,16 +92,40 @@ public abstract class Expr extends AstNode {
     public static class IdExpr extends Expr {
         public IdExpr namespace;
         public String name;
+        
         public AstNode resolvedDef;
         
         public IdExpr(String name) {
             this.name = name;
+        }
+        
+        public String getNamespaceName() {
+            if (this.namespace != null) {
+                return namespace.toString();
+            }
+            
+            if (this.resolvedDef instanceof FieldDef f) {
+                if (f.parent instanceof FileUnit u) {
+                    return u.name;
+                }
+            }
+            return null;
+        }
+        
+        @java.lang.Override
+        public String toString() {
+            String ns = getNamespaceName();
+            if (ns != null) {
+                return ns + "::" + name;
+            }
+            return name;
         }
     }
     
     public static class AccessExpr extends Expr {
         public Expr target;
         public String name;
+        public AstNode resolvedDef;
         public Token.TokenKind opToken;
     }
     

@@ -197,6 +197,31 @@ public class AstNode {
         public Type returnType;       // return type
         public ArrayList<ParamDef> paramDefs = null;   // parameter definitions
         public int postFlags = 0;
+        
+        @java.lang.Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("(");
+            if (paramDefs != null) {
+                int i = 0;
+                for (ParamDef p : paramDefs) {
+                    if (i > 0) {
+                        sb.append(", ");
+                    }
+                    sb.append(p.name);
+                    sb.append(" : ");
+                    sb.append(p.paramType);
+                    ++i;
+                }
+            }
+            sb.append(")");
+
+            if (returnType != null && returnType.isVoid()) {
+                sb.append(":");
+                sb.append(returnType);
+            }
+            return sb.toString();
+        }
     }
     
     public static class FuncDef extends TopLevelDef {

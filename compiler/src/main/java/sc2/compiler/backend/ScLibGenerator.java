@@ -32,40 +32,13 @@ public class ScLibGenerator extends BaseGenerator {
     }
 
     private void printType(Type type) {
-        if (type == null) {
-            print("auto");
-            return;
-        }
-        
-        switch (type.id.name) {
-            case "Void":
-                print("void");
-                return;
-            case "*":
-                print("Ptr");
-                return;
-            case "Int":
-                print("int"+type.size+"_t");
-                return;
-            case "Float":
-                if (type.size == 64) {
-                    print("double");
-                }
-                else {
-                    print("float");
-                }
-                return;
-            case "Bool":
-                print("bool");
-                return;
-        }
-        
-        printIdExpr(type.id);
+        print(type.toString());
     }
 
     private void printIdExpr(Expr.IdExpr id) {
-        if (id.namespace != null) {
-            printIdExpr(id.namespace);
+        String ns = id.getNamespaceName();
+        if (ns != null) {
+            print(ns);
             print("::");
         }
         print(id.name);
@@ -83,9 +56,13 @@ public class ScLibGenerator extends BaseGenerator {
     }
     
     void printLocalFieldDefAsExpr(AstNode.FieldDef v) {
-        printType(v.fieldType);
-        print(" ");
+        print("var ");
         print(v.name);
+        
+        if (v.fieldType != null) {
+            print(" : ");
+            printType(v.fieldType);
+        }
         
         if (v.initExpr != null) {
             print(" = ");
@@ -95,16 +72,21 @@ public class ScLibGenerator extends BaseGenerator {
     
     @Override
     public void visitFunc(AstNode.FuncDef v) {
-        printType(v.prototype.returnType);
-        print(" ");
+        print("fun ");
         print(v.name);
 
-        printFuncPrototype(v.prototype, false);
+        printFuncPrototype(v.prototype);
 
-        print(";");
+        boolean inlined = (v.flags & AstNode.Inline) != 0 || v.generiParams != null;
+        if (inlined) {
+            this.visit(v.code);
+        }
+        else {
+            print(";");
+        }
     }
     
-    private void printFuncPrototype(AstNode.FuncPrototype prototype, boolean isLambda) {
+    private void printFuncPrototype(AstNode.FuncPrototype prototype) {
         print("(");
         if (prototype != null && prototype.paramDefs != null) {
             int i = 0;
@@ -124,9 +106,9 @@ public class ScLibGenerator extends BaseGenerator {
         }
         print(")");
         
-        if (isLambda && prototype != null) {
-            if (prototype.returnType != null && prototype.returnType.isVoid()) {
-                print("->");
+        if (prototype != null) {
+            if (prototype.returnType != null && !prototype.returnType.isVoid()) {
+                print(" : ");
                 printType(prototype.returnType);
             }
         }
@@ -286,7 +268,7 @@ public class ScLibGenerator extends BaseGenerator {
     @Override
     public void visitExpr(Expr v) {
         boolean isPrimitive = false;
-        if (v instanceof Expr.IdExpr || v instanceof Expr.LiteralExpr || v instanceof Expr.CallExpr) {
+        if (v.isStmt || v instanceof Expr.IdExpr || v instanceof Expr.LiteralExpr || v instanceof Expr.CallExpr) {
             isPrimitive = true;
         }
         else {
@@ -440,7 +422,7 @@ public class ScLibGenerator extends BaseGenerator {
         }
         print("]");
         
-        this.printFuncPrototype(expr.prototype, true);
+        this.printFuncPrototype(expr.prototype);
         
         this.visit(expr.code);
     }

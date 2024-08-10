@@ -16,7 +16,7 @@ public class Loc {
     public final int line;
     public final int col;
     public final int offset;
-
+    
     public Loc(String file, int line, int col, int offset) {
         this.file = file;
         this.line = line;

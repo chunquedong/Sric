@@ -120,6 +120,7 @@ public class DeepParser extends Parser {
         // return expression as statement
         ExprStmt stmt = new ExprStmt();
         stmt.expr = e;
+        e.isStmt = true;
         
         endOfStmt();
         endLoc(stmt, loc);
@@ -423,6 +424,7 @@ public class DeepParser extends Parser {
         Expr expr = ifExpr();
         if (cur.isAssign()) {
             TokenKind tok = consume().kind;
+            expr.inLeftSide = true;
             BinaryExpr e = new BinaryExpr(expr, tok, assignExpr());
             endLoc(e, loc);
             return e;
@@ -883,13 +885,17 @@ public class DeepParser extends Parser {
     
     private Expr sizeofExpr() {
         Loc loc = cur.loc;
-        TokenKind tokt = curt;
+        //TokenKind tokt = curt;
         consume(TokenKind.sizeofKeyword);
         consume(TokenKind.lparen);
-        UnaryExpr e = new UnaryExpr(tokt, typeExpr());
+        
+        CallExpr call = new CallExpr();
+        call.target = new IdExpr(TokenKind.sizeofKeyword.symbol);
+        call.args.add(new CallArg(typeExpr()));
+        
         consume(TokenKind.rparen);
-        endLoc(e, loc);
-        return e;
+        endLoc(call, loc);
+        return call;
     }
     
     private Expr offsetofExpr() {

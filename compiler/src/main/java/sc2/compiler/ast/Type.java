@@ -34,9 +34,15 @@ public class Type extends AstNode {
     
     public static class FuncType extends Type {
         public FuncPrototype prototype;
+        public FuncDef funcDef = null;
 
         public FuncType(Loc loc, String name) {
             super(loc, name);
+        }
+        
+        @java.lang.Override
+        public String toString() {
+            return prototype.toString();
         }
     }
     
@@ -49,6 +55,12 @@ public class Type extends AstNode {
         public PointerType(Loc loc, String name) {
             super(loc, name);
         }
+        
+        @java.lang.Override
+        public String toString() {
+            String t = super.toString();
+            return pointerAttr + "*" + t;
+        }
     }
     
     public static class MetaType extends Type {
@@ -56,6 +68,11 @@ public class Type extends AstNode {
         public MetaType(Loc loc, Type type) {
             super(loc, "Type");
             this.type = type;
+        }
+        
+        @java.lang.Override
+        public String toString() {
+            return type.toString();
         }
     }
     
@@ -105,6 +122,18 @@ public class Type extends AstNode {
         return id.name.equals("[]");
     }
     
+    public boolean isMetaType() {
+        return this instanceof MetaType;
+    }
+    
+    public boolean isPointerType() {
+        return this instanceof PointerType;
+    }
+    
+    public boolean isFuncType() {
+        return this instanceof FuncType;
+    }
+    
     public boolean fit(Type target) {
         if (this == target) {
             return true;
@@ -116,6 +145,36 @@ public class Type extends AstNode {
             return true;
         }
         return false;
+    }
+    
+    public boolean equals(Type target) {
+        if (this == target) {
+            return true;
+        }
+        if (this.id.namespace == target.id.namespace && this.id.name.equals(target.id.name)) {
+            return true;
+        }
+        if (this.id.resolvedDef == target.id.resolvedDef) {
+            return true;
+        }
+        return false;
+    }
+        
+    public static FuncType funcType(Loc loc, FuncPrototype prototype) {
+        FuncType type = new FuncType(loc, "=>");
+        type.prototype = prototype;
+        return type;
+    }
+    
+    public static Type funcType(FuncDef f) {
+        FuncType type = funcType(f.loc, f.prototype);
+        type.funcDef = f;
+        return type;
+    }
+    
+    public static Type funcType(ClosureExpr f) {
+        FuncType type = funcType(f.loc, f.prototype);
+        return type;
     }
     
     public static Type voidType(Loc loc) {
@@ -146,12 +205,6 @@ public class Type extends AstNode {
         type.imutableAttr = ImutableAttr.imu;
         return pointerType(loc, type, PointerAttr.raw, false);
     }
-    
-    public static FuncType funcType(Loc loc, FuncPrototype prototype) {
-        FuncType type = new FuncType(loc, "=>");
-        type.prototype = prototype;
-        return type;
-    }
 
     public static Type arrayType(Loc loc, Type elemType, int size) {
         Type type = new Type(loc, "[]");
@@ -180,10 +233,34 @@ public class Type extends AstNode {
         return t;
     }
     
-//    public static Type placeHolder(Loc loc) {
-//        Type type = new Type(loc, "PlaceHolder");
-//        type.loc = loc;
-//        return type;
-//    }
+    @java.lang.Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        
+        if (this.isUnsigned) {
+            sb.append("U");
+        }
+        
+        sb.append(id.toString());
+        
+        if (size != 0) {
+            sb.append(size);
+        }
+        
+        if (this.genericArgs != null) {
+            sb.append("$<");
+            int i = 0;
+            for (Type t : this.genericArgs) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+                sb.append(t.toString());
+                ++i;
+            }
+            sb.append(">");
+        }
+        
+        return sb.toString();
+    }
 
 }

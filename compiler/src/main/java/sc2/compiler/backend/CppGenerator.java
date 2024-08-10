@@ -24,6 +24,8 @@ import sc2.compiler.ast.AstNode.*;
 import sc2.compiler.ast.ClosureExpr;
 import sc2.compiler.ast.SModule;
 import sc2.compiler.ast.SModule.Depend;
+import sc2.compiler.ast.Type.FuncType;
+import sc2.compiler.ast.Type.PointerType;
 
 /**
  *
@@ -99,14 +101,18 @@ public class CppGenerator extends BaseGenerator {
             return;
         }
         
+        if (type.imutableAttr == Type.ImutableAttr.imu) {
+            print("const ");
+        }
+        
         switch (type.id.name) {
             case "Void":
                 print("void");
                 return;
-            case "*":
-                print("Ptr");
-                return;
             case "Int":
+                if (type.isUnsigned) {
+                    print("u");
+                }
                 print("int"+type.size+"_t");
                 return;
             case "Float":
@@ -120,14 +126,53 @@ public class CppGenerator extends BaseGenerator {
             case "Bool":
                 print("bool");
                 return;
+            case "*":
+                PointerType pt = (PointerType)type;
+                if (pt.pointerAttr == Type.PointerAttr.raw) {
+                    printType(pt.genericArgs.get(0));
+                    print("*");
+                }
+                else {
+                    if (pt.pointerAttr == Type.PointerAttr.own) {
+                        print("OwnPtr");
+                    }
+                    else if (pt.pointerAttr == Type.PointerAttr.ref) {
+                        print("RefPtr");
+                    }
+                    else if (pt.pointerAttr == Type.PointerAttr.weak) {
+                        print("WeakPtr");
+                    }
+                    print("<");
+                    printType(pt.genericArgs.get(0));
+                    print(">");
+                }
+                return;
+            case "[]":
+                printType(type.genericArgs.get(0));
+                print("[");
+                print(""+type.size);
+                print("]");
+                return;
+            case "=>":
+                FuncType ft = (FuncType)type;
+                print("std::function<");
+                printType(ft.prototype.returnType);
+                print("(");
+                if (ft.prototype.paramDefs != null) {
+                    for (ParamDef p : ft.prototype.paramDefs) {
+                        printType(p.paramType);
+                    }
+                }
+                print(")>");
         }
         
         printIdExpr(type.id);
     }
 
     private void printIdExpr(IdExpr id) {
-        if (id.namespace != null) {
-            printIdExpr(id.namespace);
+        String ns = id.getNamespaceName();
+        if (ns != null) {
+            print(ns);
             print("::");
         }
         print(id.name);
@@ -173,6 +218,11 @@ public class CppGenerator extends BaseGenerator {
         
         printType(v.prototype.returnType);
         print(" ");
+        if (implMode()) {
+            if (v.parent instanceof TypeDef t) {
+                print(t.name).print("::");
+            }
+        }
         print(v.name);
 
         printFuncPrototype(v.prototype, false);
@@ -211,7 +261,7 @@ public class CppGenerator extends BaseGenerator {
         print(")");
         
         if (isLambda && prototype != null) {
-            if (prototype.returnType != null && prototype.returnType.isVoid()) {
+            if (prototype.returnType != null && !prototype.returnType.isVoid()) {
                 print("->");
                 printType(prototype.returnType);
             }
@@ -377,7 +427,7 @@ public class CppGenerator extends BaseGenerator {
     @Override
     public void visitExpr(Expr v) {
         boolean isPrimitive = false;
-        if (v instanceof IdExpr || v instanceof LiteralExpr || v instanceof CallExpr || v instanceof AccessExpr) {
+        if (v.isStmt || v instanceof IdExpr || v instanceof LiteralExpr || v instanceof CallExpr || v instanceof AccessExpr) {
             isPrimitive = true;
         }
         else {
@@ -397,7 +447,9 @@ public class CppGenerator extends BaseGenerator {
         }
         else if (v instanceof BinaryExpr e) {
             this.visit(e.lhs);
+            print(" ");
             print(e.opToken.symbol);
+            print(" ");
             this.visit(e.rhs);
         }
         else if (v instanceof CallExpr e) {
