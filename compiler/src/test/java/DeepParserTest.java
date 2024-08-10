@@ -37,6 +37,7 @@ public class DeepParserTest {
         assertTrue(log.errors.size() == 0);
         
         CppGenerator generator = new CppGenerator(log, System.out);
+        generator.headMode = false;
         unit.walkChildren(generator);
         //System.out.println(file);
     }
@@ -63,6 +64,7 @@ public class DeepParserTest {
 
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
             CppGenerator generator = new CppGenerator(log, new PrintStream(stream));
+            generator.headMode = false;
             unit.walkChildren(generator);
             
             String str = stream.toString("UTF-8");

@@ -62,6 +62,7 @@ public class ParserTest {
 
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
             CppGenerator generator = new CppGenerator(log, new PrintStream(stream));
+            generator.headMode = true;
             unit.walkChildren(generator);
             
             String str = stream.toString("UTF-8");

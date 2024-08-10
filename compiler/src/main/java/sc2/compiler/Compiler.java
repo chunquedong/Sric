@@ -16,6 +16,7 @@ import sc2.compiler.ast.AstNode;
 import sc2.compiler.ast.SModule;
 import sc2.compiler.ast.SModule.Depend;
 import sc2.compiler.backend.CppGenerator;
+import sc2.compiler.backend.ScLibGenerator;
 import sc2.compiler.parser.DeepParser;
 import sc2.compiler.resolve.ExprTypeResolver;
 import sc2.compiler.resolve.TopLevelTypeResolver;
@@ -123,7 +124,6 @@ public class Compiler {
     public AstNode.FileUnit parse(File file) throws IOException {
         String src = Files.readString(file.toPath());
         
-        CompilerLog log = new CompilerLog();
         AstNode.FileUnit unit = new AstNode.FileUnit(file.getPath());
         DeepParser parser = new DeepParser(log, src, unit);
         parser.parse();
@@ -131,14 +131,20 @@ public class Compiler {
     }
     
     public void genOutput() throws IOException {
+
+        String libFile = libPath + "/" + this.module.name + "-"+ this.module.version + ".sc";
+        ScLibGenerator scGenerator = new ScLibGenerator(log, libFile);
+        scGenerator.run(module);
+        
         new File(outputDir).mkdirs();
         
         String outputFile = outputDir + "/" + this.module.name;
         CppGenerator generator = new CppGenerator(log, outputFile+".h", true);
-        module.walkChildren(generator);
+        generator.run(module);
         
         CppGenerator generator2 = new CppGenerator(log, outputFile+".cpp", false);
-        module.walkChildren(generator2);
+        generator2.run(module);
+
     }
     
 }

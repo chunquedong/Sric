@@ -1,96 +1,34 @@
-//
-// Copyright (c) 2024, chunquedong
-// Licensed under the Academic Free License version 3.0
-//
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package sc2.compiler.backend;
 
-import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.Writer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import sc2.compiler.ast.AstNode;
-import sc2.compiler.ast.Expr;
-import sc2.compiler.ast.Expr.*;
-import sc2.compiler.ast.Stmt;
-import sc2.compiler.ast.Stmt.*;
-import sc2.compiler.ast.Type;
-import sc2.compiler.CompilePass;
 import sc2.compiler.CompilerLog;
-import sc2.compiler.ast.AstNode.*;
+import sc2.compiler.ast.AstNode;
 import sc2.compiler.ast.ClosureExpr;
+import sc2.compiler.ast.Expr;
 import sc2.compiler.ast.SModule;
-import sc2.compiler.ast.SModule.Depend;
+import sc2.compiler.ast.Stmt;
+import sc2.compiler.ast.Type;
 
 /**
  *
  * @author yangjiandong
  */
-public class CppGenerator extends BaseGenerator {
-    
-    public boolean headMode = true;
-    
-    public CppGenerator(CompilerLog log, String file, boolean headMode) throws IOException {
+public class ScLibGenerator extends BaseGenerator {
+    public ScLibGenerator(CompilerLog log, String file) throws IOException {
         super(log, file);
-        this.headMode = headMode;
     }
     
-    public CppGenerator(CompilerLog log, PrintStream writer) {
+    public ScLibGenerator(CompilerLog log, PrintStream writer) {
         super(log, writer);
     }
     
     public void run(SModule module) {
-        if (headMode) {
-            String marcoName = module.name.toUpperCase()+"_H_";
-            print("#ifndef ").print(marcoName).newLine();
-            print("#define ").print(marcoName).newLine();
-
-            for (Depend d : module.depends) {
-                print("#include \"");
-                print(d.name);
-                print("\"").newLine();
-            }
-
-            print("namespace ");
-            print(module.name);
-            print(" {").newLine();
-            
-            this.indent();
-            
-            //types decleartion
-            for (FileUnit funit : module.fileUnits) {
-                for (TypeDef type : funit.typeDefs) {
-                    print("class ");
-                    print(type.name).print(";").newLine();
-                }
-            }
-
-            module.walkChildren(this);
-
-            this.unindent();
-            
-            newLine();
-            print("}//ns").newLine();
-
-            print("#endif //");
-            print(marcoName).newLine();
-        }
-        else {
-            print("#include \"");
-            print(module.name);
-            print("\"").newLine();
-            
-            print("using namespace ");
-            print(module.name).print(";").newLine();
-            newLine();
-            
-            module.walkChildren(this);
-            
-            newLine();
-        }
+        module.walkChildren(this);
     }
 
     private void printType(Type type) {
@@ -125,7 +63,7 @@ public class CppGenerator extends BaseGenerator {
         printIdExpr(type.id);
     }
 
-    private void printIdExpr(IdExpr id) {
+    private void printIdExpr(Expr.IdExpr id) {
         if (id.namespace != null) {
             printIdExpr(id.namespace);
             print("::");
@@ -140,9 +78,6 @@ public class CppGenerator extends BaseGenerator {
 
     @Override
     public void visitField(AstNode.FieldDef v) {
-        if (headMode && v.parent instanceof FileUnit) {
-            print("extern ");
-        }
         printLocalFieldDefAsExpr(v);
         print(";").newLine();
     }
@@ -158,43 +93,22 @@ public class CppGenerator extends BaseGenerator {
         }
     }
     
-    private boolean implMode() {
-        return !headMode;
-    }
-    
     @Override
     public void visitFunc(AstNode.FuncDef v) {
-        boolean inlined = (v.flags & AstNode.Inline) != 0 || v.generiParams != null;
-        if (implMode()) {
-            if (v.code == null || inlined) {
-                return;
-            }
-        }
-        
         printType(v.prototype.returnType);
         print(" ");
         print(v.name);
 
         printFuncPrototype(v.prototype, false);
 
-        if (v.code == null) {
-            print(";");
-        }
-        else {
-            if (implMode() || inlined) {
-                this.visit(v.code);
-            }
-            else {
-                print(";");
-            }
-        }
+        print(";");
     }
     
-    private void printFuncPrototype(FuncPrototype prototype, boolean isLambda) {
+    private void printFuncPrototype(AstNode.FuncPrototype prototype, boolean isLambda) {
         print("(");
         if (prototype != null && prototype.paramDefs != null) {
             int i = 0;
-            for (ParamDef p : prototype.paramDefs) {
+            for (AstNode.ParamDef p : prototype.paramDefs) {
                 if (i > 0) {
                     print(", ");
                 }
@@ -220,19 +134,14 @@ public class CppGenerator extends BaseGenerator {
 
     @Override
     public void visitTypeDef(AstNode.TypeDef v) {
-        if (implMode()) {
-            v.walkChildren(this);
-            return;
-        }
-        
-        if (v instanceof EnumDef edef) {
+        if (v instanceof AstNode.EnumDef edef) {
             print("enum class ");
             print(v.name);
             print(" {").newLine();
             indent();
 
             int i = 0;
-            for (FieldDef f : edef.enumDefs) {
+            for (AstNode.FieldDef f : edef.enumDefs) {
                 if (i > 0) {
                     print(",").newLine();
                 }
@@ -265,14 +174,14 @@ public class CppGenerator extends BaseGenerator {
 
     @Override
     public void visitStmt(Stmt v) {
-        if (v instanceof Block bs) {
+        if (v instanceof AstNode.Block bs) {
             print("{").newLine();
             indent();
             bs.walkChildren(this);
             unindent();
             print("}").newLine();
         }
-        else if (v instanceof IfStmt ifs) {
+        else if (v instanceof Stmt.IfStmt ifs) {
             print("if (");
             this.visit(ifs.condition);
             print(") ");
@@ -282,22 +191,22 @@ public class CppGenerator extends BaseGenerator {
                 this.visit(ifs.elseBlock);
             }
         }
-        else if (v instanceof LocalDefStmt e) {
+        else if (v instanceof Stmt.LocalDefStmt e) {
             this.visit(e.fieldDef);
         }
-        else if (v instanceof WhileStmt whiles) {
+        else if (v instanceof Stmt.WhileStmt whiles) {
             print("while (");
             this.visit(whiles.condition);
             print(") ");
             this.visit(whiles.block);
         }
-        else if (v instanceof ForStmt fors) {
+        else if (v instanceof Stmt.ForStmt fors) {
             print("for (");
             if (fors.init != null) {
-                if (fors.init instanceof LocalDefStmt varDef) {
+                if (fors.init instanceof Stmt.LocalDefStmt varDef) {
                     printLocalFieldDefAsExpr(varDef.fieldDef);
                 }
-                else if (fors.init instanceof ExprStmt s) {
+                else if (fors.init instanceof Stmt.ExprStmt s) {
                     this.visit(s.expr);
                 }
                 else {
@@ -317,14 +226,14 @@ public class CppGenerator extends BaseGenerator {
             print(") ");
             this.visit(fors.block);
         }
-        else if (v instanceof SwitchStmt switchs) {
+        else if (v instanceof Stmt.SwitchStmt switchs) {
             print("switch (");
             this.visit(switchs.condition);
             print(") {").newLine();
             
             this.indent();
             
-            for (CaseBlock cb : switchs.cases) {
+            for (Stmt.CaseBlock cb : switchs.cases) {
                 this.unindent();
                 print("case ");
                 this.visit(cb.caseExpr);
@@ -348,18 +257,18 @@ public class CppGenerator extends BaseGenerator {
             this.unindent();
             print("}").newLine();
         }
-        else if (v instanceof ExprStmt exprs) {
+        else if (v instanceof Stmt.ExprStmt exprs) {
             this.visit(exprs.expr);
             print(";").newLine();
         }
-        else if (v instanceof JumpStmt jumps) {
+        else if (v instanceof Stmt.JumpStmt jumps) {
             print(jumps.opToken.symbol).print(";").newLine();
         }
-        else if (v instanceof UnsafeBlock bs) {
+        else if (v instanceof Stmt.UnsafeBlock bs) {
             print("/*unsafe*/ ");
             this.visit(bs.block);
         }
-        else if (v instanceof ReturnStmt rets) {
+        else if (v instanceof Stmt.ReturnStmt rets) {
             if (rets.expr != null) {
                 print("return ");
                 this.visit(rets.expr);
@@ -377,35 +286,35 @@ public class CppGenerator extends BaseGenerator {
     @Override
     public void visitExpr(Expr v) {
         boolean isPrimitive = false;
-        if (v instanceof IdExpr || v instanceof LiteralExpr || v instanceof CallExpr) {
+        if (v instanceof Expr.IdExpr || v instanceof Expr.LiteralExpr || v instanceof Expr.CallExpr) {
             isPrimitive = true;
         }
         else {
             print("(");
         }
         
-        if (v instanceof IdExpr e) {
+        if (v instanceof Expr.IdExpr e) {
             this.printIdExpr(e);
         }
-        else if (v instanceof AccessExpr e) {
+        else if (v instanceof Expr.AccessExpr e) {
             this.visit(e.target);
             print(".");
             print(e.name);
         }
-        else if (v instanceof LiteralExpr e) {
+        else if (v instanceof Expr.LiteralExpr e) {
             printLiteral(e);
         }
-        else if (v instanceof BinaryExpr e) {
+        else if (v instanceof Expr.BinaryExpr e) {
             this.visit(e.lhs);
             print(e.opToken.symbol);
             this.visit(e.rhs);
         }
-        else if (v instanceof CallExpr e) {
+        else if (v instanceof Expr.CallExpr e) {
             this.visit(e.target);
             print("(");
             if (e.args != null) {
                 int i = 0;
-                for (CallArg t : e.args) {
+                for (Expr.CallArg t : e.args) {
                     if (i > 0) print(", ");
                     this.visit(t.argExpr);
                     ++i;
@@ -413,20 +322,20 @@ public class CppGenerator extends BaseGenerator {
             }
             print(")");
         }
-        else if (v instanceof UnaryExpr e) {
+        else if (v instanceof Expr.UnaryExpr e) {
             print(e.opToken.symbol);
             this.visit(e.operand);
         }
-        else if (v instanceof TypeExpr e) {
+        else if (v instanceof Expr.TypeExpr e) {
             this.printType(e.type);
         }
-        else if (v instanceof IndexExpr e) {
+        else if (v instanceof Expr.IndexExpr e) {
             this.visit(e.target);
             print("[");
             this.visit(e.index);
             print("]");
         }
-        else if (v instanceof GenericInstance e) {
+        else if (v instanceof Expr.GenericInstance e) {
             this.visit(e.target);
             print("<");
             int i = 0;
@@ -437,14 +346,14 @@ public class CppGenerator extends BaseGenerator {
             }
             print(" >");
         }
-        else if (v instanceof IfExpr e) {
+        else if (v instanceof Expr.IfExpr e) {
             this.visit(e.condition);
             print("?");
             this.visit(e.trueExpr);
             print(":");
             this.visit(e.falseExpr);
         }
-        else if (v instanceof InitBlockExpr e) {
+        else if (v instanceof Expr.InitBlockExpr e) {
             printInitBlockExpr(e);
         }
         else if (v instanceof ClosureExpr e) {
@@ -459,7 +368,7 @@ public class CppGenerator extends BaseGenerator {
         }
     }
     
-    void printLiteral(LiteralExpr e) {
+    void printLiteral(Expr.LiteralExpr e) {
         if (e.value instanceof Long li) {
             print(li.toString()).print("lld");
         }
@@ -507,9 +416,9 @@ public class CppGenerator extends BaseGenerator {
         }
     }
     
-    void printInitBlockExpr(InitBlockExpr e) {
+    void printInitBlockExpr(Expr.InitBlockExpr e) {
         this.visit(e.target);
-        for (CallArg t : e.args) {
+        for (Expr.CallArg t : e.args) {
             print(",");
             this.visit(t.argExpr);
         }
