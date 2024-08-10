@@ -6,6 +6,7 @@ package sc2.compiler.ast;
 
 import sc2.compiler.ast.AstNode.*;
 import java.util.ArrayList;
+import sc2.compiler.ast.Token.TokenKind;
 
 /**
  *
@@ -15,4 +16,5 @@ public class ClosureExpr extends Expr {
     public FuncPrototype prototype = new FuncPrototype();// function signature
     public Block code;             // code block
     public ArrayList<Expr> captures;
+    public TokenKind defaultCapture;
 }

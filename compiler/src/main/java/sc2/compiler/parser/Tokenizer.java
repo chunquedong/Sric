@@ -128,6 +128,17 @@ public class Tokenizer {
         }
 //    return null; // TODO - shouldn't need this
     }
+    
+    public static boolean isWhitespace(int ch) {
+        switch (ch) {
+            case ' ':
+            case '\t':
+            case '\n':
+            case '\r':
+                return true;
+        }
+        return false;
+    }
 
     /**
      ** Find the next token or return null.
@@ -135,7 +146,7 @@ public class Tokenizer {
      */
     private Token find() {
         // skip whitespace
-        if (Character.isWhitespace(cur)) {
+        if (isWhitespace(cur)) {
             consume();
             whitespace = true;
             return null;
@@ -585,7 +596,7 @@ public class Tokenizer {
         int line = this.line;
         consume();   // first slash
         consume();   // next slash
-        boolean isDoc = peek == '/';
+        boolean isDoc = peek == '@';
         StringBuilder s = new StringBuilder();
         while (true) {
             if (cur == '\n') {

@@ -62,6 +62,13 @@ public class Type extends AstNode {
         this.id.loc = loc;
     }
     
+    public boolean isVoid() {
+        if (id.namespace != null) {
+            return false;
+        }
+        return id.name.equals("Void");
+    }
+    
     public static Type voidType(Loc loc) {
         Type type = new Type(loc, "Void");
         return type;

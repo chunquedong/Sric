@@ -21,6 +21,7 @@ import sc2.compiler.ast.Type;
 import sc2.compiler.CompilePass;
 import sc2.compiler.CompilerLog;
 import sc2.compiler.ast.AstNode.*;
+import sc2.compiler.ast.ClosureExpr;
 
 /**
  *
@@ -105,6 +106,13 @@ public class CppGenerator extends CompilePass {
         printIdExpr(type.id);
     }
 
+    private void printIdExpr(IdExpr id) {
+        if (id.namespace != null) {
+            printIdExpr(id.namespace);
+            print("::");
+        }
+        print(id.name);
+    }
 
     @Override
     public void visitUnit(AstNode.FileUnit v) {
@@ -133,11 +141,22 @@ public class CppGenerator extends CompilePass {
         printType(v.prototype.returnType);
         print(" ");
         print(v.name);
-        print("(");
 
-        if (v.prototype.paramDefs != null) {
+        printFuncPrototype(v.prototype, false);
+
+        if (v.code == null) {
+            print(";");
+        }
+        else {
+            this.visit(v.code);
+        }
+    }
+    
+    private void printFuncPrototype(FuncPrototype prototype, boolean isLambda) {
+        print("(");
+        if (prototype != null && prototype.paramDefs != null) {
             int i = 0;
-            for (ParamDef p : v.prototype.paramDefs) {
+            for (ParamDef p : prototype.paramDefs) {
                 if (i > 0) {
                     print(", ");
                 }
@@ -151,13 +170,13 @@ public class CppGenerator extends CompilePass {
                 ++i;
             }
         }
-        
         print(")");
-        if (v.code == null) {
-            print(";");
-        }
-        else {
-            this.visit(v.code);
+        
+        if (isLambda && prototype != null) {
+            if (prototype.returnType != null && prototype.returnType.isVoid()) {
+                print("->");
+                printType(prototype.returnType);
+            }
         }
     }
 
@@ -213,6 +232,9 @@ public class CppGenerator extends CompilePass {
                 print("else ");
                 this.visit(ifs.elseBlock);
             }
+        }
+        else if (v instanceof LocalDefStmt e) {
+            this.visit(e.fieldDef);
         }
         else if (v instanceof WhileStmt whiles) {
             print("while (");
@@ -305,15 +327,161 @@ public class CppGenerator extends CompilePass {
 
     @Override
     public void visitExpr(Expr v) {
-        print("TODO");
-    }
-    
-    private void printIdExpr(IdExpr id) {
-        if (id.namespace != null) {
-            printIdExpr(id.namespace);
-            print("::");
+        boolean isPrimitive = false;
+        if (v instanceof IdExpr || v instanceof LiteralExpr || v instanceof CallExpr) {
+            isPrimitive = true;
         }
-        print(id.name);
+        else {
+            print("(");
+        }
+        
+        if (v instanceof IdExpr e) {
+            this.printIdExpr(e);
+        }
+        else if (v instanceof AccessExpr e) {
+            this.visit(e.target);
+            print(".");
+            print(e.name);
+        }
+        else if (v instanceof LiteralExpr e) {
+            printLiteral(e);
+        }
+        else if (v instanceof BinaryExpr e) {
+            this.visit(e.lhs);
+            print(e.opToken.symbol);
+            this.visit(e.rhs);
+        }
+        else if (v instanceof CallExpr e) {
+            this.visit(e.target);
+            print("(");
+            int i = 0;
+            for (CallArg t : e.args) {
+                if (i > 0) print(", ");
+                this.visit(t.argExpr);
+                ++i;
+            }
+            print(")");
+        }
+        else if (v instanceof UnaryExpr e) {
+            print(e.opToken.symbol);
+            this.visit(e.operand);
+        }
+        else if (v instanceof TypeExpr e) {
+            this.printType(e.type);
+        }
+        else if (v instanceof IndexExpr e) {
+            this.visit(e.target);
+            print("[");
+            this.visit(e.index);
+            print("]");
+        }
+        else if (v instanceof GenericInstance e) {
+            this.visit(e.target);
+            print("<");
+            int i = 0;
+            for (Type t : e.genericArgs) {
+                if (i > 0) print(", ");
+                this.visit(t);
+                ++i;
+            }
+            print(" >");
+        }
+        else if (v instanceof IfExpr e) {
+            this.visit(e.condition);
+            print("?");
+            this.visit(e.trueExpr);
+            print(":");
+            this.visit(e.falseExpr);
+        }
+        else if (v instanceof InitBlockExpr e) {
+            printInitBlockExpr(e);
+        }
+        else if (v instanceof ClosureExpr e) {
+            printClosureExpr(e);
+        }
+        else {
+            err("Unkown expr:"+v, v.loc);
+        }
+        
+        if (!isPrimitive) {
+            print(")");
+        }
     }
     
+    void printLiteral(LiteralExpr e) {
+        if (e.value instanceof Long li) {
+            print(li.toString()).print("lld");
+        }
+        else if (e.value instanceof Double li) {
+            print(li.toString());
+        }
+        else if (e.value instanceof Boolean li) {
+            print(li.toString());
+        }
+        else if (e.value instanceof String li) {
+            print("\"");
+            for (int i=0; i<li.length(); ++i) {
+                char c = li.charAt(i);
+                printChar(c);
+            }
+            print("\"");
+        }
+    }
+
+    void printChar(char c) {
+        switch (c) {
+            case '\b':
+                print("\\b");
+                break;
+            case '\n':
+                print("\\n");
+                break;
+            case '\r':
+                print("\\r");
+                break;
+            case '\t':
+                print("\\t");
+                break;
+            case '\"':
+                print("\\\"");
+                break;
+            case '\'':
+                print("\\\'");
+                break;
+            case '\\':
+                writer.print('\\');
+                break;
+            default:
+                writer.print(c);
+        }
+    }
+    
+    void printInitBlockExpr(InitBlockExpr e) {
+        this.visit(e.target);
+        for (CallArg t : e.args) {
+            print(",");
+            this.visit(t.argExpr);
+        }
+    }
+    
+    void printClosureExpr(ClosureExpr expr) {
+        print("[");
+        
+        int i = 0;
+        if (expr.defaultCapture != null) {
+            print(expr.defaultCapture.symbol);
+            ++i;
+        }
+        
+        for (Expr t : expr.captures) {
+            if (i > 0) print(", ");
+            this.visit(t);
+            ++i;
+        }
+        print("]");
+        
+        this.printFuncPrototype(expr.prototype, true);
+        
+        this.visit(expr.code);
+    }
 }

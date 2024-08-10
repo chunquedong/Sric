@@ -13,54 +13,8 @@ import java.util.ArrayList;
  * @author yangjiandong
  */
 public abstract class Expr extends AstNode {
-    public static enum ExprId {
-      nullLiteral,      // LiteralExpr
-      trueLiteral,
-      falseLiteral,
-      intLiteral,
-      floatLiteral,
-      strLiteral,
-      typeLiteral,
-      slotLiteral,      // SlotLiteralExpr
-      listLiteral,      // ListLiteralExpr
-      boolNot,          // UnaryExpr
-      cmpNull,
-      cmpNotNull,
-      elvis,
-      assign,           // BinaryExpr
-      same,
-      notSame,
-      boolOr,           // CondExpr
-      boolAnd,
-      isExpr,           // TypeCheckExpr
-      asExpr,
-      coerce,
-      call,             // CallExpr
-      construction,
-      shortcut,         // ShortcutExpr (has ShortcutOp)
-      field,            // FieldExpr
-      localVar,         // LocalVarExpr
-      thisExpr,         // ThisExpr
-      superExpr,        // SuperExpr
-      itExpr,           // ItExpr
-      staticTarget,     // StaticTargetExpr
-      unknownVar,       // UnknownVarExpr
-      ternary,          // TernaryExpr
-      complexLiteral,   // ComplexLiteral
-      closure,          // ClosureExpr
-      throwExpr,        // ThrowExpr
-      awaitExpr,
-      sizeOfExpr,
-      addressOfExpr,
-      initBlockExpr
-    }
-    
-    public ExprId id;
+
     public Type resolvedType;
-    
-    public ExprId getId() {
-        return id;
-    }
     
     public static class UnaryExpr extends Expr {
         public Token.TokenKind opToken;   // operator token type (Token.bang, etc)
@@ -111,17 +65,17 @@ public abstract class Expr extends AstNode {
     
     public static class CallExpr extends Expr {
         public Expr target;
-        public ArrayList<ArgExpr> args = null;
+        public ArrayList<CallArg> args = null;
     }
     
-    public static class ArgExpr extends AstNode {
+    public static class CallArg extends AstNode {
         public String name;
         public Expr argExpr;
         
-        public ArgExpr() {
+        public CallArg() {
         }
         
-        public ArgExpr(Expr argExpr) {
+        public CallArg(Expr argExpr) {
             this.argExpr = argExpr;
             this.loc = argExpr.loc;
             this.len = argExpr.len;
@@ -153,14 +107,13 @@ public abstract class Expr extends AstNode {
     
     public static class InitBlockExpr extends Expr {
         public Expr target;
-        public ArrayList<ArgExpr> args = null;
+        public ArrayList<CallArg> args = null;
     }
     
     public static class LiteralExpr extends Expr {
         public Object value;
         
-        public LiteralExpr(ExprId id, Object value) {
-            this.id = id;
+        public LiteralExpr(Object value) {
             this.value = value;
         }
     }

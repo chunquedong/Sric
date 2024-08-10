@@ -222,7 +222,7 @@ public class Parser {
 //////////////////////////////////////////////////////////////////////////
     
     private ArrayList<GeneriParamDef> tryGenericParamDef() {
-        if (curt == TokenKind.dollar && !cur.whitespace && peekt == TokenKind.lt) {
+        if (curt == TokenKind.dollar && !peek.whitespace && peekt == TokenKind.lt) {
             consume();
             consume();
             ArrayList<GeneriParamDef> gparams = new ArrayList<GeneriParamDef>();
@@ -982,7 +982,7 @@ public class Parser {
     }
     
     protected ArrayList<Type> genericArgs() {
-        if (cur.whitespace) {
+        if (peek.whitespace) {
             err("Expected $<");
         }
         consume(TokenKind.dollar);

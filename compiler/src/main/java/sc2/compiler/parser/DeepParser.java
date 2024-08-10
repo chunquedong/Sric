@@ -584,9 +584,14 @@ public class DeepParser extends Parser {
         }
         else if (curt == TokenKind.lt || curt == TokenKind.ltEq
                 || curt == TokenKind.gt || curt == TokenKind.gtEq
-                || curt == TokenKind.cmp) {
-            expr = new BinaryExpr(expr, consume().kind, bitShiftExpr());
-            endLoc(expr, loc);
+                //|| curt == TokenKind.cmp
+                ) {
+            
+            //not >> or <<
+            if (peekt != curt) {
+                expr = new BinaryExpr(expr, consume().kind, bitShiftExpr());
+                endLoc(expr, loc);
+            }
         }
         return expr;
     }
@@ -594,11 +599,13 @@ public class DeepParser extends Parser {
     private Expr bitShiftExpr() {
         Loc loc = curLoc();
         Expr expr = addExpr();
-        if (curt == TokenKind.leftShift) {
-            expr = new BinaryExpr(expr, consume().kind, addExpr());
+        if (curt == TokenKind.lt && !peek.whitespace && peekt == TokenKind.lt) {
+            consume();
+            consume();
+            expr = new BinaryExpr(expr, TokenKind.leftShift, addExpr());
             endLoc(expr, loc);
         }
-        if (curt == TokenKind.gt && peekt == TokenKind.gt) {
+        if (curt == TokenKind.gt && !peek.whitespace && peekt == TokenKind.gt) {
             consume();
             consume();
             expr = new BinaryExpr(expr, TokenKind.rightShift, addExpr());
@@ -787,12 +794,12 @@ public class DeepParser extends Parser {
      **   <args> = <arg> ("," <arg>)*
      **   <arg> = [<id> ":"] <expr>
      */
-    private ArrayList<ArgExpr> callArgs(TokenKind right) {
+    private ArrayList<CallArg> callArgs(TokenKind right) {
         if (curt != right) {
-            ArrayList<ArgExpr> args = new ArrayList<ArgExpr>();
+            ArrayList<CallArg> args = new ArrayList<CallArg>();
             while (true) {
                 Loc loc = curLoc();
-                ArgExpr arg = new ArgExpr();
+                CallArg arg = new CallArg();
 
                 //named param
                 if (curt == TokenKind.identifier && peekt == TokenKind.colon) {
@@ -893,8 +900,8 @@ public class DeepParser extends Parser {
         call.target = new IdExpr(TokenKind.offsetofKeyword.symbol);
         
         consume(TokenKind.lparen);
-        call.args.add(new ArgExpr(typeExpr()));
-        call.args.add(new ArgExpr(idExpr()));
+        call.args.add(new CallArg(typeExpr()));
+        call.args.add(new CallArg(idExpr()));
         consume(TokenKind.rparen);
         
         endLoc(call, loc);
@@ -917,25 +924,25 @@ public class DeepParser extends Parser {
                 expr = idExpr();
                 break;
             case intLiteral:
-                expr = new LiteralExpr(ExprId.intLiteral, consume().val);
+                expr = new LiteralExpr(consume().val);
                 break;
             case floatLiteral:
-                expr = new LiteralExpr(ExprId.floatLiteral, consume().val);
+                expr = new LiteralExpr(consume().val);
                 break;
             case strLiteral:
-                expr = new LiteralExpr(ExprId.strLiteral, consume().val);
+                expr = new LiteralExpr(consume().val);
                 break;
             case trueKeyword:
                 consume();
-                expr = new LiteralExpr(ExprId.trueLiteral, true);
+                expr = new LiteralExpr(true);
                 break;
             case falseKeyword:
                 consume();
-                expr = new LiteralExpr(ExprId.falseLiteral, false);
+                expr = new LiteralExpr(false);
                 break;
             case nullKeyword:
                 consume();
-                expr = new LiteralExpr(ExprId.nullLiteral, null);
+                expr = new LiteralExpr(null);
                 break;
             case superKeyword:
             case thisKeyword:
@@ -1009,6 +1016,13 @@ public class DeepParser extends Parser {
             while (true) {
                 if (closure.captures == null) {
                     closure.captures = new ArrayList<Expr>();
+                }
+                if (curt == TokenKind.assign || curt == TokenKind.amp) {
+                    if (peekt == TokenKind.comma || peekt == TokenKind.rbracket) {
+                        closure.defaultCapture = curt;
+                        consume();
+                        continue;
+                    }
                 }
                 Expr id = expr();
                 closure.captures.add(id);

@@ -73,7 +73,7 @@ public class Token {
         safeDot       ("?.", false),
         safeArrow     ("?->", false),
         safeTildeArrow("?~>", false),
-        rightShift    ("rightShif", false),
+        rightShift    (">>", false),
         leftShift     ("<<", false),
         docComment    ("/**", false),
         cmdComment    ("//@", false),
@@ -219,9 +219,15 @@ public class Token {
     
     @Override
     public String toString() {
-        if (val == null) {
-            return this.kind.toString();
+        StringBuilder sb = new StringBuilder();
+        sb.append(this.kind.toString());
+        if (val != null) {
+            sb.append(":");
+            sb.append(val);
         }
-        return this.kind + ":" + val;
+        if (this.whitespace) {
+            sb.append("[space]");
+        }
+        return sb.toString();
     }
 }
