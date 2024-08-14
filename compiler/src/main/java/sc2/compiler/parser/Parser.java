@@ -17,6 +17,7 @@ import sc2.compiler.CompilerLog.CompilerErr;
 import java.util.ArrayList;
 import sc2.compiler.ast.Expr.IdExpr;
 import static sc2.compiler.ast.Token.TokenKind.*;
+import sc2.compiler.ast.Type.NumType;
 
 
 /**
@@ -221,17 +222,19 @@ public class Parser {
 // TypeDef
 //////////////////////////////////////////////////////////////////////////
     
-    private ArrayList<GeneriParamDef> tryGenericParamDef() {
+    private ArrayList<GenericParamDef> tryGenericParamDef(AstNode parent) {
         if (curt == TokenKind.dollar && !peek.whitespace && peekt == TokenKind.lt) {
             consume();
             consume();
-            ArrayList<GeneriParamDef> gparams = new ArrayList<GeneriParamDef>();
+            ArrayList<GenericParamDef> gparams = new ArrayList<GenericParamDef>();
             while (true) {
                 Loc gloc = curLoc();
                 String paramName = consumeId();
-                GeneriParamDef param = new GeneriParamDef();
+                GenericParamDef param = new GenericParamDef();
                 param.loc = gloc;
                 param.name = paramName;
+                param.parent = parent;
+                param.index = gparams.size();
                 gparams.add(param);
                 if (curt == TokenKind.comma) {
                     consume();
@@ -315,7 +318,7 @@ public class Parser {
             typeDef = structDef;
             
             //GenericType Param
-            structDef.generiParamDefs = tryGenericParamDef();
+            structDef.generiParamDefs = tryGenericParamDef(structDef);
         }
 
 
@@ -454,6 +457,9 @@ public class Parser {
                     break;
                 case packedKeyword:
                     flags = flags | (AstNode.Packed);
+                    break;
+                case constexprKeyword:
+                    flags = flags | (AstNode.ConstExpr);
                     break;
                 default:
                     done = true;
@@ -737,7 +743,7 @@ public class Parser {
         method.flags = flags;
         method.prototype.returnType = ret;
         method.name = name;
-        method.generiParams = tryGenericParamDef();
+        method.generiParamDefs = tryGenericParamDef(method);
         
         funcPrototype(method.prototype);
 
@@ -867,17 +873,7 @@ public class Parser {
         Loc loc = curLoc();
         consume(TokenKind.lbracket);
 
-        int size = 0;
-        if (curt == TokenKind.intLiteral) {
-            size = (Integer)cur.val;
-        }
-        else if (curt == TokenKind.rbracket) {
-            err("Array size must int literal");
-        }
-        else {
-            err("Array size must int literal");
-            expr();
-        }
+        Expr size = expr();
         consume(TokenKind.rbracket);
         
         Type type = typeRef();
@@ -917,58 +913,70 @@ public class Parser {
         Loc loc = cur.loc;
         IdExpr id = idExpr();
 
-        Type type = new Type(id);
+        Type type = null;
         
         //type name rewrite
         if (id.namespace == null) {
+            NumType ntype = null;
             switch (id.name) {
                 case "Int8":
-                    type.id.name = "Int";
-                    type.size = 8;
+                    ntype = Type.intType(loc);
+                    ntype.size = 8;
                     break;
                 case "Int16":
-                    type.id.name = "Int";
-                    type.size = 16;
+                    ntype = Type.intType(loc);
+                    ntype.size = 16;
                     break;
                 case "Int32":
-                    type.id.name = "Int";
-                    type.size = 32;
+                    ntype = Type.intType(loc);
+                    ntype.size = 32;
                     break;
                 case "Int64":
-                    type.id.name = "Int";
-                    type.size = 64;
+                    ntype = Type.intType(loc);
+                    ntype.size = 64;
                     break;
                 case "UInt8":
-                    type.id.name = "Int";
-                    type.size = 8;
+                    ntype = Type.intType(loc);
+                    ntype.size = 8;
+                    ntype.isUnsigned = true;
                     break;
                 case "UInt16":
-                    type.id.name = "Int";
-                    type.size = 16;
+                    ntype = Type.intType(loc);
+                    ntype.size = 16;
+                    ntype.isUnsigned = true;
                     break;
                 case "UInt32":
-                    type.id.name = "Int";
-                    type.size = 32;
+                    ntype = Type.intType(loc);
+                    ntype.size = 32;
+                    ntype.isUnsigned = true;
                     break;
                 case "UInt64":
-                    type.id.name = "Int";
-                    type.size = 64;
+                    ntype = Type.intType(loc);
+                    ntype.size = 64;
+                    ntype.isUnsigned = true;
                     break;
                 case "Float32":
-                    type.id.name = "Int";
-                    type.size = 32;
+                    ntype = Type.floatType(loc);
+                    ntype.size = 32;
                     break;
                 case "Float64":
-                    type.id.name = "Int";
-                    type.size = 64;
+                    ntype = Type.floatType(loc);
+                    ntype.size = 64;
                     break;
                 case "Int":
-                    type.size = 32;
+                    ntype = Type.intType(loc);
                     break;
                 case "Float":
-                    type.size = 64;
+                    ntype = Type.floatType(loc);
                     break;
             }
+            if (ntype != null) {
+                type = ntype;
+            }
+        }
+        
+        if (type == null) {
+            type = new Type(id);
         }
 
         //generic param

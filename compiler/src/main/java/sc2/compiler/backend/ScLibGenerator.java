@@ -32,7 +32,50 @@ public class ScLibGenerator extends BaseGenerator {
     }
 
     private void printType(Type type) {
-        print(type.toString());
+        if (type == null) {
+            return;
+        }
+        
+        if (type.imutableAttr == Type.ImutableAttr.imu) {
+            print("const ");
+        }
+        
+        switch (type.id.name) {
+            case "[]":
+                Type.ArrayType arrayType = (Type.ArrayType)type;
+                printType(type.genericArgs.get(0));
+                print("[");
+                this.visit(arrayType.sizeExpr);
+                print("]");
+                return;
+            case "=>":
+                Type.FuncType ft = (Type.FuncType)type;
+                print("[]");
+                print("(");
+                if (ft.prototype.paramDefs != null) {
+                    for (AstNode.ParamDef p : ft.prototype.paramDefs) {
+                        printType(p.paramType);
+                    }
+                }
+                print("):");
+                printType(ft.prototype.returnType);
+                return;
+        }
+        
+        printIdExpr(type.id);
+        
+        if (type.genericArgs != null) {
+            print("$<");
+            int i = 0;
+            for (Type t : type.genericArgs) {
+                if (i > 0) {
+                    print(", ");
+                }
+                printType(t);
+                ++i;
+            }
+            print(">");
+        }
     }
 
     private void printIdExpr(Expr.IdExpr id) {
@@ -77,7 +120,7 @@ public class ScLibGenerator extends BaseGenerator {
 
         printFuncPrototype(v.prototype);
 
-        boolean inlined = (v.flags & AstNode.Inline) != 0 || v.generiParams != null;
+        boolean inlined = (v.flags & AstNode.Inline) != 0 || v.generiParamDefs != null;
         if (inlined) {
             this.visit(v.code);
         }
@@ -144,6 +187,18 @@ public class ScLibGenerator extends BaseGenerator {
         
         print("struct ");
         print(v.name);
+        
+        if (v instanceof AstNode.StructDef sd) {
+            if (sd.inheritances != null) {
+                int i = 0;
+                for (Type inh : sd.inheritances) {
+                    if (i == 0) print(" : ");
+                    else print(", ");
+                    printType(inh);
+                }
+            }
+        }
+        
         print(" {").newLine();
         indent();
         
@@ -400,27 +455,29 @@ public class ScLibGenerator extends BaseGenerator {
     
     void printInitBlockExpr(Expr.InitBlockExpr e) {
         this.visit(e.target);
-        for (Expr.CallArg t : e.args) {
-            print(",");
-            this.visit(t.argExpr);
+        if (e.args != null) {
+            for (Expr.CallArg t : e.args) {
+                print(",");
+                this.visit(t.argExpr);
+            }
         }
     }
     
     void printClosureExpr(ClosureExpr expr) {
-        print("[");
+        print("fun");
         
-        int i = 0;
-        if (expr.defaultCapture != null) {
-            print(expr.defaultCapture.symbol);
-            ++i;
-        }
-        
-        for (Expr t : expr.captures) {
-            if (i > 0) print(", ");
-            this.visit(t);
-            ++i;
-        }
-        print("]");
+//        int i = 0;
+//        if (expr.defaultCapture != null) {
+//            print(expr.defaultCapture.symbol);
+//            ++i;
+//        }
+//        
+//        for (Expr t : expr.captures) {
+//            if (i > 0) print(", ");
+//            this.visit(t);
+//            ++i;
+//        }
+//        print("]");
         
         this.printFuncPrototype(expr.prototype);
         

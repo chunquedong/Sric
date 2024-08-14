@@ -151,6 +151,7 @@ public class Token {
         reflectKeyword("reflect", true),
         packedKeyword("packed", true),
         fallthroughKeyword("fallthrough", true),
+        constexprKeyword("constexpr", true),
         
         // misc
         eof("eof", false);

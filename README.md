@@ -94,7 +94,7 @@ struct A {
   var i: Int;
 }
 
-var a: A = { i : 0 };
+var a  = A { i : 0 };
 var a: own* A = alloc$<A>() { i : 0 };
 ```
 
@@ -120,7 +120,8 @@ var b = p is own* A;
 
 static size Array
 ```
-var a: [14]Int = { 1,2,3 };
+var a  = []Int { 1,2,3 };
+var a: [15]Int;
 ```
 
 
@@ -220,13 +221,13 @@ import std::Vec;
 ```
 
 ### Closure
-C++ like lambda:
+
 ```
-fun foo(f: [](a:Int) ) {
+fun foo(f: fun(a:Int) ) {
     f(1);
 }
 
-foo([](a:Int){ ... });
+foo(fun(a:Int){ ... });
 ```
 
 ### Typealias

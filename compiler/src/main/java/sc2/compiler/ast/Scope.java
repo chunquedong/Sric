@@ -32,6 +32,10 @@ public class Scope extends AstNode {
         }
         nodes.add(node);
     }
+    
+    public boolean contains(String name) {
+        return symbolTable.containsKey(name);
+    }
 
     public AstNode get(String name, Loc loc, CompilerLog log) {
         ArrayList<AstNode> nodes = symbolTable.get(name);

@@ -44,6 +44,7 @@ public class AstNode {
     public static final int Reflect    = 0x08000000;
     public static final int Inline     = 0x10000000;
     public static final int Packed     = 0x20000000;
+    public static final int ConstExpr  = 0x40000000;
   
     public Loc loc;
     public int len = 0;
@@ -92,13 +93,25 @@ public class AstNode {
             this.comment = comment;
             this.name = name;
         }
+        
+        public FieldDef parameterize(ArrayList<Type> typeGenericArgs) {
+            FieldDef nf = new FieldDef(this.comment, this.name);
+            nf.loc = this.loc;
+            nf.len = this.len;
+            nf.flags = this.flags;
+            nf.parent = this.parent;
+            nf.initExpr = this.initExpr;
+            nf.isLocalVar = this.isLocalVar;
+            nf.fieldType = this.fieldType.parameterize(typeGenericArgs);
+            return nf;
+        }
     }
     
     public static class StructDef extends TypeDef {
-        public ArrayList<Type> inheritances;
+        public ArrayList<Type> inheritances = null;
         public ArrayList<FieldDef> fieldDefs = new ArrayList<FieldDef>();
         public ArrayList<FuncDef> funcDefs = new ArrayList<FuncDef>();
-        public ArrayList<GeneriParamDef> generiParamDefs = null;
+        public ArrayList<GenericParamDef> generiParamDefs = null;
         
         public StructDef(Comments comment, int flags, String name) {
             this.comment = comment;
@@ -118,6 +131,11 @@ public class AstNode {
         }
         
         @Override public void walkChildren(Visitor visitor) {
+//            if (this.inheritances != null) {
+//                for (Type ins : this.inheritances) {
+//                    visitor.visit(ins);
+//                }
+//            }
             for (FieldDef field : fieldDefs) {
                 visitor.visit(field);
             }
@@ -129,7 +147,11 @@ public class AstNode {
         public Scope getScope() {
             if (scope == null) {
                 scope = new Scope();
-                
+                if (this.generiParamDefs != null) {
+                    for (GenericParamDef gp : this.generiParamDefs) {
+                        scope.put(gp.name, gp);
+                    }
+                }
                 for (FieldDef f : fieldDefs) {
                     scope.put(f.name, f);
                 }
@@ -138,6 +160,36 @@ public class AstNode {
                 }
             }
             return scope;
+        }
+        
+        public Scope getScopeForInherite() {
+            if (scope == null) {
+                scope = new Scope();
+                for (FieldDef f : fieldDefs) {
+                    if ((f.flags & AstNode.Private) != 0) {
+                        continue;
+                    }
+                    scope.put(f.name, f);
+                }
+                for (FuncDef f : funcDefs) {
+                    if ((f.flags & AstNode.Private) != 0) {
+                        continue;
+                    }
+                    scope.put(f.name, f);
+                }
+            }
+            return scope;
+        }
+        
+        public StructDef parameterize(ArrayList<Type> typeGenericArgs) {
+            StructDef nt = new StructDef(this.comment, this.flags, this.name);
+            for (FieldDef f : fieldDefs) {
+                nt.addSlot(f.parameterize(typeGenericArgs));
+            }
+            for (FuncDef f : funcDefs) {
+                nt.addSlot(f.parameterize(typeGenericArgs));
+            }
+            return nt;
         }
     }
     
@@ -227,7 +279,32 @@ public class AstNode {
     public static class FuncDef extends TopLevelDef {
         public FuncPrototype prototype = new FuncPrototype();       // return type
         public Block code;            // code block
-        public ArrayList<GeneriParamDef> generiParams = null;
+        public ArrayList<GenericParamDef> generiParamDefs = null;
+        
+        public FuncDef parameterize(ArrayList<Type> typeGenericArgs) {
+            FuncDef nf = new FuncDef();
+            nf.comment = this.comment;
+            nf.flags = this.flags;
+            nf.loc = this.loc;
+            nf.len = this.len;
+            nf.name = this.name;
+            nf.code = this.code;
+            nf.parent = this.parent;
+            nf.prototype = new FuncPrototype();
+            nf.prototype.returnType = this.prototype.returnType.parameterize(typeGenericArgs);
+            nf.prototype.postFlags = this.prototype.postFlags;
+            nf.prototype.paramDefs = new ArrayList<ParamDef>();
+            for (ParamDef p : this.prototype.paramDefs) {
+                ParamDef np = new ParamDef();
+                np.name = p.name;
+                np.defualtValue = p.defualtValue;
+                np.loc = p.loc;
+                np.len = p.len;
+                np.paramType = p.paramType.parameterize(typeGenericArgs);
+                nf.prototype.paramDefs.add(np);
+            }
+            return nf;
+        }
     }
 
     
@@ -293,9 +370,9 @@ public class AstNode {
         }
     }
     
-    public static class GeneriParamDef extends TypeDef {
+    public static class GenericParamDef extends TypeDef {
         public Type bound;
-        public TypeDef parent;
+        public int index;
 
         @Override
         public Scope getScope() {

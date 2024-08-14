@@ -24,7 +24,9 @@ import sc2.compiler.ast.AstNode.*;
 import sc2.compiler.ast.ClosureExpr;
 import sc2.compiler.ast.SModule;
 import sc2.compiler.ast.SModule.Depend;
+import sc2.compiler.ast.Type.ArrayType;
 import sc2.compiler.ast.Type.FuncType;
+import sc2.compiler.ast.Type.NumType;
 import sc2.compiler.ast.Type.PointerType;
 
 /**
@@ -110,13 +112,15 @@ public class CppGenerator extends BaseGenerator {
                 print("void");
                 return;
             case "Int":
-                if (type.isUnsigned) {
+                NumType intType = (NumType)type;
+                if (intType.isUnsigned) {
                     print("u");
                 }
-                print("int"+type.size+"_t");
+                print("int"+intType.size+"_t");
                 return;
             case "Float":
-                if (type.size == 64) {
+                NumType floatType = (NumType)type;
+                if (floatType.size == 64) {
                     print("double");
                 }
                 else {
@@ -148,9 +152,10 @@ public class CppGenerator extends BaseGenerator {
                 }
                 return;
             case "[]":
+                ArrayType arrayType = (ArrayType)type;
                 printType(type.genericArgs.get(0));
                 print("[");
-                print(""+type.size);
+                this.visit(arrayType.sizeExpr);
                 print("]");
                 return;
             case "=>":
@@ -185,19 +190,50 @@ public class CppGenerator extends BaseGenerator {
 
     @Override
     public void visitField(AstNode.FieldDef v) {
+        if (v.isLocalVar) {
+            printLocalFieldDefAsExpr(v);
+            print(";").newLine();
+        }
+        
         if (headMode && v.parent instanceof FileUnit) {
             print("extern ");
         }
-        printLocalFieldDefAsExpr(v);
-        print(";").newLine();
+        if (headMode) {
+            printLocalFieldDefAsExpr(v);
+            print(";").newLine();
+        }
+        else if ((v.flags & AstNode.Static) != 0) {
+            printLocalFieldDefAsExpr(v);
+            print(";").newLine();
+        }
     }
     
     void printLocalFieldDefAsExpr(AstNode.FieldDef v) {
+        boolean isImpl = implMode();
+        boolean isStatic = (v.flags & AstNode.Static) != 0;
+        if (v.parent instanceof FileUnit) {
+            isStatic = true;
+        }
         printType(v.fieldType);
         print(" ");
+        if (isStatic && isImpl && !v.isLocalVar) {
+            print(((StructDef)v.parent).name);
+            print("::");
+        }
         print(v.name);
         
-        if (v.initExpr != null) {
+        boolean init = false;
+        if (v.isLocalVar) {
+            init = true;
+        }
+        else if (isStatic && isImpl) {
+            init = true;
+        }
+        else if (!isStatic && !isImpl) {
+            init = true;
+        }
+        
+        if (init && v.initExpr != null) {
             print(" = ");
             this.visit(v.initExpr);
         }
@@ -209,7 +245,7 @@ public class CppGenerator extends BaseGenerator {
     
     @Override
     public void visitFunc(AstNode.FuncDef v) {
-        boolean inlined = (v.flags & AstNode.Inline) != 0 || v.generiParams != null;
+        boolean inlined = (v.flags & AstNode.Inline) != 0 || v.generiParamDefs != null;
         if (implMode()) {
             if (v.code == null || inlined) {
                 return;
@@ -303,6 +339,19 @@ public class CppGenerator extends BaseGenerator {
         
         print("struct ");
         print(v.name);
+        
+        if (v instanceof StructDef sd) {
+            if (sd.inheritances != null) {
+                int i = 0;
+                for (Type inh : sd.inheritances) {
+                    if (i == 0) print(" : ");
+                    else print(", ");
+                    print("public ");
+                    printType(inh);
+                }
+            }
+        }
+        
         print(" {").newLine();
         indent();
         
@@ -561,26 +610,28 @@ public class CppGenerator extends BaseGenerator {
     
     void printInitBlockExpr(InitBlockExpr e) {
         this.visit(e.target);
-        for (CallArg t : e.args) {
-            print(",");
-            this.visit(t.argExpr);
+        if (e.args != null) {
+            for (CallArg t : e.args) {
+                print(",");
+                this.visit(t.argExpr);
+            }
         }
     }
     
     void printClosureExpr(ClosureExpr expr) {
         print("[");
         
-        int i = 0;
-        if (expr.defaultCapture != null) {
-            print(expr.defaultCapture.symbol);
-            ++i;
-        }
-        
-        for (Expr t : expr.captures) {
-            if (i > 0) print(", ");
-            this.visit(t);
-            ++i;
-        }
+//        int i = 0;
+//        if (expr.defaultCapture != null) {
+//            print(expr.defaultCapture.symbol);
+//            ++i;
+//        }
+//        
+//        for (Expr t : expr.captures) {
+//            if (i > 0) print(", ");
+//            this.visit(t);
+//            ++i;
+//        }
         print("]");
         
         this.printFuncPrototype(expr.prototype, true);

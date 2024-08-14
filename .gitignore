@@ -37,3 +37,6 @@
 compiler/goldenFile/
 compiler/res/output/
 compiler/res/lib/
+compiler/.classpath
+compiler/.project
+compiler/.settings/

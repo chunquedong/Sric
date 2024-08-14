@@ -138,6 +138,7 @@ public abstract class Expr extends AstNode {
     public static class InitBlockExpr extends Expr {
         public Expr target;
         public ArrayList<CallArg> args = null;
+        public boolean isArray = false;
     }
     
     public static class LiteralExpr extends Expr {

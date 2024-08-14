@@ -13,11 +13,11 @@ import sc2.compiler.CompilerLog;
 import sc2.compiler.ast.AstNode;
 import sc2.compiler.ast.AstNode.*;
 import sc2.compiler.ast.*;
-import sc2.compiler.ast.Expr.AccessExpr;
-import sc2.compiler.ast.Expr.IdExpr;
+import sc2.compiler.ast.Expr.*;
 import sc2.compiler.ast.Stmt.LocalDefStmt;
 import sc2.compiler.ast.Token.TokenKind;
 import static sc2.compiler.ast.Token.TokenKind.*;
+import sc2.compiler.ast.Type.ArrayType;
 import sc2.compiler.ast.Type.FuncType;
 
 /**
@@ -111,7 +111,27 @@ public class ExprTypeResolver extends CompilePass {
                 type.id.resolvedDef = null;
                 err("It's not a type "+type.id.name, type.loc);
             }
+        }
+        else {
             return;
+        }
+        
+        if (type.genericArgs != null) {
+            boolean genericOk = false;
+            if (type.id.resolvedDef instanceof StructDef sd) {
+                if (sd.generiParamDefs != null) {
+                    if (type.genericArgs.size() == sd.generiParamDefs.size()) {
+                        type.id.resolvedDef = sd.parameterize(type.genericArgs);
+                        genericOk = true;
+                    }
+                }
+            }
+            err("Generic args not match", type.loc);
+        }
+        else if (type.id.resolvedDef instanceof StructDef sd) {
+            if (sd.generiParamDefs != null) {
+                err("Miss generic args", type.loc);
+            }
         }
     }
 
@@ -184,10 +204,51 @@ public class ExprTypeResolver extends CompilePass {
 
     @Override
     public void visitTypeDef(TypeDef v) {
+        int scopeCount = 1;
+        if (v instanceof StructDef sd) {
+            if (sd.inheritances != null) {
+                Scope inhScopes = pushScope();
+                int i = 0;
+                for (Type inh : sd.inheritances) {
+                    this.resolveType(inh);
+                    if (i > 0) {
+                        if (inh.id.isResolved()) {
+                            if (!(inh.id.resolvedDef instanceof TraitDef)) {
+                                err("Unsupport multi struct inheritance", inh.loc);
+                            }
+                        }
+                    }
+                    if (inh.id.resolvedDef != null && inh.id.resolvedDef instanceof StructDef inhSd) {
+                        Scope inhScope = inhSd.getScopeForInherite();
+                        inhScopes.addAll(inhScope);
+                    }
+                    ++i;
+                }
+                ++scopeCount;
+                
+                for (FieldDef f : sd.fieldDefs) {
+                    if (inhScopes.contains(f.name)) {
+                        err("Field name is already exsits"+f.name, f.loc);
+                    }
+                }
+                
+                for (FuncDef f : sd.funcDefs) {
+                    if ((f.flags & AstNode.Static) != 0 || (f.flags | AstNode.Override) != 0) {
+                        continue;
+                    }
+                    if (inhScopes.contains(f.name)) {
+                        err("Field name is already exsits"+f.name, f.loc);
+                    }
+                }
+            }
+        }
         Scope scope = v.getScope();
         this.scopes.add(scope);
         v.walkChildren(this);
-        popScope();
+        
+        for (int i=0; i<scopeCount; ++i) {
+            popScope();
+        }
     }
 
     @Override
@@ -385,20 +446,7 @@ public class ExprTypeResolver extends CompilePass {
             resolveBinaryExpr(e);
         }
         else if (v instanceof Expr.CallExpr e) {
-            this.visit(e.target);
-            if (e.args != null) {
-                for (Expr.CallArg t : e.args) {
-                    this.visit(t.argExpr);
-                }
-            }
-            if (e.target.isResolved()) {
-                if (e.target.resolvedType instanceof FuncType f) {
-                    e.resolvedType = f.prototype.returnType;
-                }
-                else {
-                    err("Call a non-function type:"+e.target, e.loc);
-                }
-            }
+            resolveCallExpr(e);
         }
         else if (v instanceof Expr.UnaryExpr e) {
             this.visit(e.operand);
@@ -497,18 +545,14 @@ public class ExprTypeResolver extends CompilePass {
             verifyBool(e.condition);
         }
         else if (v instanceof Expr.InitBlockExpr e) {
-            this.visit(e.target);
-            for (Expr.CallArg t : e.args) {
-                this.visit(t.argExpr);
-            }
-            e.resolvedType = e.target.resolvedType;
+            resolveInitBlockExpr(e);
         }
         else if (v instanceof ClosureExpr e) {
             this.funcs.push(v);
 
-            for (Expr t : e.captures) {
-                this.visit(t);
-            }
+//            for (Expr t : e.captures) {
+//                this.visit(t);
+//            }
             
             preScope = new Scope();
             
@@ -522,6 +566,143 @@ public class ExprTypeResolver extends CompilePass {
         }
         else {
             err("Unkown expr:"+v, v.loc);
+        }
+    }
+
+    private void resolveInitBlockExpr(Expr.InitBlockExpr e) {
+        this.visit(e.target);
+        for (Expr.CallArg t : e.args) {
+            this.visit(t.argExpr);
+        }
+        if (e.target.isResolved()) {
+            StructDef sd = null;
+            if (e.target instanceof IdExpr id) {
+                if (id.resolvedDef instanceof StructDef) {
+                    sd = (StructDef)id.resolvedDef;
+                }
+            }
+            else if (e.target instanceof CallExpr call) {
+                AstNode rdef = e.target.resolvedType.id.resolvedDef;
+                if (rdef != null) {
+                    if (rdef instanceof StructDef) {
+                        sd = (StructDef)rdef;
+                    }
+                }
+            }
+            else if (e.target instanceof TypeExpr te) {
+                if (te.type instanceof ArrayType at) {
+                    e.isArray = true;
+                    for (Expr.CallArg t : e.args) {
+                        if (t.name != null) {
+                            err("Invalid name for array", t.loc);
+                        }
+                    }
+                    at.sizeExpr = new LiteralExpr(Long.valueOf(e.args.size()));
+                    at.sizeExpr.loc = e.loc;
+                }
+            }
+            
+            if (sd != null) {
+                for (FieldDef f : sd.fieldDefs) {
+                    if (f.initExpr != null) {
+                        continue;
+                    }
+                    boolean found = false;
+                    for (Expr.CallArg t : e.args) {
+                        if (t.name.equals(f.name)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        err("Field not init:"+f.name, e.loc);
+                    }
+                }
+
+                for (Expr.CallArg t : e.args) {
+                    boolean found = false;
+                    for (FieldDef f : sd.fieldDefs) {
+                        if (t.name.equals(f.name)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        err("Field not found:"+t.name, t.loc);
+                    }
+                }
+            }
+            else {
+                err("Invalid init block", e.loc);
+            }
+        }
+        e.resolvedType = e.target.resolvedType;
+    }
+    
+    private void resolveGenericInstance(Expr.GenericInstance e) {
+        this.visit(e.target);
+        if (!e.target.isResolved()) {
+            return;
+        }
+        
+        IdExpr idExpr;
+        if (e.target instanceof IdExpr) {
+            idExpr = (IdExpr)e.target;
+        }
+        else {
+            err("Unexpected generic args", e.loc);
+            return;
+        }
+        
+        if (e.genericArgs != null) {
+            boolean genericOk = false;
+            if (idExpr.resolvedDef instanceof StructDef sd) {
+                if (sd.generiParamDefs != null) {
+                    if (e.genericArgs.size() == sd.generiParamDefs.size()) {
+                        idExpr.resolvedDef = sd.parameterize(e.genericArgs);
+                        genericOk = true;
+                    }
+                }
+            }
+            else if (idExpr.resolvedDef instanceof FuncDef sd) {
+                if (sd.generiParamDefs != null) {
+                    if (e.genericArgs.size() == sd.generiParamDefs.size()) {
+                        idExpr.resolvedDef = sd.parameterize(e.genericArgs);
+                        genericOk = true;
+                    }
+                }
+            }
+            err("Generic args not match", e.loc);
+        }
+        else if (idExpr.resolvedDef instanceof StructDef sd) {
+            if (sd.generiParamDefs != null) {
+                err("Miss generic args", idExpr.loc);
+            }
+        }
+        else if (idExpr.resolvedDef instanceof FuncDef sd) {
+            if (sd.generiParamDefs != null) {
+                err("Miss generic args", idExpr.loc);
+            }
+        }
+    }
+
+    private void resolveCallExpr(Expr.CallExpr e) {
+        this.visit(e.target);
+        if (e.args != null) {
+            for (Expr.CallArg t : e.args) {
+                this.visit(t.argExpr);
+            }
+        }
+        if (e.target.isResolved()) {
+            if (e.target.resolvedType instanceof FuncType f) {
+                e.resolvedType = f.prototype.returnType;
+            }
+            else {
+                err("Call a non-function type:"+e.target, e.loc);
+            }
+        }
+        else {
+            return;
         }
     }
 

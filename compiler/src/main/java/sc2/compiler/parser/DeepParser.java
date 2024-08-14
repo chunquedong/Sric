@@ -971,6 +971,10 @@ public class DeepParser extends Parser {
                 break;
             }
             case lbracket:
+                if (peekt == rbracket) {
+                    expr = typeExpr();
+                }
+            case funKeyword:
                 expr = closureExpr();
                 break;
         }
@@ -1018,28 +1022,30 @@ public class DeepParser extends Parser {
         ClosureExpr closure = new ClosureExpr();
         Loc loc = curLoc();
         
-        consume(TokenKind.lbracket);
-        if (curt != TokenKind.rbracket) {
-            while (true) {
-                if (closure.captures == null) {
-                    closure.captures = new ArrayList<Expr>();
-                }
-                if (curt == TokenKind.assign || curt == TokenKind.amp) {
-                    if (peekt == TokenKind.comma || peekt == TokenKind.rbracket) {
-                        closure.defaultCapture = curt;
-                        consume();
-                        continue;
-                    }
-                }
-                Expr id = expr();
-                closure.captures.add(id);
-                if (curt != TokenKind.comma) {
-                    break;
-                }
-                consume();
-            }
-        }
-        consume(TokenKind.rbracket);
+        //consume(TokenKind.lbracket);
+//        if (curt != TokenKind.rbracket) {
+//            while (true) {
+//                if (closure.captures == null) {
+//                    closure.captures = new ArrayList<Expr>();
+//                }
+//                if (curt == TokenKind.assign || curt == TokenKind.amp) {
+//                    if (peekt == TokenKind.comma || peekt == TokenKind.rbracket) {
+//                        closure.defaultCapture = curt;
+//                        consume();
+//                        continue;
+//                    }
+//                }
+//                Expr id = expr();
+//                closure.captures.add(id);
+//                if (curt != TokenKind.comma) {
+//                    break;
+//                }
+//                consume();
+//            }
+//        }
+        //consume(TokenKind.rbracket);
+        
+        consume(TokenKind.funKeyword);
         
         funcPrototype(closure.prototype);
 
