@@ -126,7 +126,9 @@ public class ExprTypeResolver extends CompilePass {
                     }
                 }
             }
-            err("Generic args not match", type.loc);
+            if (!genericOk) {
+                err("Generic args not match", type.loc);
+            }
         }
         else if (type.id.resolvedDef instanceof StructDef sd) {
             if (sd.generiParamDefs != null) {
@@ -535,7 +537,7 @@ public class ExprTypeResolver extends CompilePass {
         else if (v instanceof Expr.GenericInstance e) {
             this.visit(e.target);
             for (Type t : e.genericArgs) {
-                this.visit(t);
+                this.resolveType(t);
             }
         }
         else if (v instanceof Expr.IfExpr e) {
@@ -571,8 +573,10 @@ public class ExprTypeResolver extends CompilePass {
 
     private void resolveInitBlockExpr(Expr.InitBlockExpr e) {
         this.visit(e.target);
-        for (Expr.CallArg t : e.args) {
-            this.visit(t.argExpr);
+        if (e.args != null) {
+            for (Expr.CallArg t : e.args) {
+                this.visit(t.argExpr);
+            }
         }
         if (e.target.isResolved()) {
             StructDef sd = null;

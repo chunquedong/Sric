@@ -194,7 +194,21 @@ public class TopLevelTypeResolver  extends CompilePass {
 
     @Override
     public void visitTypeDef(AstNode.TypeDef v) {
+        Scope gpScope = null;
+        if (v instanceof StructDef sd) {
+            if (sd.generiParamDefs != null) {
+                gpScope = new Scope();
+                for (GenericParamDef gp : sd.generiParamDefs) {
+                    gpScope.put(gp.name, gp);
+                }
+                this.scopes.add(gpScope);
+            }
+        }
         v.walkChildren(this);
+        
+        if (gpScope != null) {
+            this.scopes.removeLast();
+        }
     }
 
     @Override

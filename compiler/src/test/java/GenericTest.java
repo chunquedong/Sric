@@ -3,6 +3,7 @@
 // Licensed under the Academic Free License version 3.0
 //
 import java.io.IOException;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -17,6 +18,7 @@ public class GenericTest {
         
         sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file, libPath);
         compiler.genCode = false;
-        compiler.run();
+        boolean res = compiler.run();
+        assertTrue(res);
     }
 }

@@ -5,12 +5,13 @@ Memory safe and compiled systems programming language.
 Work in process ...
 
 ## Features
-- Fast as C. low-level memeory access without GC
-- Safe as Rust. ownship and runtime check
-- Object-oriented. inheritance and polymorphisn
-- Simpler than C++
-- Interoperate with existing code. compile to C++ code
-- Non-nullable pointer
+- Fast as C. low-level memeory access without GC.
+- Safe as Rust but no reference limitations.
+- Object-oriented. inheritance and polymorphisn.
+- Simpler than C++. A subset of C++.
+- Interoperate with existing code. compile to C++ code.
+- Non-nullable pointer.
+- Modularization
 
 ## Design
 
@@ -125,7 +126,7 @@ var a: [15]Int;
 ```
 
 
-### Template
+### Generic Type
 ```
 struct Bar$<T> {
   fun foo() {
@@ -250,19 +251,19 @@ var c = Color::red;
 ## Removed features from C++
 
 - no reference, just pointer
-- no class, just struct
 - no header file
-- no function overload by params
+- no implicit copying of large objects
+- no new, delete
 - define one var per statement
 - no constructor
 - no nested class, nested function
+- no class, just struct
 - no namespace, just module
 - no macro
 - no forward declarations
 - no three static
 - no friend class
-- no multiple inheritance
-- no i++ only ++i
+- no multiple,virtual,private inheritance
+- no i++ just ++i
 - no switch auto fallthrough
 - no template overload
-

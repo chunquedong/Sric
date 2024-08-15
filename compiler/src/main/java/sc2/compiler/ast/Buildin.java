@@ -18,10 +18,14 @@ public class Buildin {
     private static Scope buildinScope;
     
     private static Loc loc = new Loc("buildin", 0, 0, 0);
-    
+
     private static TypeDef makeBuildinType(Scope scope, String name) {
+        return makeBuildinType(scope, name, null);
+    }
+    private static TypeDef makeBuildinType(Scope scope, String name, ArrayList<GenericParamDef> gps) {
         StructDef typeDef = new AstNode.StructDef(null, 0, name);
         typeDef.loc = loc;
+        typeDef.generiParamDefs = gps;
         scope.put(name, typeDef);
         return typeDef;
     }
@@ -71,8 +75,19 @@ public class Buildin {
             makeBuildinType(scope, "Int");
             makeBuildinType(scope, "Bool");
             makeBuildinType(scope, "Float");
-            makeBuildinType(scope, "[]");//array
-            makeBuildinType(scope, "*");//pointer
+            
+            ArrayList<GenericParamDef> gps = new ArrayList<GenericParamDef>();
+            GenericParamDef gp = new GenericParamDef();
+            gp.name = "T";
+            gps.add(gp);
+            makeBuildinType(scope, "[]", gps);//array
+            
+            ArrayList<GenericParamDef> gps2 = new ArrayList<GenericParamDef>();
+            GenericParamDef gp2 = new GenericParamDef();
+            gp2.name = "T";
+            gps2.add(gp2);
+            makeBuildinType(scope, "*", gps2);//pointer
+            
             makeBuildinType(scope, "Void");
             makeBuildinType(scope, "...");//varargs
             makeBuildinType(scope, "=>");//func

@@ -169,9 +169,16 @@ public class CppGenerator extends BaseGenerator {
                     }
                 }
                 print(")>");
+                return;
         }
         
         printIdExpr(type.id);
+        
+        if (type.genericArgs != null) {
+            for (Type p : type.genericArgs) {
+                printType(p);
+            }
+        }
     }
 
     private void printIdExpr(IdExpr id) {
@@ -533,7 +540,7 @@ public class CppGenerator extends BaseGenerator {
             int i = 0;
             for (Type t : e.genericArgs) {
                 if (i > 0) print(", ");
-                this.visit(t);
+                this.printType(t);
                 ++i;
             }
             print(" >");
@@ -562,7 +569,7 @@ public class CppGenerator extends BaseGenerator {
     
     void printLiteral(LiteralExpr e) {
         if (e.value instanceof Long li) {
-            print(li.toString()).print("lld");
+            print(li.toString()).print("LL");
         }
         else if (e.value instanceof Double li) {
             print(li.toString());
