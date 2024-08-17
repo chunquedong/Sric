@@ -187,8 +187,48 @@ public class TopLevelTypeResolver  extends CompilePass {
         resolveType(v.prototype.returnType, v.loc);
         if (v.prototype.paramDefs != null) {
             for (AstNode.ParamDef p : v.prototype.paramDefs) {
-                resolveType(p.paramType, v.loc);
+                resolveType(p.paramType, p.loc);
             }
+        }
+        
+        if (v.parent instanceof StructDef sd) {
+            if ((v.flags & AstNode.Virtual) != 0) {
+                if ((sd.flags & AstNode.Virtual) != 0 || (sd.flags & AstNode.Abstract) != 0) {
+                    //ok
+                }
+                else {
+                    err("Struct must be virtual or abstract", v.loc);
+                }
+            }
+            else if ((v.flags & AstNode.Abstract) != 0) {
+                if ((sd.flags & AstNode.Abstract) != 0) {
+                    //ok
+                }
+                else {
+                    err("Struct must be abstract", v.loc);
+                }
+                if (v.code != null) {
+                    err("abstract method must no code", v.loc);
+                }
+            }
+        }
+        else if (v.parent instanceof TraitDef tt) {
+            if ((v.flags & AstNode.Abstract) != 0) {
+                if (v.code != null) {
+                    err("abstract method must no code", v.loc);
+                }
+            }
+        }
+        else {
+            if ((v.flags & AstNode.Abstract) != 0 ||
+                    (v.flags & AstNode.Virtual) != 0 ||
+                    (v.flags & AstNode.Static) != 0) {
+                err("Invalid flags", v.loc);
+            }
+        }
+        
+        if ((v.flags & AstNode.Readonly) != 0) {
+            err("Invalid flags", v.loc);
         }
     }
 

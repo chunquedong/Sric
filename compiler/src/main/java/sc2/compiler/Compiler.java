@@ -73,6 +73,7 @@ public class Compiler {
     public boolean run() throws IOException {
         for (File file : sources) {
             AstNode.FileUnit funit = parse(file);
+            funit.module = module;
             module.fileUnits.add(funit);
         }
         

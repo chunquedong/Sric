@@ -371,7 +371,7 @@ public class ExprTypeResolver extends CompilePass {
             if (rets.expr != null) {
                 this.visit(rets.expr);
                 if (rets.expr.resolvedType != null) {
-                    AstNode func = this.funcs.getLast();
+                    AstNode func = this.funcs.peek();
                     FuncPrototype prototype;
                     if (func instanceof FuncDef f) {
                         prototype = f.prototype;
@@ -404,6 +404,9 @@ public class ExprTypeResolver extends CompilePass {
         else if (resolvedDef instanceof TypeDef f) {
             //TODO
             return Type.metaType(f.loc, new Type(f.loc, f.name));
+        }
+        else if (resolvedDef instanceof ParamDef p) {
+            return p.paramType;
         }
         return null;
     }
@@ -484,6 +487,13 @@ public class ExprTypeResolver extends CompilePass {
             resolveId(e);
             if (e.resolvedDef != null) {
                 e.resolvedType = getSlotType(e.resolvedDef);
+                
+                if (e.resolvedDef instanceof FieldDef f) {
+                    checkProtection(f, f.parent, f.loc, e.inLeftSide);
+                }
+                else if (e.resolvedDef instanceof FuncDef f) {
+                    checkProtection(f, f.parent, f.loc, e.inLeftSide);
+                }
             }
         }
         else if (v instanceof Expr.AccessExpr e) {
@@ -491,6 +501,13 @@ public class ExprTypeResolver extends CompilePass {
             e.resolvedDef = resoveOnTarget(e.target, e.name, e.loc);
             if (e.resolvedDef != null) {
                 e.resolvedType = getSlotType(e.resolvedDef);
+                
+                if (e.resolvedDef instanceof FieldDef f) {
+                    checkProtection(f, f.parent, f.loc, e.inLeftSide);
+                }
+                else if (e.resolvedDef instanceof FuncDef f) {
+                    checkProtection(f, f.parent, f.loc, e.inLeftSide);
+                }
             }
         }
         else if (v instanceof Expr.LiteralExpr e) {
@@ -770,6 +787,56 @@ public class ExprTypeResolver extends CompilePass {
             return;
         }
     }
+    
+    private boolean isInheriteFrom(StructDef cur, TypeDef parent) {
+        if (curStruct.inheritances != null) {
+            return false;
+        }
+        for (Type t : cur.inheritances) {
+            if (t.id.resolvedDef == parent) {
+                return true;
+            }
+            if (t.id.resolvedDef instanceof StructDef sd) {
+                boolean res = isInheriteFrom(sd, parent);
+                if (res) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    private boolean checkProtection(TopLevelDef slot, AstNode parent, Loc loc, boolean isSet) {
+        int slotFlags = slot.flags;
+        if (isSet && slot instanceof FieldDef f) {
+            if ((f.flags & AstNode.Readonly) != 0) {
+                slotFlags |= AstNode.Private;
+            }
+        }
+        
+        if (parent instanceof TypeDef tparent) {
+            if (parent != curStruct) {
+                if ((slotFlags & AstNode.Private) != 0) {
+                    err("It's private", loc);
+                    return false;
+                }
+
+                if ((slotFlags & AstNode.Protected) != 0) {
+                    if (curStruct == null || !isInheriteFrom(curStruct, tparent)) {
+                        err("It's protected", loc);
+                    }
+                }
+            }
+        }
+        else if (parent instanceof FileUnit fu) {
+            if ((slotFlags & AstNode.Private) != 0 || (slotFlags & AstNode.Protected) != 0) {
+                if (fu.module != this.module) {
+                    err("It's private or protected", loc);
+                }
+            }
+        }
+        return false;
+    }
 
     private void resolveBinaryExpr(Expr.BinaryExpr e) {
 
@@ -862,23 +929,30 @@ public class ExprTypeResolver extends CompilePass {
                     boolean ok = false;
                     if (e.lhs instanceof IdExpr idExpr) {
                         if (idExpr.resolvedDef instanceof FieldDef f) {
-                            ok = true;
+                            //if (checkProtection(f, f.parent, f.loc, true)) {
+                                ok = true;
+                            //}
+                        }
+                        else {
+                            err("Not assignable", e.lhs.loc);
                         }
                     }
                     else if (e.lhs instanceof AccessExpr accessExpr) {
                         if (accessExpr.resolvedDef instanceof FieldDef f) {
-                            ok = true;
+                            //if (checkProtection(f, f.parent, f.loc, true)) {
+                                ok = true;
+                            //}
                         }
                     }
                     else if (e.lhs instanceof IndexExpr indexExpr) {
                         ok = true;
                         return;
                     }
-                    
-                    if (!ok) {
+                    else {
                         err("Not assignable", e.lhs.loc);
                     }
-                    else {
+                    
+                    if (ok) {
                         if (e.lhs.resolvedType.isInt() && e.rhs.resolvedType.isInt()) {
                             e.resolvedType = e.lhs.resolvedType;
                         }

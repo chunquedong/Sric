@@ -65,4 +65,15 @@ public class MiscTest {
         boolean res = compiler.run();
         assertTrue(res);
     }
+    
+    @Test
+    public void testClosure() throws IOException {
+        String file = "res/code/testClosure.sc";
+        String libPath = "res/lib";
+        
+        sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file, libPath);
+        compiler.genCode = false;
+        boolean res = compiler.run();
+        assertTrue(res);
+    }
 }

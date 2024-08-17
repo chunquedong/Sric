@@ -328,6 +328,7 @@ public class Parser {
                 // first inheritance type can be extends or mixin
                 consume();
                 Type first = inheritType();
+                structDef.inheritances = new ArrayList<Type>();
                 structDef.inheritances.add(first);
 
                 // additional mixins
@@ -904,7 +905,7 @@ public class Parser {
     }
 
     private Type funcOrSimpleType() {
-        if (curt == TokenKind.lbracket) {
+        if (curt == TokenKind.funKeyword) {
             return funcType();
         }
         return simpleType();
@@ -1015,13 +1016,12 @@ public class Parser {
 
     /**
      ** Method type signature:
-     **   <funcType> := "[]" "(" <args> ")" [<type>]
+     **   <funcType> := "fun" "(" <args> ")" [<type>]
      */
     private Type funcType() {
         Loc loc = cur.loc;
         
-        consume(TokenKind.lbracket);
-        consume(TokenKind.rbracket);
+        consume(TokenKind.funKeyword);
         
         FuncPrototype prototype = new FuncPrototype();
         funcPrototype(prototype);
@@ -1029,7 +1029,7 @@ public class Parser {
         Type t = Type.funcType(loc, prototype);
 
         endLoc(t, loc);
-        return null;
+        return t;
     }
 
 //////////////////////////////////////////////////////////////////////////

@@ -221,7 +221,7 @@ public class AstNode {
     }
     
     public static class TraitDef extends TypeDef {
-        public ArrayList<FuncDef> funcDefs;
+        public ArrayList<FuncDef> funcDefs = new ArrayList<FuncDef>();
         
         public TraitDef(Comments comment, int flags, String name) {
             this.comment = comment;
@@ -316,6 +316,7 @@ public class AstNode {
         public ArrayList<FuncDef> funcDefs = new ArrayList<FuncDef>();
         public ArrayList<Import> imports = new ArrayList<Import>();
         public ArrayList<TypeAlias> typeAlias = new ArrayList<TypeAlias>();
+        public SModule module;
         
         public Scope importScope = null;
         
