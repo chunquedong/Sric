@@ -461,6 +461,9 @@ public class Parser {
                 case constexprKeyword:
                     flags = flags | (AstNode.ConstExpr);
                     break;
+                case operatorKeyword:
+                    flags = flags | (AstNode.Operator);
+                    break;
                 default:
                     done = true;
             }
@@ -872,8 +875,10 @@ public class Parser {
     private Type arrayType() {
         Loc loc = curLoc();
         consume(TokenKind.lbracket);
-
-        Expr size = expr();
+        Expr size = null;
+        if (curt != TokenKind.rbracket) {
+            size = expr();
+        }
         consume(TokenKind.rbracket);
         
         Type type = typeRef();

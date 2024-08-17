@@ -38,6 +38,9 @@ public abstract class CompilePass implements Visitor {
         v.walkChildren(this);
     }
     
+    public void visitTypeAlias(TypeAlias v) {
+    }
+    
     public void visitStmt(Stmt v) {
     }
     
@@ -63,6 +66,9 @@ public abstract class CompilePass implements Visitor {
         }
         else if (node instanceof Expr v) {
             this.visitExpr(v);
+        }
+        else if (node instanceof TypeAlias v) {
+            this.visitTypeAlias(v);
         }
         else {
             err("Unknow AstNode type:" + node.getClass(), node.loc);

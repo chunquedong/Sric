@@ -210,6 +210,11 @@ public class TopLevelTypeResolver  extends CompilePass {
             this.scopes.removeLast();
         }
     }
+    
+    @Override
+    public void visitTypeAlias(TypeAlias v) {
+        this.resolveType(v.type, v.loc);
+    }
 
     @Override
     public void visitStmt(Stmt v) {

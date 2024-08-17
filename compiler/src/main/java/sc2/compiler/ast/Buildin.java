@@ -92,27 +92,31 @@ public class Buildin {
             makeBuildinType(scope, "...");//varargs
             makeBuildinType(scope, "=>");//func
             
+            buildinScope = scope;
+            
             sizeofFunc(scope);
             offsetofFunc(scope);
             
-            buildinScope = scope;
         }
         return buildinScope;
     }
     
-    public static HashMap<TokenKind, String> tokenOperator = initOperators();
-    public static String getOperator = "get";
-    public static String setOperator = "set";
+    public static final String getOperator = "get";
+    public static final String setOperator = "set";
     
-    private static HashMap<TokenKind, String> initOperators() {
-        HashMap<TokenKind, String> tokenOperator = new HashMap<>();
-        
-        tokenOperator.put(TokenKind.plus, "plus");
-        tokenOperator.put(TokenKind.minus, "minus");
-        tokenOperator.put(TokenKind.star, "mult");
-        tokenOperator.put(TokenKind.slash, "div");
-        tokenOperator.put(TokenKind.cmp, "compare");
-        
-        return tokenOperator;
+    public static String operatorToName(TokenKind tok) {
+        switch (tok) {
+            case plus:
+                return "plus";
+            case minus:
+                return "minus";
+            case star:
+                return "mult";
+            case slash:
+                return "div";
+            case cmp:
+                return "compare";
+        }
+        return null;
     }
 }

@@ -45,6 +45,7 @@ public class AstNode {
     public static final int Inline     = 0x10000000;
     public static final int Packed     = 0x20000000;
     public static final int ConstExpr  = 0x40000000;
+    public static final int Operator   = 0x80000000;
   
     public Loc loc;
     public int len = 0;
@@ -339,6 +340,9 @@ public class AstNode {
         }
         
         @Override public void walkChildren(Visitor visitor) {
+            for (TypeAlias typeAlias : typeAlias) {
+                visitor.visit(typeAlias);
+            }
             for (TypeDef typeDef : typeDefs) {
                 visitor.visit(typeDef);
             }

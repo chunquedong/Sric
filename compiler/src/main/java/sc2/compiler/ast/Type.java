@@ -204,6 +204,7 @@ public class Type extends AstNode {
         
     public static FuncType funcType(Loc loc, FuncPrototype prototype) {
         FuncType type = new FuncType(loc, prototype);
+        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
         return type;
     }
     
@@ -220,47 +221,56 @@ public class Type extends AstNode {
     
     public static Type voidType(Loc loc) {
         Type type = new Type(loc, "Void");
+        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, loc, null);
         return type;
     }
     
     public static Type boolType(Loc loc) {
         Type type = new Type(loc, "Bool");
+        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, loc, null);
         return type;
     }
     
     public static NumType intType(Loc loc) {
         NumType type = new NumType(loc, "Int", 64);
+        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, loc, null);
         return type;
     }
     
     public static NumType floatType(Loc loc) {
         NumType type = new NumType(loc, "Float", 64);
+        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, loc, null);
         return type;
     }
     
     public static Type strType(Loc loc) {
         NumType type = new NumType(loc, "Int", 8);
+        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
         type.imutableAttr = ImutableAttr.imu;
         return pointerType(loc, type, PointerAttr.raw, false);
     }
 
     public static Type arrayType(Loc loc, Type elemType, Expr size) {
         Type type = new ArrayType(loc, elemType, size);
+        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
         return type;
     }
     
     public static PointerType pointerType(Loc loc, Type elemType, PointerAttr pointerAttr, boolean nullable) {
         PointerType type = new PointerType(loc, elemType, pointerAttr, nullable);
+        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
         return type;
     }
     
     public static Type varArgType(Loc loc) {
         Type type = new Type(loc, "...");
+        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
         return type;
     }
     
     public static Type metaType(Loc loc, Type type) {
         MetaType t = new MetaType(loc, type);
+        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
         return t;
     }
     

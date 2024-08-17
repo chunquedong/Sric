@@ -34,6 +34,7 @@ public class ExprTypeResolver extends CompilePass {
     
     private ArrayDeque<AstNode> funcs = new ArrayDeque<AstNode>();
     private ArrayDeque<AstNode> loops = new ArrayDeque<AstNode>();
+    private StructDef curStruct = null;
     
     public ExprTypeResolver(CompilerLog log, SModule module) {
         super(log);
@@ -76,6 +77,16 @@ public class ExprTypeResolver extends CompilePass {
     
     private void resolveId(Expr.IdExpr idExpr) {
         if (idExpr.namespace == null) {
+            if (idExpr.name.equals("this")) {
+                if (curStruct == null) {
+                    err("Use this out of struct", idExpr.loc);
+                    return;
+                }
+                Type self = new Type(curStruct.loc, curStruct.name);
+                self.id.resolvedDef = curStruct;
+                idExpr.resolvedDef = Type.pointerType(idExpr.loc, self, Type.PointerAttr.raw, false);
+                return;
+            }
             idExpr.resolvedDef = findSymbol(idExpr.name, idExpr.loc);
             return;
         }
@@ -107,9 +118,15 @@ public class ExprTypeResolver extends CompilePass {
     private void resolveType(Type type) {
         resolveId(type.id);
         if (type.id.resolvedDef != null) {
-            if (!(type.id.resolvedDef instanceof TypeDef)) {
+            if (type.id.resolvedDef instanceof TypeDef) {
+                //ok
+            }
+            else if (type.id.resolvedDef instanceof TypeAlias ta) {
+                type.id.resolvedDef = ta.type.id.resolvedDef;
+            }
+            else {
                 type.id.resolvedDef = null;
-                err("It's not a type "+type.id.name, type.loc);
+                err("It's not a type: "+type.id.name, type.loc);
             }
         }
         else {
@@ -167,6 +184,12 @@ public class ExprTypeResolver extends CompilePass {
                     }
                 }
             }
+            if (v.fieldType == null) {
+                v.fieldType = v.initExpr.resolvedType;
+            }
+        }
+        if (v.fieldType == null) {
+            err("Unkonw field type", v.loc);
         }
         if (v.isLocalVar) {
             lastScope().put(v.name, v);
@@ -196,6 +219,9 @@ public class ExprTypeResolver extends CompilePass {
         this.funcs.push(v);
         preScope = new Scope();
         visitFuncPrototype(v.prototype, preScope);
+        if ((v.flags & AstNode.Operator) != 0) {
+            verifyOperator(v);
+        }
         if (v.code != null) {
             this.visit(v.code);
         }
@@ -208,6 +234,7 @@ public class ExprTypeResolver extends CompilePass {
     public void visitTypeDef(TypeDef v) {
         int scopeCount = 1;
         if (v instanceof StructDef sd) {
+            curStruct = sd;
             if (sd.inheritances != null) {
                 Scope inhScopes = pushScope();
                 int i = 0;
@@ -251,6 +278,7 @@ public class ExprTypeResolver extends CompilePass {
         for (int i=0; i<scopeCount; ++i) {
             popScope();
         }
+        curStruct = null;
     }
 
     @Override
@@ -287,9 +315,7 @@ public class ExprTypeResolver extends CompilePass {
         else if (v instanceof Stmt.ForStmt fors) {
             this.loops.push(v);
             if (fors.init != null) {
-                if (preScope == null) {
-                    preScope = new Scope();
-                }
+                pushScope();
                 
                 if (fors.init instanceof Stmt.LocalDefStmt varDef) {
                     this.visit(varDef.fieldDef);
@@ -311,6 +337,10 @@ public class ExprTypeResolver extends CompilePass {
                 this.visit(fors.update);
             }
             this.visit(fors.block);
+            
+            if (fors.init != null) {
+                this.popScope();
+            }
             this.loops.pop();
         }
         else if (v instanceof Stmt.SwitchStmt switchs) {
@@ -393,6 +423,39 @@ public class ExprTypeResolver extends CompilePass {
     private void verifyMetType(Expr e) {
         if (e.resolvedType != null && !e.resolvedType.isMetaType()) {
             err("Type required", e.loc);
+        }
+    }
+    
+    private void verifyOperator(FuncDef f) {
+        if (f.name.equals("plus") || f.name.equals("minus") || 
+                f.name.equals("mult") || f.name.equals("div")) {
+            if (f.prototype.paramDefs.size() != 1) {
+                err("Must 1 params", f.loc);
+            }
+            if (f.prototype.returnType.isVoid()) {
+                err("Must has return", f.loc);
+            }
+        }
+        else if (f.name.equals("compare")) {
+            if (f.prototype.paramDefs.size() != 1) {
+                err("Must 1 params", f.loc);
+            }
+            if (!f.prototype.returnType.isInt()) {
+                err("Must return Int", f.loc);
+            }
+        }
+        else if (f.name.equals(Buildin.getOperator)) {
+            if (f.prototype.paramDefs.size() != 1) {
+                err("Must 1 params", f.loc);
+            }
+            if (f.prototype.returnType.isVoid()) {
+                err("Must has return", f.loc);
+            }
+        }
+        else if (f.name.equals(Buildin.setOperator)) {
+            if (f.prototype.paramDefs.size() != 2) {
+                err("Must 1 params", f.loc);
+            }
         }
     }
     
@@ -510,9 +573,9 @@ public class ExprTypeResolver extends CompilePass {
                     e.resolvedType = e.target.resolvedType.genericArgs.get(0);
                 }
                 else {
-                    String operatorName = e.inLeftSide ? Buildin.setOperator : Buildin.setOperator;
+                    String operatorName = e.inLeftSide ? Buildin.setOperator : Buildin.getOperator;
                     AstNode rdef = resoveOnTarget(e.target, operatorName, e.loc);
-                    if (rdef != null) {
+                    if (rdef == null) {
                         err("Unknow operator []", e.loc);
                     }
                     else if (rdef instanceof FuncDef f) {
@@ -520,17 +583,11 @@ public class ExprTypeResolver extends CompilePass {
                         if (f.prototype.paramDefs == null || f.prototype.paramDefs.size() != expectedParamSize) {
                             err("Invalid operator []", e.loc);
                         }
-                        else if (f.prototype.returnType == null || f.prototype.returnType.isVoid()) {
-                            err("Invalid operator []", e.loc);
-                        }
-                        else if (!(f.prototype.paramDefs.get(0).paramType.isInt())) {
-                            err("Invalid arg type for operator []", e.loc);
-                        }
+                        e.resolvedType = f.prototype.returnType;
                     }
                     else {
                         err("Invalid operator []", e.loc);
                     }
-                    err("Unsupport [] for "+e.target.resolvedType, e.loc);
                 }
             }
         }
@@ -578,69 +635,73 @@ public class ExprTypeResolver extends CompilePass {
                 this.visit(t.argExpr);
             }
         }
-        if (e.target.isResolved()) {
-            StructDef sd = null;
-            if (e.target instanceof IdExpr id) {
-                if (id.resolvedDef instanceof StructDef) {
-                    sd = (StructDef)id.resolvedDef;
-                }
-            }
-            else if (e.target instanceof CallExpr call) {
-                AstNode rdef = e.target.resolvedType.id.resolvedDef;
-                if (rdef != null) {
-                    if (rdef instanceof StructDef) {
-                        sd = (StructDef)rdef;
-                    }
-                }
-            }
-            else if (e.target instanceof TypeExpr te) {
-                if (te.type instanceof ArrayType at) {
-                    e.isArray = true;
-                    for (Expr.CallArg t : e.args) {
-                        if (t.name != null) {
-                            err("Invalid name for array", t.loc);
-                        }
-                    }
-                    at.sizeExpr = new LiteralExpr(Long.valueOf(e.args.size()));
-                    at.sizeExpr.loc = e.loc;
-                }
-            }
-            
-            if (sd != null) {
-                for (FieldDef f : sd.fieldDefs) {
-                    if (f.initExpr != null) {
-                        continue;
-                    }
-                    boolean found = false;
-                    for (Expr.CallArg t : e.args) {
-                        if (t.name.equals(f.name)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        err("Field not init:"+f.name, e.loc);
-                    }
-                }
-
-                for (Expr.CallArg t : e.args) {
-                    boolean found = false;
-                    for (FieldDef f : sd.fieldDefs) {
-                        if (t.name.equals(f.name)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        err("Field not found:"+t.name, t.loc);
-                    }
-                }
-            }
-            else {
-                err("Invalid init block", e.loc);
+        if (!e.target.isResolved()) {
+            return;
+        }
+        
+        StructDef sd = null;
+        if (e.target instanceof IdExpr id) {
+            if (id.resolvedDef instanceof StructDef) {
+                sd = (StructDef)id.resolvedDef;
             }
         }
-        e.resolvedType = e.target.resolvedType;
+        else if (e.target instanceof CallExpr call) {
+            AstNode rdef = e.target.resolvedType.id.resolvedDef;
+            if (rdef != null) {
+                if (rdef instanceof StructDef) {
+                    sd = (StructDef)rdef;
+                }
+            }
+        }
+        else if (e.target instanceof TypeExpr te) {
+            if (te.type instanceof ArrayType at) {
+                e.isArray = true;
+                for (Expr.CallArg t : e.args) {
+                    if (t.name != null) {
+                        err("Invalid name for array", t.loc);
+                    }
+                }
+                at.sizeExpr = new LiteralExpr(Long.valueOf(e.args.size()));
+                at.sizeExpr.loc = e.loc;
+
+                e.resolvedType = te.type;
+            }
+        }
+
+        if (sd != null) {
+            for (FieldDef f : sd.fieldDefs) {
+                if (f.initExpr != null) {
+                    continue;
+                }
+                boolean found = false;
+                for (Expr.CallArg t : e.args) {
+                    if (t.name.equals(f.name)) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    err("Field not init:"+f.name, e.loc);
+                }
+            }
+
+            for (Expr.CallArg t : e.args) {
+                boolean found = false;
+                for (FieldDef f : sd.fieldDefs) {
+                    if (t.name.equals(f.name)) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    err("Field not found:"+t.name, t.loc);
+                }
+            }
+            e.resolvedType = e.target.resolvedType;
+        }
+        else if (!e.isArray) {
+            err("Invalid init block", e.loc);
+        }
     }
     
     private void resolveGenericInstance(Expr.GenericInstance e) {
@@ -750,18 +811,12 @@ public class ExprTypeResolver extends CompilePass {
                         err("Cant compare different type", e.loc);
                     }
                     else {
-                        String operatorName = Buildin.tokenOperator.get(TokenKind.cmp);
+                        String operatorName = Buildin.operatorToName(TokenKind.cmp);
                         AstNode rdef = resoveOnTarget(e.lhs, operatorName, e.loc);
                         if (rdef != null) {
                             err("Unknow operator:"+curt, e.loc);
                         }
                         else if (rdef instanceof FuncDef f) {
-                            if (!f.prototype.returnType.isBool()) {
-                                err("Invalid operator:"+curt, e.loc);
-                            }
-                            else if (f.prototype.paramDefs == null || f.prototype.paramDefs.size() != 1) {
-                                err("Invalid operator:"+curt, e.loc);
-                            }
                         }
                         else {
                             err("Invalid operator:"+curt, e.loc);
@@ -815,6 +870,10 @@ public class ExprTypeResolver extends CompilePass {
                             ok = true;
                         }
                     }
+                    else if (e.lhs instanceof IndexExpr indexExpr) {
+                        ok = true;
+                        return;
+                    }
                     
                     if (!ok) {
                         err("Not assignable", e.lhs.loc);
@@ -865,21 +924,19 @@ public class ExprTypeResolver extends CompilePass {
     }
 
     private void resolveMathOperator(TokenKind curt, Expr.BinaryExpr e) {
-        String operatorName = Buildin.tokenOperator.get(curt);
+        String operatorName = Buildin.operatorToName(curt);
+        if (operatorName == null) {
+            err("Unknow operator:"+curt, e.loc);
+        }
         AstNode rdef = resoveOnTarget(e.lhs, operatorName, e.loc);
-        if (rdef != null) {
+        if (rdef == null) {
             err("Unknow operator:"+curt, e.loc);
         }
         else if (rdef instanceof FuncDef f) {
-            if (f.prototype.paramDefs == null || f.prototype.paramDefs.size() != 1) {
-                err("Invalid operator:"+curt, e.loc);
-            }
-            else if (f.prototype.returnType == null || f.prototype.returnType.isVoid()) {
-                err("Invalid operator:"+curt, e.loc);
-            }
-            else if (!e.rhs.resolvedType.fit(f.prototype.paramDefs.get(0).paramType)) {
+            if (!e.rhs.resolvedType.fit(f.prototype.paramDefs.get(0).paramType)) {
                 err("Invalid arg type:"+e.rhs.resolvedType, e.rhs.loc);
             }
+            e.resolvedType = f.prototype.returnType;
         }
         else {
             err("Invalid operator:"+curt, e.loc);

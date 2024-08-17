@@ -152,6 +152,7 @@ public class Token {
         packedKeyword("packed", true),
         fallthroughKeyword("fallthrough", true),
         constexprKeyword("constexpr", true),
+        operatorKeyword("operator", true),
         
         // misc
         eof("eof", false);

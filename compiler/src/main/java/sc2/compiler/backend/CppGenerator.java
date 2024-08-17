@@ -616,12 +616,26 @@ public class CppGenerator extends BaseGenerator {
     }
     
     void printInitBlockExpr(InitBlockExpr e) {
-        this.visit(e.target);
+        if (!e.target.isResolved()) {
+            return;
+        }
+        if (!e.target.resolvedType.isMetaType()) {
+            this.visit(e.target);
+        }
         if (e.args != null) {
+            int i = 0;
+            print("{");
             for (CallArg t : e.args) {
-                print(",");
+                if (i > 0)
+                    print(",");
+                if (t.name != null) {
+                    print(t.name);
+                    print(" = ");
+                }
                 this.visit(t.argExpr);
+                ++i;
             }
+            print("}");
         }
     }
     

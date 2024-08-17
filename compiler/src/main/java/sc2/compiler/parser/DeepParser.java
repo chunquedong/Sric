@@ -795,7 +795,7 @@ public class DeepParser extends Parser {
     /**
      ** Parse args with known parens:
      **   <args> = <arg> ("," <arg>)*
-     **   <arg> = [<id> ":"] <expr>
+     **   <arg> = [<id> "="] <expr>
      */
     private ArrayList<CallArg> callArgs(TokenKind right) {
         if (curt != right) {
@@ -805,9 +805,9 @@ public class DeepParser extends Parser {
                 CallArg arg = new CallArg();
 
                 //named param
-                if (curt == TokenKind.identifier && peekt == TokenKind.colon) {
+                if (curt == TokenKind.identifier && peekt == TokenKind.assign) {
                     String name = consumeId();
-                    consume(TokenKind.colon);
+                    consume();
                     arg.name = name;
                 }
                 arg.argExpr = expr();
@@ -857,11 +857,11 @@ public class DeepParser extends Parser {
     
     /**
      ** Paren grouped expression:
-     **   <typeExpr> =  ":" <type>
+     **   <typeExpr> =  <type>
      */
     private TypeExpr typeExpr() {
         Loc loc = curLoc();
-        consume(TokenKind.colon);
+        //consume(TokenKind.colon);
         Type type = typeRef();
         TypeExpr expr = new TypeExpr(type);
         endLoc(expr, loc);
@@ -974,6 +974,7 @@ public class DeepParser extends Parser {
                 if (peekt == rbracket) {
                     expr = typeExpr();
                 }
+                break;
             case funKeyword:
                 expr = closureExpr();
                 break;

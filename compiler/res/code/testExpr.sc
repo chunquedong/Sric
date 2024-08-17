@@ -27,3 +27,11 @@ fun foo() : Int {
 
     return 1;
 }
+
+fun literal() {
+    var a = 100;
+    var b = 100.0;
+    var c = true;
+    var d = a + b;
+    var e = "str";
+}
