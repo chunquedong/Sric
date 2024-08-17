@@ -115,6 +115,9 @@ public class ScLibGenerator extends BaseGenerator {
     
     @Override
     public void visitFunc(AstNode.FuncDef v) {
+        if ((v.flags & AstNode.Private) != 0) {
+            return;
+        }
         print("fun ");
         print(v.name);
 

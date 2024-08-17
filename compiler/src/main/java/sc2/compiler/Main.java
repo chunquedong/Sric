@@ -14,7 +14,7 @@ public class Main {
     
 
     public static void main(String[] args) throws IOException {
-        String sourceDir = "res/code/testStruct.sc";
+        String sourceDir = "res/code/testInherit.sc";
         String libPath = "res/lib";
         
         for (int i = 1; i<args.length; ++i) {

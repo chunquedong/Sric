@@ -244,6 +244,12 @@ public class AstNode {
             }
             return scope;
         }
+        
+        @Override public void walkChildren(Visitor visitor) {
+            for (FuncDef func : funcDefs) {
+                visitor.visit(func);
+            }
+        }
     }
     
     public static class FuncPrototype {
@@ -325,7 +331,7 @@ public class AstNode {
         }
         
         public void addDef(TopLevelDef node) {
-
+            node.parent = this;
             if (node instanceof TypeDef) {
                 typeDefs.add((TypeDef)node);
             }

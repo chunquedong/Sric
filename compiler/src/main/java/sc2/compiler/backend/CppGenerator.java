@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import sc2.compiler.ast.AstNode;
@@ -36,6 +37,9 @@ import sc2.compiler.ast.Type.PointerType;
 public class CppGenerator extends BaseGenerator {
     
     public boolean headMode = true;
+    private SModule module;
+    
+    private HashMap<TypeDef, Integer> emitState = new HashMap<>();
     
     public CppGenerator(CompilerLog log, String file, boolean headMode) throws IOException {
         super(log, file);
@@ -47,16 +51,19 @@ public class CppGenerator extends BaseGenerator {
     }
     
     public void run(SModule module) {
+        this.module = module;
         if (headMode) {
             String marcoName = module.name.toUpperCase()+"_H_";
             print("#ifndef ").print(marcoName).newLine();
             print("#define ").print(marcoName).newLine();
 
+            newLine();
             for (Depend d : module.depends) {
                 print("#include \"");
                 print(d.name);
                 print("\"").newLine();
             }
+            newLine();
 
             print("namespace ");
             print(module.name);
@@ -77,8 +84,9 @@ public class CppGenerator extends BaseGenerator {
             this.unindent();
             
             newLine();
-            print("}//ns").newLine();
-
+            print("} //ns").newLine();
+            
+            newLine();
             print("#endif //");
             print(marcoName).newLine();
         }
@@ -87,6 +95,7 @@ public class CppGenerator extends BaseGenerator {
             print(module.name);
             print("\"").newLine();
             
+            newLine();
             print("using namespace ");
             print(module.name).print(";").newLine();
             newLine();
@@ -259,6 +268,12 @@ public class CppGenerator extends BaseGenerator {
             }
         }
         
+        newLine();
+        
+        if ((v.flags & AstNode.Virtual) != 0 || (v.flags & AstNode.Abstract) != 0) {
+            print("virtual ");
+        }
+        
         printType(v.prototype.returnType);
         print(" ");
         if (implMode()) {
@@ -269,8 +284,11 @@ public class CppGenerator extends BaseGenerator {
         print(v.name);
 
         printFuncPrototype(v.prototype, false);
-
+        
         if (v.code == null) {
+            if ((v.flags & AstNode.Abstract) != 0) {
+                print(" = 0");
+            }
             print(";");
         }
         else {
@@ -312,11 +330,45 @@ public class CppGenerator extends BaseGenerator {
     }
 
     @Override
-    public void visitTypeDef(AstNode.TypeDef v) {
+    public void visitTypeDef(TypeDef v) {
+        if (headMode) {
+            //Topo sort
+            if (this.emitState.get(v) != null) {
+                int state = this.emitState.get(v);
+                if (state == 2) {
+                    return;
+                }
+                err("Cyclic dependency", v.loc);
+                return;
+            }
+            this.emitState.put(v, 1);
+            if (v instanceof StructDef sd) {
+                if (sd.inheritances != null) {
+                    for (Type t : sd.inheritances) {
+                        if (t.id.resolvedDef != null && t.id.resolvedDef instanceof TypeDef td) {
+                            if (td.parent != null && ((FileUnit)td.parent).module == this.module) {
+                                this.visitTypeDef(td);
+                            }
+                        }
+                    }
+                }
+                for (FieldDef f : sd.fieldDefs) {
+                    if (f.fieldType.id.resolvedDef != null && f.fieldType.id.resolvedDef instanceof TypeDef td) {
+                        if (td.parent != null && ((FileUnit)td.parent).module == this.module) {
+                            this.visitTypeDef(td);
+                        }
+                    }
+                }
+            }
+            this.emitState.put(v, 2);
+        }
+        
         if (implMode()) {
             v.walkChildren(this);
             return;
         }
+        
+        newLine();
         
         if (v instanceof EnumDef edef) {
             print("enum class ");

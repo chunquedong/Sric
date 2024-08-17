@@ -1,16 +1,16 @@
 
 
+struct A : B, I {
+  override fun foo() {
+    bar();
+  }
+}
+
 trait I {
-  virtual fun foo();
+  abstract fun foo();
 }
 
 struct B {
   var a: Int;
   fun bar() {  }
-}
-
-struct A : B, I {
-  override fun foo() {
-    bar();
-  }
 }
