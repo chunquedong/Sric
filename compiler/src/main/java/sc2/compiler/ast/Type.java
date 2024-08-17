@@ -7,6 +7,7 @@ package sc2.compiler.ast;
 import sc2.compiler.ast.AstNode.TypeDef;
 import java.util.ArrayList;
 import java.util.HashMap;
+import sc2.compiler.ast.Expr.ClosureExpr;
 import sc2.compiler.ast.Expr.IdExpr;
 
 /**
@@ -270,7 +271,9 @@ public class Type extends AstNode {
     
     public static Type metaType(Loc loc, Type type) {
         MetaType t = new MetaType(loc, type);
-        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
+        if (type.id.resolvedDef == null && type.id.namespace == null) {
+            type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
+        }
         return t;
     }
     

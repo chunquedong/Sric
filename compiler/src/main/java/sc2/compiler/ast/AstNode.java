@@ -14,39 +14,7 @@ import sc2.compiler.ast.Token.TokenKind;
  * @author yangjiandong
  */
 public class AstNode {
-    public static final int Abstract   = 0x00000001;
-    public static final int Const      = 0x00000002;
-    public static final int Ctor       = 0x00000004;
-    public static final int Enum       = 0x00000008;
-    public static final int Facet      = 0x00000010;
-    public static final int Unsafe     = 0x00000020;
-    public static final int Getter     = 0x00000040;
-    public static final int Internal   = 0x00000080;
-    public static final int Mixin      = 0x00000100;
-    public static final int Native     = 0x00000200;
-    public static final int Override   = 0x00000400;
-    public static final int Private    = 0x00000800;
-    public static final int Protected  = 0x00001000;
-    public static final int Public     = 0x00002000;
-    public static final int Setter     = 0x00004000;
-    public static final int Static     = 0x00008000;
-    public static final int Storage    = 0x00010000;
-    public static final int Synthetic  = 0x00020000;
-    public static final int Virtual    = 0x00040000;
-    public static final int Struct     = 0x00080000;
-    public static final int Extension  = 0x00100000;
-    public static final int Mutable    = 0x00200000;
-    public static final int Readonly   = 0x00400000;
-    public static final int Async      = 0x00800000;
-    public static final int Overload   = 0x01000000;
-    public static final int Closure    = 0x02000000;
-    public static final int Throws     = 0x04000000;
-    public static final int Reflect    = 0x08000000;
-    public static final int Inline     = 0x10000000;
-    public static final int Packed     = 0x20000000;
-    public static final int ConstExpr  = 0x40000000;
-    public static final int Operator   = 0x80000000;
-  
+
     public Loc loc;
     public int len = 0;
     
@@ -114,6 +82,8 @@ public class AstNode {
         public ArrayList<FuncDef> funcDefs = new ArrayList<FuncDef>();
         public ArrayList<GenericParamDef> generiParamDefs = null;
         
+        private Scope inheritScopes = null;
+        
         public StructDef(Comments comment, int flags, String name) {
             this.comment = comment;
             this.flags = flags;
@@ -163,23 +133,44 @@ public class AstNode {
             return scope;
         }
         
-        public Scope getScopeForInherite() {
-            if (scope == null) {
-                scope = new Scope();
-                for (FieldDef f : fieldDefs) {
-                    if ((f.flags & AstNode.Private) != 0) {
-                        continue;
-                    }
-                    scope.put(f.name, f);
+        public Scope getInheriteScope() {
+            if (inheritScopes == null) {
+                if (this.inheritances == null) {
+                    return null;
                 }
-                for (FuncDef f : funcDefs) {
-                    if ((f.flags & AstNode.Private) != 0) {
-                        continue;
+                Scope s = new Scope();
+                for (Type inh : this.inheritances) {
+                    if (inh.id.resolvedDef != null) {
+                        if (inh.id.resolvedDef instanceof StructDef inhSd) {
+                            inhSd.getScopeNoPrivate(s);
+                            Scope inhScope2 = inhSd.getInheriteScope();
+                            if (inhScope2 != null) {
+                                s.addAll(inhScope2);
+                            }
+                        }
+                        else if (inh.id.resolvedDef instanceof TraitDef inhSd) {
+                            inhSd.getScopeNoPrivate(s);
+                        }
                     }
-                    scope.put(f.name, f);
                 }
+                inheritScopes = s;
             }
-            return scope;
+            return inheritScopes;
+        }
+        
+        private void getScopeNoPrivate(Scope scope) {
+            for (FieldDef f : fieldDefs) {
+                if ((f.flags & FConst.Private) != 0) {
+                    continue;
+                }
+                scope.put(f.name, f);
+            }
+            for (FuncDef f : funcDefs) {
+                if ((f.flags & FConst.Private) != 0) {
+                    continue;
+                }
+                scope.put(f.name, f);
+            }
         }
         
         public StructDef parameterize(ArrayList<Type> typeGenericArgs) {
@@ -243,6 +234,15 @@ public class AstNode {
                 }
             }
             return scope;
+        }
+        
+        public void getScopeNoPrivate(Scope scope) {
+            for (FuncDef f : funcDefs) {
+                if ((f.flags & FConst.Private) != 0) {
+                    continue;
+                }
+                scope.put(f.name, f);
+            }
         }
         
         @Override public void walkChildren(Visitor visitor) {

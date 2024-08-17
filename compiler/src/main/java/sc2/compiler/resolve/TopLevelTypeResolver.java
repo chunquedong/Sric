@@ -1,7 +1,7 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
+//
+// Copyright (c) 2024, chunquedong
+// Licensed under the Academic Free License version 3.0
+//
 package sc2.compiler.resolve;
 
 import java.util.ArrayList;
@@ -125,11 +125,41 @@ public class TopLevelTypeResolver  extends CompilePass {
         }
         resolveId(type.id);
         if (type.id.resolvedDef != null) {
-            if (!(type.id.resolvedDef instanceof TypeDef)) {
-                type.id.resolvedDef = null;
-                err("It's not a type "+type.id.name, type.loc);
+            if (type.id.resolvedDef instanceof TypeDef) {
+                //ok
+                type.id.resolvedType = Type.metaType(type.loc, type);
             }
+            else if (type.id.resolvedDef instanceof TypeAlias ta) {
+                type.id.resolvedDef = ta.type.id.resolvedDef;
+                type.id.resolvedType = Type.metaType(type.loc, type);
+            }
+            else {
+                type.id.resolvedDef = null;
+                err("It's not a type: "+type.id.name, type.loc);
+            }
+        }
+        else {
             return;
+        }
+        
+        if (type.genericArgs != null) {
+            boolean genericOk = false;
+            if (type.id.resolvedDef instanceof StructDef sd) {
+                if (sd.generiParamDefs != null) {
+                    if (type.genericArgs.size() == sd.generiParamDefs.size()) {
+                        type.id.resolvedDef = sd.parameterize(type.genericArgs);
+                        genericOk = true;
+                    }
+                }
+            }
+            if (!genericOk) {
+                err("Generic args not match", type.loc);
+            }
+        }
+        else if (type.id.resolvedDef instanceof StructDef sd) {
+            if (sd.generiParamDefs != null) {
+                err("Miss generic args", type.loc);
+            }
         }
     }
     
@@ -192,16 +222,16 @@ public class TopLevelTypeResolver  extends CompilePass {
         }
         
         if (v.parent instanceof StructDef sd) {
-            if ((v.flags & AstNode.Virtual) != 0) {
-                if ((sd.flags & AstNode.Virtual) != 0 || (sd.flags & AstNode.Abstract) != 0) {
+            if ((v.flags & FConst.Virtual) != 0) {
+                if ((sd.flags & FConst.Virtual) != 0 || (sd.flags & FConst.Abstract) != 0) {
                     //ok
                 }
                 else {
                     err("Struct must be virtual or abstract", v.loc);
                 }
             }
-            else if ((v.flags & AstNode.Abstract) != 0) {
-                if ((sd.flags & AstNode.Abstract) != 0) {
+            else if ((v.flags & FConst.Abstract) != 0) {
+                if ((sd.flags & FConst.Abstract) != 0) {
                     //ok
                 }
                 else {
@@ -213,21 +243,21 @@ public class TopLevelTypeResolver  extends CompilePass {
             }
         }
         else if (v.parent instanceof TraitDef tt) {
-            if ((v.flags & AstNode.Abstract) != 0) {
+            if ((v.flags & FConst.Abstract) != 0) {
                 if (v.code != null) {
                     err("abstract method must no code", v.loc);
                 }
             }
         }
         else {
-            if ((v.flags & AstNode.Abstract) != 0 ||
-                    (v.flags & AstNode.Virtual) != 0 ||
-                    (v.flags & AstNode.Static) != 0) {
+            if ((v.flags & FConst.Abstract) != 0 ||
+                    (v.flags & FConst.Virtual) != 0 ||
+                    (v.flags & FConst.Static) != 0) {
                 err("Invalid flags", v.loc);
             }
         }
         
-        if ((v.flags & AstNode.Readonly) != 0) {
+        if ((v.flags & FConst.Readonly) != 0) {
             err("Invalid flags", v.loc);
         }
     }
@@ -243,11 +273,25 @@ public class TopLevelTypeResolver  extends CompilePass {
                 }
                 this.scopes.add(gpScope);
             }
+            if (sd.inheritances != null) {
+                int i = 0;
+                for (Type inh : sd.inheritances) {
+                    this.resolveType(inh, inh.loc);
+                    if (i > 0) {
+                        if (inh.id.resolvedDef != null) {
+                            if (!(inh.id.resolvedDef instanceof TraitDef)) {
+                                err("Unsupport multi struct inheritance", inh.loc);
+                            }
+                        }
+                    }
+                    ++i;
+                }
+            }
         }
         v.walkChildren(this);
         
         if (gpScope != null) {
-            this.scopes.removeLast();
+            this.scopes.remove(this.scopes.size()-1);
         }
     }
     

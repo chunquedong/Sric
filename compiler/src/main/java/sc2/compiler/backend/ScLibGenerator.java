@@ -1,15 +1,16 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
+//
+// Copyright (c) 2024, chunquedong
+// Licensed under the Academic Free License version 3.0
+//
 package sc2.compiler.backend;
 
 import java.io.IOException;
 import java.io.PrintStream;
 import sc2.compiler.CompilerLog;
 import sc2.compiler.ast.AstNode;
-import sc2.compiler.ast.ClosureExpr;
 import sc2.compiler.ast.Expr;
+import sc2.compiler.ast.Expr.ClosureExpr;
+import sc2.compiler.ast.FConst;
 import sc2.compiler.ast.SModule;
 import sc2.compiler.ast.Stmt;
 import sc2.compiler.ast.Type;
@@ -115,15 +116,20 @@ public class ScLibGenerator extends BaseGenerator {
     
     @Override
     public void visitFunc(AstNode.FuncDef v) {
-        if ((v.flags & AstNode.Private) != 0) {
-            return;
+        boolean inlined = (v.flags & FConst.Inline) != 0 || v.generiParamDefs != null;
+        
+        if (!inlined) {
+            if ((v.flags & FConst.Private) != 0) {
+                return;
+            }
         }
+        
         print("fun ");
         print(v.name);
 
         printFuncPrototype(v.prototype);
 
-        boolean inlined = (v.flags & AstNode.Inline) != 0 || v.generiParamDefs != null;
+        
         if (inlined) {
             this.visit(v.code);
         }

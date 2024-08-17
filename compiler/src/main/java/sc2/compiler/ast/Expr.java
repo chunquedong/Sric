@@ -148,4 +148,10 @@ public abstract class Expr extends AstNode {
             this.value = value;
         }
     }
+    
+    public static class ClosureExpr extends Expr {
+        public FuncPrototype prototype = new FuncPrototype();// function signature
+        public Block code;             // code block
+    }
+
 }

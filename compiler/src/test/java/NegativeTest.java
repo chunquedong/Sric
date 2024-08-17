@@ -2,52 +2,52 @@
 // Copyright (c) 2024, chunquedong
 // Licensed under the Academic Free License version 3.0
 //
-import java.io.ByteArrayOutputStream;
-import java.io.File;
+
 import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.File;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
-import sc2.compiler.CompilerLog;
-import sc2.compiler.Util;
-import sc2.compiler.ast.AstNode;
-import sc2.compiler.backend.CppGenerator;
-import sc2.compiler.parser.DeepParser;
-import sc2.compiler.resolve.ExprTypeResolver;
-import sc2.compiler.resolve.TopLevelTypeResolver;
+
 
 /**
  *
  * @author yangjiandong
  */
-public class TypeCheckTest {
+public class NegativeTest {
+    
     @Test
     public void test() throws IOException {
-        String file = "res/code/testExpr.sc";
         String libPath = "res/lib";
-        
-        sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file, libPath);
+        File file = new File("res/negative/unsafe.sc");
+
+        sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file.getPath(), libPath);
         compiler.genCode = false;
         boolean res = compiler.run();
-        assertTrue(res);
+        assertFalse(res, file.getName());
+
+        String str = compiler.log.toString();
+        String name = file.getName().substring(0, file.getName().lastIndexOf("."));
+        GoldenTest.verifyGolden(str, "negative", name+".cpp");
     }
     
     @Test
     public void testAll() throws IOException {
         String libPath = "res/lib";
-        
-        File[] list = new File("res/code").listFiles();
+        File[] list = new File("res/negative").listFiles();
         for (File file : list) {
             if (!file.getName().endsWith(".sc")) {
                 continue;
             }
-        
+
             sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file.getPath(), libPath);
             compiler.genCode = false;
             boolean res = compiler.run();
-            assertTrue(res);
+            assertFalse(res, file.getName());
+
+            String str = compiler.log.toString();
+            String name = file.getName().substring(0, file.getName().lastIndexOf("."));
+            GoldenTest.verifyGolden(str, "negative", name+".cpp");
         }
     }
 }

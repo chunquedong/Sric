@@ -22,7 +22,7 @@ import sc2.compiler.ast.Type;
 import sc2.compiler.CompilePass;
 import sc2.compiler.CompilerLog;
 import sc2.compiler.ast.AstNode.*;
-import sc2.compiler.ast.ClosureExpr;
+import sc2.compiler.ast.FConst;
 import sc2.compiler.ast.SModule;
 import sc2.compiler.ast.SModule.Depend;
 import sc2.compiler.ast.Type.ArrayType;
@@ -218,7 +218,7 @@ public class CppGenerator extends BaseGenerator {
             printLocalFieldDefAsExpr(v);
             print(";").newLine();
         }
-        else if ((v.flags & AstNode.Static) != 0) {
+        else if ((v.flags & FConst.Static) != 0) {
             printLocalFieldDefAsExpr(v);
             print(";").newLine();
         }
@@ -226,7 +226,7 @@ public class CppGenerator extends BaseGenerator {
     
     void printLocalFieldDefAsExpr(AstNode.FieldDef v) {
         boolean isImpl = implMode();
-        boolean isStatic = (v.flags & AstNode.Static) != 0;
+        boolean isStatic = (v.flags & FConst.Static) != 0;
         if (v.parent instanceof FileUnit) {
             isStatic = true;
         }
@@ -261,7 +261,7 @@ public class CppGenerator extends BaseGenerator {
     
     @Override
     public void visitFunc(AstNode.FuncDef v) {
-        boolean inlined = (v.flags & AstNode.Inline) != 0 || v.generiParamDefs != null;
+        boolean inlined = (v.flags & FConst.Inline) != 0 || v.generiParamDefs != null;
         if (implMode()) {
             if (v.code == null || inlined) {
                 return;
@@ -270,7 +270,7 @@ public class CppGenerator extends BaseGenerator {
         
         newLine();
         
-        if ((v.flags & AstNode.Virtual) != 0 || (v.flags & AstNode.Abstract) != 0) {
+        if ((v.flags & FConst.Virtual) != 0 || (v.flags & FConst.Abstract) != 0) {
             print("virtual ");
         }
         
@@ -286,7 +286,7 @@ public class CppGenerator extends BaseGenerator {
         printFuncPrototype(v.prototype, false);
         
         if (v.code == null) {
-            if ((v.flags & AstNode.Abstract) != 0) {
+            if ((v.flags & FConst.Abstract) != 0) {
                 print(" = 0");
             }
             print(";");

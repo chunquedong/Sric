@@ -19,6 +19,8 @@ import sc2.compiler.ast.Token.TokenKind;
 import static sc2.compiler.ast.Token.TokenKind.*;
 import sc2.compiler.ast.Type.ArrayType;
 import sc2.compiler.ast.Type.FuncType;
+import sc2.compiler.ast.Type.PointerAttr;
+import sc2.compiler.ast.Type.PointerType;
 
 /**
  *
@@ -35,6 +37,7 @@ public class ExprTypeResolver extends CompilePass {
     private ArrayDeque<AstNode> funcs = new ArrayDeque<AstNode>();
     private ArrayDeque<AstNode> loops = new ArrayDeque<AstNode>();
     private StructDef curStruct = null;
+    private int inUnsafe = 0;
     
     public ExprTypeResolver(CompilerLog log, SModule module) {
         super(log);
@@ -120,9 +123,11 @@ public class ExprTypeResolver extends CompilePass {
         if (type.id.resolvedDef != null) {
             if (type.id.resolvedDef instanceof TypeDef) {
                 //ok
+                type.id.resolvedType = Type.metaType(type.loc, type);
             }
             else if (type.id.resolvedDef instanceof TypeAlias ta) {
                 type.id.resolvedDef = ta.type.id.resolvedDef;
+                type.id.resolvedType = Type.metaType(type.loc, type);
             }
             else {
                 type.id.resolvedDef = null;
@@ -219,11 +224,17 @@ public class ExprTypeResolver extends CompilePass {
         this.funcs.push(v);
         preScope = new Scope();
         visitFuncPrototype(v.prototype, preScope);
-        if ((v.flags & AstNode.Operator) != 0) {
+        if ((v.flags & FConst.Operator) != 0) {
             verifyOperator(v);
         }
         if (v.code != null) {
+            if ((v.flags & FConst.Unsafe) != 0) {
+                ++inUnsafe;
+            }
             this.visit(v.code);
+            if ((v.flags & FConst.Unsafe) != 0) {
+                --inUnsafe;
+            }
         }
         preScope = null;
         
@@ -236,23 +247,8 @@ public class ExprTypeResolver extends CompilePass {
         if (v instanceof StructDef sd) {
             curStruct = sd;
             if (sd.inheritances != null) {
-                Scope inhScopes = pushScope();
-                int i = 0;
-                for (Type inh : sd.inheritances) {
-                    this.resolveType(inh);
-                    if (i > 0) {
-                        if (inh.id.isResolved()) {
-                            if (!(inh.id.resolvedDef instanceof TraitDef)) {
-                                err("Unsupport multi struct inheritance", inh.loc);
-                            }
-                        }
-                    }
-                    if (inh.id.resolvedDef != null && inh.id.resolvedDef instanceof StructDef inhSd) {
-                        Scope inhScope = inhSd.getScopeForInherite();
-                        inhScopes.addAll(inhScope);
-                    }
-                    ++i;
-                }
+                Scope inhScopes = sd.getInheriteScope();
+                this.scopes.add(inhScopes);
                 ++scopeCount;
                 
                 for (FieldDef f : sd.fieldDefs) {
@@ -262,11 +258,11 @@ public class ExprTypeResolver extends CompilePass {
                 }
                 
                 for (FuncDef f : sd.funcDefs) {
-                    if ((f.flags & AstNode.Static) != 0 || (f.flags | AstNode.Override) != 0) {
+                    if ((f.flags & FConst.Static) != 0 || (f.flags | FConst.Override) != 0) {
                         continue;
                     }
                     if (inhScopes.contains(f.name)) {
-                        err("Field name is already exsits"+f.name, f.loc);
+                        err("Func name is already exsits"+f.name, f.loc);
                     }
                 }
             }
@@ -365,7 +361,9 @@ public class ExprTypeResolver extends CompilePass {
             }
         }
         else if (v instanceof Stmt.UnsafeBlock bs) {
+            ++inUnsafe;
             this.visit(bs.block);
+            --inUnsafe;
         }
         else if (v instanceof Stmt.ReturnStmt rets) {
             if (rets.expr != null) {
@@ -473,12 +471,37 @@ public class ExprTypeResolver extends CompilePass {
                 Scope scope = t.getScope();
                 AstNode def = scope.get(name, loc, log);
                 if (def == null) {
+                    if (t instanceof StructDef sd) {
+                        if (sd.inheritances != null) {
+                            Scope inhScopes = sd.getInheriteScope();
+                            def = inhScopes.get(name, loc, log);
+                        }
+                    }
+                }
+                if (def == null) {
                     err("Unkown name:"+name, loc);
                 }
                 return def;
             }
         }
         return null;
+    }
+    
+    private void verifyUnsafe(Expr target) {
+        if (target.resolvedType != null && target.resolvedType instanceof PointerType pt) {
+            if (pt.pointerAttr == PointerAttr.raw) {
+                if (inUnsafe == 0) {
+                    err("Expect unsafe block", target.loc);
+                }
+            }
+        }
+        if (target instanceof IdExpr e) {
+            if (e.resolvedDef != null && e.resolvedDef instanceof FuncDef f) {
+                if ((f.flags & FConst.Unsafe) != 0) {
+                    err("Expect unsafe block", target.loc);
+                }
+            }
+        }
     }
 
     @Override
@@ -489,25 +512,29 @@ public class ExprTypeResolver extends CompilePass {
                 e.resolvedType = getSlotType(e.resolvedDef);
                 
                 if (e.resolvedDef instanceof FieldDef f) {
-                    checkProtection(f, f.parent, f.loc, e.inLeftSide);
+                    checkProtection(f, f.parent, v.loc, e.inLeftSide);
                 }
                 else if (e.resolvedDef instanceof FuncDef f) {
-                    checkProtection(f, f.parent, f.loc, e.inLeftSide);
+                    checkProtection(f, f.parent, v.loc, e.inLeftSide);
                 }
             }
         }
         else if (v instanceof Expr.AccessExpr e) {
             this.visit(e.target);
+            verifyUnsafe(e.target);
             e.resolvedDef = resoveOnTarget(e.target, e.name, e.loc);
             if (e.resolvedDef != null) {
                 e.resolvedType = getSlotType(e.resolvedDef);
                 
                 if (e.resolvedDef instanceof FieldDef f) {
-                    checkProtection(f, f.parent, f.loc, e.inLeftSide);
+                    checkProtection(f, f.parent, v.loc, e.inLeftSide);
                 }
                 else if (e.resolvedDef instanceof FuncDef f) {
-                    checkProtection(f, f.parent, f.loc, e.inLeftSide);
+                    checkProtection(f, f.parent, v.loc, e.inLeftSide);
                 }
+            }
+            else {
+                err("Unknow access:"+e.name, e.loc);
             }
         }
         else if (v instanceof Expr.LiteralExpr e) {
@@ -557,6 +584,7 @@ public class ExprTypeResolver extends CompilePass {
                         }
                         else {
                             e.resolvedType = e.operand.resolvedType.genericArgs.get(0);
+                            verifyUnsafe(e.operand);
                         }
                         break;
                     //++, --
@@ -582,6 +610,7 @@ public class ExprTypeResolver extends CompilePass {
         }
         else if (v instanceof Expr.IndexExpr e) {
             this.visit(e.target);
+            verifyUnsafe(e.target);
             this.visit(e.index);
             verifyInt(e.index);
             
@@ -596,6 +625,9 @@ public class ExprTypeResolver extends CompilePass {
                         err("Unknow operator []", e.loc);
                     }
                     else if (rdef instanceof FuncDef f) {
+                        if ((f.flags & FConst.Operator) == 0) {
+                            err("Expected operator", e.loc);
+                        }
                         int expectedParamSize = e.inLeftSide ? 2:1;
                         if (f.prototype.paramDefs == null || f.prototype.paramDefs.size() != expectedParamSize) {
                             err("Invalid operator []", e.loc);
@@ -686,35 +718,47 @@ public class ExprTypeResolver extends CompilePass {
         }
 
         if (sd != null) {
-            for (FieldDef f : sd.fieldDefs) {
-                if (f.initExpr != null) {
-                    continue;
-                }
-                boolean found = false;
-                for (Expr.CallArg t : e.args) {
-                    if (t.name.equals(f.name)) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    err("Field not init:"+f.name, e.loc);
-                }
+            if ((sd.flags & FConst.Abstract) != 0) {
+                err("It's abstract", e.target.loc);
             }
-
-            for (Expr.CallArg t : e.args) {
-                boolean found = false;
+            if (e.args != null) {
                 for (FieldDef f : sd.fieldDefs) {
-                    if (t.name.equals(f.name)) {
-                        found = true;
-                        break;
+                    if (f.initExpr != null) {
+                        continue;
+                    }
+                    boolean found = false;
+                    for (Expr.CallArg t : e.args) {
+                        if (t.name.equals(f.name)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        err("Field not init:"+f.name, e.loc);
                     }
                 }
-                if (!found) {
-                    err("Field not found:"+t.name, t.loc);
+
+                for (Expr.CallArg t : e.args) {
+                    boolean found = false;
+                    for (FieldDef f : sd.fieldDefs) {
+                        if (t.name.equals(f.name)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        err("Field not found:"+t.name, t.loc);
+                    }
                 }
             }
-            e.resolvedType = e.target.resolvedType;
+            if (e.target.resolvedType.isMetaType()) {
+                Type type = new Type(e.loc, sd.name);
+                type.id.resolvedDef = sd;
+                e.resolvedType = type;
+            }
+            else {
+                e.resolvedType = e.target.resolvedType;
+            }
         }
         else if (!e.isArray) {
             err("Invalid init block", e.loc);
@@ -770,6 +814,7 @@ public class ExprTypeResolver extends CompilePass {
 
     private void resolveCallExpr(Expr.CallExpr e) {
         this.visit(e.target);
+        verifyUnsafe(e.target);
         if (e.args != null) {
             for (Expr.CallArg t : e.args) {
                 this.visit(t.argExpr);
@@ -789,7 +834,7 @@ public class ExprTypeResolver extends CompilePass {
     }
     
     private boolean isInheriteFrom(StructDef cur, TypeDef parent) {
-        if (curStruct.inheritances != null) {
+        if (curStruct.inheritances == null) {
             return false;
         }
         for (Type t : cur.inheritances) {
@@ -809,19 +854,19 @@ public class ExprTypeResolver extends CompilePass {
     private boolean checkProtection(TopLevelDef slot, AstNode parent, Loc loc, boolean isSet) {
         int slotFlags = slot.flags;
         if (isSet && slot instanceof FieldDef f) {
-            if ((f.flags & AstNode.Readonly) != 0) {
-                slotFlags |= AstNode.Private;
+            if ((f.flags & FConst.Readonly) != 0) {
+                slotFlags |= FConst.Private;
             }
         }
         
         if (parent instanceof TypeDef tparent) {
             if (parent != curStruct) {
-                if ((slotFlags & AstNode.Private) != 0) {
+                if ((slotFlags & FConst.Private) != 0) {
                     err("It's private", loc);
                     return false;
                 }
 
-                if ((slotFlags & AstNode.Protected) != 0) {
+                if ((slotFlags & FConst.Protected) != 0) {
                     if (curStruct == null || !isInheriteFrom(curStruct, tparent)) {
                         err("It's protected", loc);
                     }
@@ -829,7 +874,7 @@ public class ExprTypeResolver extends CompilePass {
             }
         }
         else if (parent instanceof FileUnit fu) {
-            if ((slotFlags & AstNode.Private) != 0 || (slotFlags & AstNode.Protected) != 0) {
+            if ((slotFlags & FConst.Private) != 0 || (slotFlags & FConst.Protected) != 0) {
                 if (fu.module != this.module) {
                     err("It's private or protected", loc);
                 }
@@ -1007,6 +1052,9 @@ public class ExprTypeResolver extends CompilePass {
             err("Unknow operator:"+curt, e.loc);
         }
         else if (rdef instanceof FuncDef f) {
+            if ((f.flags & FConst.Operator) == 0) {
+                err("Expected operator", e.loc);
+            }
             if (!e.rhs.resolvedType.fit(f.prototype.paramDefs.get(0).paramType)) {
                 err("Invalid arg type:"+e.rhs.resolvedType, e.rhs.loc);
             }

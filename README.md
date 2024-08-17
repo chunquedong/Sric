@@ -19,8 +19,8 @@ Work in process ...
 
 ```
 var p: own* Int;       //ownership pointer, both unique and shared
-var p: ref* Int;       //non-ownership pointer, safe check at runtime
-var p: *Int;           //unsafe raw pointer
+var p: * Int;          //non-ownership pointer, safe check at runtime
+var p: raw* Int;       //unsafe raw pointer
 var p: weak* Int;      //weak pointer
 ```
 

@@ -278,10 +278,10 @@ public class Parser {
         TraitDef traitDef = null;
         // mixin
         if (curt == TokenKind.traitKeyword) {
-            if ((flags & AstNode.Abstract) != 0) {
+            if ((flags & FConst.Abstract) != 0) {
                 err("The 'abstract' modifier is implied on trait");
             }
-            flags = flags | AstNode.Mixin | AstNode.Abstract;
+            flags = flags | FConst.Mixin | FConst.Abstract;
             isMixin = true;
             consume();
             
@@ -292,13 +292,13 @@ public class Parser {
             typeDef = traitDef;
         }
         else if (curt == TokenKind.enumKeyword) {
-            if ((flags & AstNode.Const) != 0) {
+            if ((flags & FConst.Const) != 0) {
                 err("The 'const' modifier is implied on enum");
             }
-            if ((flags & AstNode.Abstract) != 0) {
+            if ((flags & FConst.Abstract) != 0) {
                 err("Cannot use 'abstract' modifier on enum");
             }
-            flags = AstNode.Enum;
+            flags = FConst.Enum;
             isEnum = true;
             consume();
             
@@ -398,13 +398,13 @@ public class Parser {
             int oldFlags = flags;
             switch (curt) {
                 case abstractKeyword:
-                    flags = flags | (AstNode.Abstract);
+                    flags = flags | (FConst.Abstract);
                     break;
                 case constKeyword:
-                    flags = flags | (AstNode.Const);
+                    flags = flags | (FConst.Const);
                     break;
                 case readonlyKeyword:
-                    flags = flags | (AstNode.Readonly);
+                    flags = flags | (FConst.Readonly);
                     break;
 //                case finalKeyword:
 //                    flags = flags | (AstNode.Final);
@@ -414,56 +414,56 @@ public class Parser {
 //                    protection = true;
 //                    break;
                 case externKeyword:
-                    flags = flags | (AstNode.Native);
+                    flags = flags | (FConst.Native);
                     break;
                 case extensionKeyword:
-                    flags = flags | (AstNode.Extension);
+                    flags = flags | (FConst.Extension);
                     break;
                 case overrideKeyword:
-                    flags = flags | (AstNode.Override);
+                    flags = flags | (FConst.Override);
                     break;
                 case privateKeyword:
-                    flags = flags | (AstNode.Private);
+                    flags = flags | (FConst.Private);
                     protection = true;
                     break;
                 case protectedKeyword:
-                    flags = flags | (AstNode.Protected);
+                    flags = flags | (FConst.Protected);
                     protection = true;
                     break;
                 case publicKeyword:
-                    flags = flags | (AstNode.Public);
+                    flags = flags | (FConst.Public);
                     protection = true;
                     break;
                 case staticKeyword:
-                    flags = flags | (AstNode.Static);
+                    flags = flags | (FConst.Static);
                     break;
                 case virtualKeyword:
-                    flags = flags | (AstNode.Virtual);
+                    flags = flags | (FConst.Virtual);
                     break;
                 //case TokenKind.rtconstKeyword:   flags = flags.or(FConst.RuntimeConst)
                 case asyncKeyword:
-                    flags = flags | (AstNode.Async);
+                    flags = flags | (FConst.Async);
                     break;
                 case reflectKeyword:
-                    flags = flags | (AstNode.Reflect);
+                    flags = flags | (FConst.Reflect);
                     break;
                 case unsafeKeyword:
-                    flags = flags | (AstNode.Unsafe);
+                    flags = flags | (FConst.Unsafe);
                     break;
                 case throwKeyword:
-                    flags = flags | (AstNode.Throws);
+                    flags = flags | (FConst.Throws);
                     break;
                 case inlineKeyword:
-                    flags = flags | (AstNode.Inline);
+                    flags = flags | (FConst.Inline);
                     break;
                 case packedKeyword:
-                    flags = flags | (AstNode.Packed);
+                    flags = flags | (FConst.Packed);
                     break;
                 case constexprKeyword:
-                    flags = flags | (AstNode.ConstExpr);
+                    flags = flags | (FConst.ConstExpr);
                     break;
                 case operatorKeyword:
-                    flags = flags | (AstNode.Operator);
+                    flags = flags | (FConst.Operator);
                     break;
                 default:
                     done = true;
@@ -487,10 +487,10 @@ public class Parser {
             int oldFlags = flags;
             switch (curt) {
                 case constKeyword:
-                    flags = flags | (AstNode.Const);
+                    flags = flags | (FConst.Const);
                     break;
                 case mutKeyword:
-                    flags = flags | (AstNode.Mutable);
+                    flags = flags | (FConst.Mutable);
                     break;
                 default:
                     done = true;
