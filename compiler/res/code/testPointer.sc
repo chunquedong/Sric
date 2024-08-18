@@ -20,4 +20,7 @@ fun main()
     foo(p2);
 
     p = p2;
+
+    var x: own*? Int;
+    foo(x!);
 }

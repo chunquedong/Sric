@@ -54,13 +54,19 @@ public class Type extends AstNode {
         public PointerAttr pointerAttr = PointerAttr.ref;
         //** Is this is a nullable type (marked with trailing ?)
         public boolean isNullable = false;
-    
+        
         public PointerType(Loc loc, Type elemType, PointerAttr pointerAttr, boolean nullable) {
             super(loc, "*");
             this.genericArgs = new ArrayList<>();
             this.genericArgs.add(elemType);
             this.pointerAttr = pointerAttr;
             this.isNullable = nullable;
+        }
+        
+        public PointerType toNonNullable() {
+            PointerType n = new PointerType(loc, this.genericArgs.get(0), this.pointerAttr, false);
+            n.id = this.id;
+            return n;
         }
         
         @java.lang.Override
@@ -91,6 +97,7 @@ public class Type extends AstNode {
                 }
                 else {
                     if (this.isNullable && !a.isNullable) {
+                        //error to nonnullable
                         return false;
                     }
                     

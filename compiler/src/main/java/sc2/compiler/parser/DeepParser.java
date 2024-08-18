@@ -687,16 +687,30 @@ public class DeepParser extends Parser {
      ** A term is a base terminal such as a variable, call, or literal,
      ** optionally followed by a chain of accessor expressions - such
      ** as "x.y[z](a, b)". 
-     **   <termExpr> =  <primaryExpr> <termChain>*
+     **   <termExpr> =  <optinalPrimaryExpr> <optinalTermChain>*
+     *    <optinalPrimaryExpr> = <primaryExpr> ["!"]
+     *    <optinalTermChain> = <termChain> ["!"]
      **/
     private Expr termExpr() {
         Expr target = primaryExpr();
+        if (curt == TokenKind.bang) {
+            consume();
+            Loc loc = target.loc;
+            target = new OptionalExpr(target);
+            endLoc(target, loc);
+        }
         while (curt != TokenKind.semicolon) {
             Expr chained = termChainExpr(target);
             if (chained == null) {
                 break;
             }
             target = chained;
+            if (curt == TokenKind.bang) {
+                consume();
+                Loc loc = target.loc;
+                target = new OptionalExpr(target);
+                endLoc(target, loc);
+            }
         }
         return target;
     }
@@ -716,8 +730,8 @@ public class DeepParser extends Parser {
         // handle various call operators: . -> ~>
         switch (curt) {
             case dot:
-            case arrow:
-            case tildeArrow:
+//            case arrow:
+//            case tildeArrow:
                 return accessExpr(target);
         }
         

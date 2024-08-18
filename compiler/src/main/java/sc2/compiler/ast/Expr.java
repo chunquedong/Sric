@@ -48,6 +48,15 @@ public abstract class Expr extends AstNode {
         }
     }
     
+    public static class OptionalExpr extends Expr {
+        public Expr operand;    // operand expression
+        public boolean isNullable = false;
+        
+        public OptionalExpr(Expr operand) {
+            this.operand = operand;
+        }
+    }
+    
     /**
      * wrap type for sizeof(t) or 'epxr is/as T'
      */

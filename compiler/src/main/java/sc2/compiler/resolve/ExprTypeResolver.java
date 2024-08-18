@@ -193,9 +193,22 @@ public class ExprTypeResolver extends CompilePass {
                 v.fieldType = v.initExpr.resolvedType;
             }
         }
+        
         if (v.fieldType == null) {
             err("Unkonw field type", v.loc);
         }
+        
+        if (v.initExpr == null && v.fieldType != null && v.fieldType instanceof PointerType pt) {
+            if (!pt.isNullable) {
+                if (v.parent instanceof StructDef) {
+                    //OK
+                }
+                else {
+                    err("Non-nullable pointer must inited", v.loc);
+                }
+            }
+        }
+        
         if (v.isLocalVar) {
             lastScope().put(v.name, v);
         }
@@ -672,6 +685,21 @@ public class ExprTypeResolver extends CompilePass {
             
             e.resolvedType = Type.voidType(e.loc);
         }
+        else if (v instanceof OptionalExpr e) {
+            this.visit(e.operand);
+            boolean ok = false;
+            if (e.operand.resolvedType != null) {
+                if (e.operand.resolvedType instanceof PointerType pt) {
+                    if (pt.isNullable) {
+                        e.resolvedType = pt.toNonNullable();
+                        ok = true;
+                    }
+                }
+            }
+            if (!ok) {
+                err("Invalid non-nullable", e.operand.loc);
+            }
+        }
         else {
             err("Unkown expr:"+v, v.loc);
         }
@@ -823,6 +851,36 @@ public class ExprTypeResolver extends CompilePass {
         if (e.target.isResolved()) {
             if (e.target.resolvedType instanceof FuncType f) {
                 e.resolvedType = f.prototype.returnType;
+                
+                if (e.args != null) {
+                    if (f.prototype.paramDefs == null) {
+                        err("Args error", e.loc);
+                    }
+                    else {
+                        int i = 0;
+                        for (Expr.CallArg t : e.args) {
+                            if (t.name != null) {
+                                if (!t.name.equals(f.prototype.paramDefs.get(i).name)) {
+                                    err("Arg name error", t.loc);
+                                }
+                            }
+                            if (!t.argExpr.resolvedType.fit(f.prototype.paramDefs.get(i).paramType)) {
+                                err("Arg type error", t.loc);
+                            }
+                            ++i;
+                        }
+                        if (i < f.prototype.paramDefs.size()) {
+                            if (f.prototype.paramDefs.get(i).defualtValue == null) {
+                                err("Arg number error", e.loc);
+                            }
+                        }
+                    }
+                }
+                else if (f.prototype.paramDefs != null) {
+                    if (f.prototype.paramDefs.get(0).defualtValue == null) {
+                        err("Arg number error", e.loc);
+                    }
+                }
             }
             else {
                 err("Call a non-function type:"+e.target, e.loc);
