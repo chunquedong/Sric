@@ -71,6 +71,7 @@ public abstract class Expr extends AstNode {
     public static class IndexExpr extends Expr {
         public Expr target;
         public Expr index;
+        public AstNode resolvedDef;
     }
     
     public static class GenericInstance extends Expr {

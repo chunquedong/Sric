@@ -10,6 +10,9 @@ struct A {
 fun foo(c: ref* Int) {
 }
 
+fun foo2(c: own* Int) {
+}
+
 fun main()
 {
     var i = 1;
@@ -23,4 +26,6 @@ fun main()
 
     var x: own*? Int;
     foo(x!);
+
+    foo2(move p2);
 }

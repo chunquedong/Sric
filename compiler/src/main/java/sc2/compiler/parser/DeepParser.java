@@ -984,6 +984,11 @@ public class DeepParser extends Parser {
                 expr = new UnaryExpr(TokenKind.awaitKeyword, expr());
                 break;
             }
+            case moveKeyword: {
+                consume();
+                expr = new UnaryExpr(TokenKind.moveKeyword, expr());
+                break;
+            }
             case lbracket:
                 if (peekt == rbracket) {
                     expr = typeExpr();

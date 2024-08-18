@@ -171,6 +171,46 @@ public class ExprTypeResolver extends CompilePass {
         popScope();
         popScope();
     }
+    
+    private void verifyTypeFit(Expr target, Type to, Loc loc) {
+        Type from = target.resolvedType;
+        if (from == null) {
+            return;
+        }
+        
+        if (!from.fit(to)) {
+            err("Type mismatch", loc);
+            return;
+        }
+        
+        if (from instanceof PointerType p1 && to instanceof PointerType p2) {
+            if (p1.pointerAttr == Type.PointerAttr.own && p2.pointerAttr == Type.PointerAttr.own) {
+                AstNode resolvedDef = idResolvedDef(target);
+                if (resolvedDef != null) {
+                    if (resolvedDef instanceof FieldDef) {
+                        err("Miss move keyword", loc);
+                    }
+                }
+            }
+        }
+    }
+    
+    private AstNode idResolvedDef(Expr target) {
+        if (target instanceof OptionalExpr e) {
+            target = e.operand;
+        }
+
+        if (target instanceof IdExpr e) {
+            return e.resolvedDef;
+        }
+        else if (target instanceof AccessExpr e) {
+            return e.resolvedDef;
+        }
+        else if (target instanceof IndexExpr e) {
+            return e.resolvedDef;
+        }
+        return null;
+    }
 
     @Override
     public void visitField(FieldDef v) {
@@ -184,9 +224,7 @@ public class ExprTypeResolver extends CompilePass {
                     v.fieldType = v.initExpr.resolvedType;
                 }
                 else {
-                    if (!v.initExpr.resolvedType.fit(v.fieldType)) {
-                        err("Type mismatch", v.loc);
-                    }
+                    verifyTypeFit(v.initExpr, v.fieldType, v.loc);
                 }
             }
             if (v.fieldType == null) {
@@ -508,11 +546,11 @@ public class ExprTypeResolver extends CompilePass {
                 }
             }
         }
-        if (target instanceof IdExpr e) {
-            if (e.resolvedDef != null && e.resolvedDef instanceof FuncDef f) {
-                if ((f.flags & FConst.Unsafe) != 0) {
-                    err("Expect unsafe block", target.loc);
-                }
+        
+        AstNode resolvedDef = idResolvedDef(target);
+        if (resolvedDef != null && resolvedDef instanceof FuncDef f) {
+            if ((f.flags & FConst.Unsafe) != 0) {
+                err("Expect unsafe block", target.loc);
             }
         }
     }
@@ -613,6 +651,9 @@ public class ExprTypeResolver extends CompilePass {
                     case awaitKeyword:
                         e.resolvedType = e.operand.resolvedType;
                         break;
+                    case moveKeyword:
+                        e.resolvedType = e.operand.resolvedType;
+                        break;
                     default:
                         break;
                 }
@@ -645,6 +686,7 @@ public class ExprTypeResolver extends CompilePass {
                         if (f.prototype.paramDefs == null || f.prototype.paramDefs.size() != expectedParamSize) {
                             err("Invalid operator []", e.loc);
                         }
+                        e.resolvedDef = f;
                         e.resolvedType = f.prototype.returnType;
                     }
                     else {
@@ -864,9 +906,7 @@ public class ExprTypeResolver extends CompilePass {
                                     err("Arg name error", t.loc);
                                 }
                             }
-                            if (!t.argExpr.resolvedType.fit(f.prototype.paramDefs.get(i).paramType)) {
-                                err("Arg type error", t.loc);
-                            }
+                            verifyTypeFit(t.argExpr, f.prototype.paramDefs.get(i).paramType, t.loc);
                             ++i;
                         }
                         if (i < f.prototype.paramDefs.size()) {
@@ -1049,9 +1089,7 @@ public class ExprTypeResolver extends CompilePass {
                         }
                         else { 
                             if (curt == TokenKind.assign) {
-                                if (!e.rhs.resolvedType.fit(e.lhs.resolvedType)) {
-                                    err("Type mismatch", e.loc);
-                                }
+                                verifyTypeFit(e.rhs, e.lhs.resolvedType, e.loc);
                             }
                             else {
                                 if (!e.lhs.resolvedType.equals(e.rhs.resolvedType)) {
@@ -1104,9 +1142,7 @@ public class ExprTypeResolver extends CompilePass {
             if ((f.flags & FConst.Operator) == 0) {
                 err("Expected operator", e.loc);
             }
-            if (!e.rhs.resolvedType.fit(f.prototype.paramDefs.get(0).paramType)) {
-                err("Invalid arg type:"+e.rhs.resolvedType, e.rhs.loc);
-            }
+            verifyTypeFit(e.rhs, f.prototype.paramDefs.get(0).paramType, e.rhs.loc);
             e.resolvedType = f.prototype.returnType;
         }
         else {

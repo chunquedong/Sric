@@ -1,15 +1,14 @@
 # safeC
 
-Memory safe and compiled systems programming language.
+A memory safe and compiled systems programming language.
 
 Work in process ...
 
 ## Features
-- Fast as C. low-level memeory access without GC.
-- Safe as Rust but no reference limitations.
-- Object-oriented. inheritance and polymorphisn.
-- Simpler than C++. A subset of C++.
-- Interoperate with existing code. compile to C++ code.
+- Low-level memeory access without GC.
+- Memory safe and no reference limitations.
+- Object-oriented.
+- Interoperate with existing C++ code.
 - Non-nullable pointer.
 - Modularization
 
@@ -19,7 +18,7 @@ Work in process ...
 
 ```
 var p: own* Int;       //ownership pointer, both unique and shared
-var p: * Int;          //non-ownership pointer, safe check at runtime
+var p: ref* Int;       //non-ownership pointer, safe check at runtime
 var p: raw* Int;       //unsafe raw pointer
 var p: weak* Int;      //weak pointer
 ```
@@ -53,7 +52,7 @@ Dereference raw pointer in unsafe block
 var p: *Int;
 ...
 unsafe {
-  var i = *p;
+    var i = *p;
 }
 ```
 
@@ -62,9 +61,9 @@ Unsafe function must call in unsafe block
 unsafe fun foo() { ... }
 
 fun main() {
-  unsafe {
-    foo();
-  }
+    unsafe {
+        foo();
+    }
 }
 ```
 
@@ -72,18 +71,18 @@ fun main() {
 
 ```
 trait I {
-  virtual fun foo();
+    virtual fun foo();
 }
 
 struct B {
-  var a: Int;
-  fun bar() { ... }
+    var a: Int;
+    fun bar() { ... }
 }
 
 struct A : B, I {
-  override fun foo(B* b) {
-    ...
-  }
+    override fun foo(B* b) {
+        ...
+    }
 }
 
 ```
@@ -92,11 +91,11 @@ struct A : B, I {
 
 ```
 struct A {
-  var i: Int;
+    var i: Int;
 }
 
-var a  = A { i : 0 };
-var a: own* A = alloc$<A>() { i : 0 };
+var a  = A { i = 0 };
+var a: own* A = alloc$<A>() { i = 0 };
 ```
 
 
@@ -129,13 +128,13 @@ var a: [15]Int;
 ### Generic Type
 ```
 struct Bar$<T> {
-  fun foo() {
-    ...
-  }
+    fun foo() {
+        ...
+    }
 }
 
 T fun foo$<T>(a: T) {
-   return a;
+    return a;
 }
 
 var b: Bar$<Int>;
@@ -145,8 +144,8 @@ var b: Bar$<Int>;
 
 Default non-nullable
 ```
-var a: own* B = ..;
-var b: own*? B = null;
+var a: own*? B;
+var b: own* B = a!;
 ```
 
 
@@ -246,6 +245,17 @@ enum Color {
 }
 
 var c = Color::red;
+```
+
+### Default Param and Named Arg
+
+```
+fun foo(a: Int, b: Int = 0) {
+}
+
+fun main() {
+    foo(a = 10);
+}
 ```
 
 ## Removed features from C++
