@@ -35,6 +35,13 @@ public class Type extends AstNode {
         public FuncType(Loc loc, FuncPrototype prototype) {
             super(loc, "=>");
             this.prototype = prototype;
+            this.genericArgs = new ArrayList<>();
+            this.genericArgs.add(prototype.returnType);
+            if (prototype.paramDefs != null) {
+                for (ParamDef p : prototype.paramDefs) {
+                    this.genericArgs.add(p.paramType);
+                }
+            }
         }
         
         @java.lang.Override
@@ -60,6 +67,70 @@ public class Type extends AstNode {
         public String toString() {
             String t = super.toString();
             return pointerAttr + "*" + t;
+        }
+        
+        @Override
+        protected boolean checkEquals(Type target) {
+            if (target instanceof PointerType a) {
+                return (this.pointerAttr == a.pointerAttr) && (this.isNullable == a.isNullable);
+            }
+            else {
+                return false;
+            }
+        }
+        
+        @Override
+        public boolean fit(Type target) {
+            if (equals(target)) {
+                return true;
+            }
+            
+            if (target instanceof PointerType a) {
+                if ((this.pointerAttr == a.pointerAttr) && (this.isNullable == a.isNullable)) {
+                    //ok
+                }
+                else {
+                    if (this.isNullable && !a.isNullable) {
+                        return false;
+                    }
+                    
+                    if (this.pointerAttr == PointerAttr.own && (a.pointerAttr == PointerAttr.ref || a.pointerAttr == PointerAttr.raw)) {
+                        //ok
+                    }
+                    else if (this.pointerAttr == PointerAttr.ref && (a.pointerAttr == PointerAttr.raw)) {
+                        //ok
+                    }
+                    else {
+                        return false;
+                    }
+                }
+
+                if (!genericArgsEquals(target)) {
+                    return false;
+                }
+
+                if (this.id.resolvedDef == target.id.resolvedDef) {
+                    return true;
+                }
+
+                if (this.id.resolvedDef != null && target.id.resolvedDef != null) {
+                    if (this.id.resolvedDef instanceof StructDef sd && target.id.resolvedDef instanceof StructDef td) {
+                        if (sd.genericFrom == td.genericFrom || sd == td.genericFrom || sd.genericFrom == td) {
+                            return true;
+                        }
+                    }
+                }
+
+                if (this.id.resolvedDef != null && target.id.resolvedDef != null) {
+                    if (this.id.resolvedDef instanceof StructDef sd && target.id.resolvedDef instanceof TypeDef td) {
+                        if (sd.isInheriteFrom(td)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
     }
     
@@ -89,6 +160,16 @@ public class Type extends AstNode {
         public String toString() {
             return "["+sizeExpr.toString()+"]"+this.genericArgs.get(0).toString();
         }
+     
+        @Override
+        protected boolean checkEquals(Type target) {
+            if (target instanceof ArrayType a) {
+                return this.sizeExpr == a.sizeExpr;
+            }
+            else {
+                return false;
+            }
+        }
     }
     
     public static class NumType extends Type {
@@ -116,6 +197,16 @@ public class Type extends AstNode {
                 sb.append(size);
             }
             return sb.toString();
+        }
+        
+        @Override
+        protected boolean checkEquals(Type target) {
+            if (target instanceof NumType a) {
+                return this.isUnsigned == a.isUnsigned;
+            }
+            else {
+                return false;
+            }
         }
     }
     
@@ -178,29 +269,55 @@ public class Type extends AstNode {
     }
     
     public boolean fit(Type target) {
-        if (this == target) {
-            return true;
-        }
-        if (this.id.namespace == target.id.namespace && this.id.name.equals(target.id.name)) {
-            return true;
-        }
-        if (this.id.resolvedDef == target.id.resolvedDef) {
-            return true;
-        }
-        return false;
+        return equals(target);
     }
     
     public boolean equals(Type target) {
         if (this == target) {
             return true;
         }
-        if (this.id.namespace == target.id.namespace && this.id.name.equals(target.id.name)) {
-            return true;
+        
+        if (!genericArgsEquals(target)) {
+            return false;
         }
+        
+        if (!checkEquals(target)) {
+            return false;
+        }
+
         if (this.id.resolvedDef == target.id.resolvedDef) {
             return true;
         }
+        
+        if (this.id.resolvedDef != null && target.id.resolvedDef != null) {
+            if (this.id.resolvedDef instanceof StructDef sd && target.id.resolvedDef instanceof StructDef td) {
+                if (sd.genericFrom == td.genericFrom) {
+                    return true;
+                }
+            }
+        }
         return false;
+    }
+    
+    protected boolean checkEquals(Type target) {
+        return true;
+    }
+    
+    protected boolean genericArgsEquals(Type target) {
+        if (this.genericArgs != null || target.genericArgs != null) {
+            if (this.genericArgs == null || target.genericArgs == null) {
+                return false;
+            }
+            if (this.genericArgs.size() != target.genericArgs.size()) {
+                return false;
+            }
+            for (int i=0; i<this.genericArgs.size(); ++i) {
+                if (!this.genericArgs.get(i).equals(target.genericArgs.get(i))) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
         
     public static FuncType funcType(Loc loc, FuncPrototype prototype) {

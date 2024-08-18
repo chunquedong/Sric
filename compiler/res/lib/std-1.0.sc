@@ -1,3 +1,5 @@
 
 
-extern public fun printf(format: *const Int8, args: ...);
+extern fun printf(format: raw*const Int8, args: ...);
+
+extern fun alloc$<T>(): own* T;

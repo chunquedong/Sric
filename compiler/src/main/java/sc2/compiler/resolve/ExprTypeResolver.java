@@ -149,7 +149,7 @@ public class ExprTypeResolver extends CompilePass {
                 }
             }
             if (!genericOk) {
-                err("Generic args not match", type.loc);
+                err("Generic args mismatch", type.loc);
             }
         }
         else if (type.id.resolvedDef instanceof StructDef sd) {
@@ -185,7 +185,7 @@ public class ExprTypeResolver extends CompilePass {
                 }
                 else {
                     if (!v.initExpr.resolvedType.fit(v.fieldType)) {
-                        err("Invalid assign", v.loc);
+                        err("Type mismatch", v.loc);
                     }
                 }
             }
@@ -595,7 +595,7 @@ public class ExprTypeResolver extends CompilePass {
                         break;
                     //&
                     case amp:
-                        e.resolvedType = Type.pointerType(e.loc, e.operand.resolvedType, Type.PointerAttr.ref, true);
+                        e.resolvedType = Type.pointerType(e.loc, e.operand.resolvedType, Type.PointerAttr.ref, false);
                         break;
                     case awaitKeyword:
                         e.resolvedType = e.operand.resolvedType;
@@ -833,24 +833,6 @@ public class ExprTypeResolver extends CompilePass {
         }
     }
     
-    private boolean isInheriteFrom(StructDef cur, TypeDef parent) {
-        if (curStruct.inheritances == null) {
-            return false;
-        }
-        for (Type t : cur.inheritances) {
-            if (t.id.resolvedDef == parent) {
-                return true;
-            }
-            if (t.id.resolvedDef instanceof StructDef sd) {
-                boolean res = isInheriteFrom(sd, parent);
-                if (res) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    
     private boolean checkProtection(TopLevelDef slot, AstNode parent, Loc loc, boolean isSet) {
         int slotFlags = slot.flags;
         if (isSet && slot instanceof FieldDef f) {
@@ -867,7 +849,7 @@ public class ExprTypeResolver extends CompilePass {
                 }
 
                 if ((slotFlags & FConst.Protected) != 0) {
-                    if (curStruct == null || !isInheriteFrom(curStruct, tparent)) {
+                    if (curStruct == null || !curStruct.isInheriteFrom(tparent)) {
                         err("It's protected", loc);
                     }
                 }
@@ -1007,29 +989,38 @@ public class ExprTypeResolver extends CompilePass {
                         else if (e.lhs.resolvedType.isFloat() && e.rhs.resolvedType.isInt()) {
                             //OK
                         }
-                        else if (!e.lhs.resolvedType.equals(e.rhs.resolvedType)) {
-                            err("Cant compare different type", e.loc);
-                        }
-                        else {
-                            TokenKind overrideToken = null;
-                            if (curt == TokenKind.assignPlus) {
-                                overrideToken = TokenKind.plus;
-                            }
-                            else if (curt == TokenKind.assignMinus) {
-                                overrideToken = TokenKind.minus;
-                            }
-                            else if (curt == TokenKind.assignStar) {
-                                overrideToken = TokenKind.star;
-                            }
-                            else if (curt == TokenKind.assignSlash) {
-                                overrideToken = TokenKind.slash;
-                            }
-
-                            if (overrideToken != null) {
-                                resolveMathOperator(overrideToken, e);
+                        else { 
+                            if (curt == TokenKind.assign) {
+                                if (!e.rhs.resolvedType.fit(e.lhs.resolvedType)) {
+                                    err("Type mismatch", e.loc);
+                                }
                             }
                             else {
-                                err("Unsupport operator:"+curt, e.loc);
+                                if (!e.lhs.resolvedType.equals(e.rhs.resolvedType)) {
+                                    err("Type mismatch", e.loc);
+                                }
+                                else {
+                                    TokenKind overrideToken = null;
+                                    if (curt == TokenKind.assignPlus) {
+                                        overrideToken = TokenKind.plus;
+                                    }
+                                    else if (curt == TokenKind.assignMinus) {
+                                        overrideToken = TokenKind.minus;
+                                    }
+                                    else if (curt == TokenKind.assignStar) {
+                                        overrideToken = TokenKind.star;
+                                    }
+                                    else if (curt == TokenKind.assignSlash) {
+                                        overrideToken = TokenKind.slash;
+                                    }
+
+                                    if (overrideToken != null) {
+                                        resolveMathOperator(overrideToken, e);
+                                    }
+                                    else {
+                                        err("Unsupport operator:"+curt, e.loc);
+                                    }
+                                }
                             }
                         }
                         e.resolvedType = e.lhs.resolvedType;

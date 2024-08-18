@@ -83,6 +83,8 @@ public class AstNode {
         public ArrayList<GenericParamDef> generiParamDefs = null;
         
         private Scope inheritScopes = null;
+        StructDef genericFrom = null;
+        private HashMap<String, StructDef> parameterizeCache;
         
         public StructDef(Comments comment, int flags, String name) {
             this.comment = comment;
@@ -174,14 +176,50 @@ public class AstNode {
         }
         
         public StructDef parameterize(ArrayList<Type> typeGenericArgs) {
+            if (parameterizeCache == null) {
+                parameterizeCache = new HashMap<String, StructDef>();
+            }
+            StringBuilder keySb = new StringBuilder();
+            for (Type t : typeGenericArgs) {
+                if (!keySb.isEmpty()) {
+                    keySb.append(',');
+                }
+                keySb.append(t.toString());
+            }
+            String key = keySb.toString();
+            StructDef gt = parameterizeCache.get(key);
+            if (gt != null) {
+                return gt;
+            }
+            
             StructDef nt = new StructDef(this.comment, this.flags, this.name);
+            nt.genericFrom = this;
             for (FieldDef f : fieldDefs) {
                 nt.addSlot(f.parameterize(typeGenericArgs));
             }
             for (FuncDef f : funcDefs) {
                 nt.addSlot(f.parameterize(typeGenericArgs));
             }
+            parameterizeCache.put(key, nt);
             return nt;
+        }
+        
+        public boolean isInheriteFrom(TypeDef parent) {
+            if (this.inheritances == null) {
+                return false;
+            }
+            for (Type t : this.inheritances) {
+                if (t.id.resolvedDef == parent) {
+                    return true;
+                }
+                if (t.id.resolvedDef instanceof StructDef sd) {
+                    boolean res = sd.isInheriteFrom(parent);
+                    if (res) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
     }
     
