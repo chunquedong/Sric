@@ -652,6 +652,15 @@ public class ExprTypeResolver extends CompilePass {
                         e.resolvedType = e.operand.resolvedType;
                         break;
                     case moveKeyword:
+                        AstNode defNode = idResolvedDef(e.operand);
+                        if (defNode != null && defNode instanceof FieldDef f) {
+                            if (!f.isLocalVar) {
+                                err("Can't move", e.loc);
+                            }
+                        }
+                        else {
+                            err("Invalid move", e.loc);
+                        }
                         e.resolvedType = e.operand.resolvedType;
                         break;
                     default:
