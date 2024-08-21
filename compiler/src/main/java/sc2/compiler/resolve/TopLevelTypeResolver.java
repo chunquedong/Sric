@@ -210,6 +210,17 @@ public class TopLevelTypeResolver  extends CompilePass {
     @Override
     public void visitField(AstNode.FieldDef v) {
         resolveType(v.fieldType, v.loc);
+        if (v.fieldType != null) {
+            boolean isStatic = false;
+            if (v.parent instanceof FileUnit || (v.flags & FConst.Static) != 0) {
+                isStatic = true;
+            }
+            if (isStatic && !v.fieldType.isImutable) {
+                if ((v.flags & FConst.Unsafe) == 0) {
+                    err("Static var must be const", v.loc);
+                }
+            }
+        }
     }
 
     @Override

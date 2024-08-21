@@ -19,7 +19,7 @@ public class NegativeTest {
     @Test
     public void test() throws IOException {
         String libPath = "res/lib";
-        File file = new File("res/negative/move.sc");
+        File file = new File("res/negative/const.sc");
 
         sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file.getPath(), libPath);
         compiler.genCode = false;

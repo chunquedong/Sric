@@ -33,7 +33,7 @@ public class GoldenTest {
         try {
             File file = goldenFile(dirName, name);
             if (!file.exists()) {
-                Files.writeString(file.toPath(), data, StandardOpenOption.WRITE, StandardOpenOption.CREATE);
+                Files.writeString(file.toPath(), data, StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
                 System.out.println("please run again");
                 return;
             }
@@ -41,7 +41,7 @@ public class GoldenTest {
             String content = Files.readString(file.toPath());
             if (!data.equals(content)) {
                 Path path = Path.of(file.getPath() + ".error");
-                Files.writeString(path, data, StandardOpenOption.WRITE, StandardOpenOption.CREATE);
+                Files.writeString(path, data, StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
                 fail();
             }
             else {

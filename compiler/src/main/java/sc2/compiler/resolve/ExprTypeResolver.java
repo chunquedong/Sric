@@ -532,6 +532,16 @@ public class ExprTypeResolver extends CompilePass {
                 if (def == null) {
                     err("Unkown name:"+name, loc);
                 }
+                else if (def instanceof FieldDef f) {
+                    if (target.resolvedType.isImutable && (f.flags & FConst.Const) == 0) {
+                        err("Const error", loc);
+                    }
+                }
+                else if (def instanceof FuncDef f) {
+                    if (target.resolvedType.isImutable && (f.prototype.postFlags & FConst.Mutable) != 0) {
+                        err("Const error", loc);
+                    }
+                }
                 return def;
             }
         }
@@ -548,9 +558,16 @@ public class ExprTypeResolver extends CompilePass {
         }
         
         AstNode resolvedDef = idResolvedDef(target);
-        if (resolvedDef != null && resolvedDef instanceof FuncDef f) {
-            if ((f.flags & FConst.Unsafe) != 0) {
-                err("Expect unsafe block", target.loc);
+        if (resolvedDef != null) {
+            if (resolvedDef instanceof FuncDef f) {
+                if ((f.flags & FConst.Unsafe) != 0) {
+                    err("Expect unsafe block", target.loc);
+                }
+            }
+            if (resolvedDef instanceof FieldDef f) {
+                if ((f.flags & FConst.Unsafe) != 0) {
+                    err("Expect unsafe block", target.loc);
+                }
             }
         }
     }
@@ -1096,7 +1113,7 @@ public class ExprTypeResolver extends CompilePass {
                         else if (e.lhs.resolvedType.isFloat() && e.rhs.resolvedType.isInt()) {
                             //OK
                         }
-                        else { 
+                        else {
                             if (curt == TokenKind.assign) {
                                 verifyTypeFit(e.rhs, e.lhs.resolvedType, e.loc);
                             }
@@ -1129,6 +1146,9 @@ public class ExprTypeResolver extends CompilePass {
                             }
                         }
                         e.resolvedType = e.lhs.resolvedType;
+                        if (e.resolvedType != null && e.resolvedType.isImutable) {
+                            err("Const error", e.loc);
+                        }
                     }
                     
                     break;
