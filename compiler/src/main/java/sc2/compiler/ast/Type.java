@@ -22,11 +22,8 @@ public class Type extends AstNode {
         own, ref, raw, weak
     };
     
-    public static enum ImutableAttr {
-        auto, imu, mut
-    };
-        
-    public ImutableAttr imutableAttr = ImutableAttr.auto;
+    public boolean explicitImutable = false;
+    public boolean isImutable = false;
     
     public static class FuncType extends Type {
         public FuncPrototype prototype;
@@ -87,6 +84,9 @@ public class Type extends AstNode {
         
         @Override
         public boolean fit(Type target) {
+            if (this.isImutable && !target.isImutable) {
+                return false;
+            }
             if (equals(target)) {
                 return true;
             }
@@ -276,6 +276,9 @@ public class Type extends AstNode {
     }
     
     public boolean fit(Type target) {
+        if (this.isImutable && !target.isImutable) {
+            return false;
+        }
         return equals(target);
     }
     
@@ -371,7 +374,7 @@ public class Type extends AstNode {
     public static Type strType(Loc loc) {
         NumType type = new NumType(loc, "Int", 8);
         type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
-        type.imutableAttr = ImutableAttr.imu;
+        type.isImutable = true;
         return pointerType(loc, type, PointerAttr.raw, false);
     }
 
@@ -445,5 +448,15 @@ public class Type extends AstNode {
             }
         }
         return nt;
+    }
+    
+    public void setToImutable() {
+        if (this.explicitImutable) {
+            return;
+        }
+        this.isImutable = true;
+        if (this instanceof PointerType) {
+            this.genericArgs.get(0).setToImutable();
+        }
     }
 }

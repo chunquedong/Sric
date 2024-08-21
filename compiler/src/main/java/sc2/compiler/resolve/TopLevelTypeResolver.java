@@ -217,6 +217,9 @@ public class TopLevelTypeResolver  extends CompilePass {
         resolveType(v.prototype.returnType, v.loc);
         if (v.prototype.paramDefs != null) {
             for (AstNode.ParamDef p : v.prototype.paramDefs) {
+                if (p.paramType != null) {
+                    p.paramType.setToImutable();
+                }
                 resolveType(p.paramType, p.loc);
             }
         }

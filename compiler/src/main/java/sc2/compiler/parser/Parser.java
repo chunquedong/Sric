@@ -890,18 +890,22 @@ public class Parser {
     }
     
     private Type imutableType() {
-        Type.ImutableAttr imutable = Type.ImutableAttr.auto;
+        boolean imutable = false;
+        boolean explicitImutable = false;
         if (curt == TokenKind.constKeyword) {
             consume();
-            imutable = Type.ImutableAttr.imu;
+            imutable = true;
+            explicitImutable = true;
         }
         else if (curt == TokenKind.mutKeyword) {
             consume();
-            imutable = Type.ImutableAttr.mut;
+            imutable = false;
+            explicitImutable = true;
         }
         
         Type type = typeRef();
-        type.imutableAttr = imutable;
+        type.explicitImutable = explicitImutable;
+        type.isImutable = imutable;
         return type;
     }
 

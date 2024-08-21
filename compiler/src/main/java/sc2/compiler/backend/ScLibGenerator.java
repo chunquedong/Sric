@@ -37,7 +37,7 @@ public class ScLibGenerator extends BaseGenerator {
             return;
         }
         
-        if (type.imutableAttr == Type.ImutableAttr.imu) {
+        if (type.isImutable) {
             print("const ");
         }
         
