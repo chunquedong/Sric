@@ -18,9 +18,6 @@ import sc2.compiler.ast.Stmt.LocalDefStmt;
 import sc2.compiler.ast.Token.TokenKind;
 import static sc2.compiler.ast.Token.TokenKind.*;
 import sc2.compiler.ast.Type.ArrayType;
-import sc2.compiler.ast.Type.FuncType;
-import sc2.compiler.ast.Type.PointerAttr;
-import sc2.compiler.ast.Type.PointerType;
 
 /**
  *
@@ -37,7 +34,6 @@ public class ExprTypeResolver extends CompilePass {
     private ArrayDeque<AstNode> funcs = new ArrayDeque<AstNode>();
     private ArrayDeque<AstNode> loops = new ArrayDeque<AstNode>();
     private StructDef curStruct = null;
-    private int inUnsafe = 0;
     
     public ExprTypeResolver(CompilerLog log, SModule module) {
         super(log);
@@ -171,46 +167,6 @@ public class ExprTypeResolver extends CompilePass {
         popScope();
         popScope();
     }
-    
-    private void verifyTypeFit(Expr target, Type to, Loc loc) {
-        Type from = target.resolvedType;
-        if (from == null) {
-            return;
-        }
-        
-        if (!from.fit(to)) {
-            err("Type mismatch", loc);
-            return;
-        }
-        
-        if (from instanceof PointerType p1 && to instanceof PointerType p2) {
-            if (p1.pointerAttr == Type.PointerAttr.own && p2.pointerAttr == Type.PointerAttr.own) {
-                AstNode resolvedDef = idResolvedDef(target);
-                if (resolvedDef != null) {
-                    if (resolvedDef instanceof FieldDef) {
-                        err("Miss move keyword", loc);
-                    }
-                }
-            }
-        }
-    }
-    
-    private AstNode idResolvedDef(Expr target) {
-        if (target instanceof OptionalExpr e) {
-            target = e.operand;
-        }
-
-        if (target instanceof IdExpr e) {
-            return e.resolvedDef;
-        }
-        else if (target instanceof AccessExpr e) {
-            return e.resolvedDef;
-        }
-        else if (target instanceof IndexExpr e) {
-            return e.resolvedDef;
-        }
-        return null;
-    }
 
     @Override
     public void visitField(FieldDef v) {
@@ -219,32 +175,6 @@ public class ExprTypeResolver extends CompilePass {
         }
         if (v.initExpr != null) {
             this.visit(v.initExpr);
-            if (v.initExpr.resolvedType != null) {
-                if (v.fieldType == null) {
-                    v.fieldType = v.initExpr.resolvedType;
-                }
-                else {
-                    verifyTypeFit(v.initExpr, v.fieldType, v.loc);
-                }
-            }
-            if (v.fieldType == null) {
-                v.fieldType = v.initExpr.resolvedType;
-            }
-        }
-        
-        if (v.fieldType == null) {
-            err("Unkonw field type", v.loc);
-        }
-        
-        if (v.initExpr == null && v.fieldType != null && v.fieldType instanceof PointerType pt) {
-            if (!pt.isNullable) {
-                if (v.parent instanceof StructDef) {
-                    //OK
-                }
-                else {
-                    err("Non-nullable pointer must inited", v.loc);
-                }
-            }
         }
         
         if (v.isLocalVar) {
@@ -275,17 +205,8 @@ public class ExprTypeResolver extends CompilePass {
         this.funcs.push(v);
         preScope = new Scope();
         visitFuncPrototype(v.prototype, preScope);
-        if ((v.flags & FConst.Operator) != 0) {
-            verifyOperator(v);
-        }
         if (v.code != null) {
-            if ((v.flags & FConst.Unsafe) != 0) {
-                ++inUnsafe;
-            }
             this.visit(v.code);
-            if ((v.flags & FConst.Unsafe) != 0) {
-                --inUnsafe;
-            }
         }
         preScope = null;
         
@@ -347,7 +268,6 @@ public class ExprTypeResolver extends CompilePass {
             if (ifs.elseBlock != null) {
                 this.visit(ifs.elseBlock);
             }
-            verifyBool(ifs.condition);
         }
         else if (v instanceof Stmt.LocalDefStmt e) {
             this.visit(e.fieldDef);
@@ -356,7 +276,6 @@ public class ExprTypeResolver extends CompilePass {
             this.loops.push(v);
             this.visit(whiles.condition);
             this.visit(whiles.block);
-            verifyBool(whiles.condition);
             this.loops.pop();
         }
         else if (v instanceof Stmt.ForStmt fors) {
@@ -377,7 +296,6 @@ public class ExprTypeResolver extends CompilePass {
             
             if (fors.condition != null) {
                 this.visit(fors.condition);
-                verifyBool(fors.condition);
             }
             
             if (fors.update != null) {
@@ -392,7 +310,6 @@ public class ExprTypeResolver extends CompilePass {
         }
         else if (v instanceof Stmt.SwitchStmt switchs) {
             this.visit(switchs.condition);
-            verifyInt(switchs.condition);
             
             for (Stmt.CaseBlock cb : switchs.cases) {
                 this.visit(cb.caseExpr);
@@ -412,9 +329,7 @@ public class ExprTypeResolver extends CompilePass {
             }
         }
         else if (v instanceof Stmt.UnsafeBlock bs) {
-            ++inUnsafe;
             this.visit(bs.block);
-            --inUnsafe;
         }
         else if (v instanceof Stmt.ReturnStmt rets) {
             if (rets.expr != null) {
@@ -460,57 +375,6 @@ public class ExprTypeResolver extends CompilePass {
         return null;
     }
     
-    private void verifyBool(Expr condition) {
-        if (condition.resolvedType != null && !condition.resolvedType.isBool()) {
-            err("Must be Bool", condition.loc);
-        }
-    }
-    
-    private void verifyInt(Expr e) {
-        if (e.resolvedType != null && !e.resolvedType.isInt()) {
-            err("Must be Int type", e.loc);
-        }
-    }
-    
-    private void verifyMetType(Expr e) {
-        if (e.resolvedType != null && !e.resolvedType.isMetaType()) {
-            err("Type required", e.loc);
-        }
-    }
-    
-    private void verifyOperator(FuncDef f) {
-        if (f.name.equals("plus") || f.name.equals("minus") || 
-                f.name.equals("mult") || f.name.equals("div")) {
-            if (f.prototype.paramDefs.size() != 1) {
-                err("Must 1 params", f.loc);
-            }
-            if (f.prototype.returnType.isVoid()) {
-                err("Must has return", f.loc);
-            }
-        }
-        else if (f.name.equals("compare")) {
-            if (f.prototype.paramDefs.size() != 1) {
-                err("Must 1 params", f.loc);
-            }
-            if (!f.prototype.returnType.isInt()) {
-                err("Must return Int", f.loc);
-            }
-        }
-        else if (f.name.equals(Buildin.getOperator)) {
-            if (f.prototype.paramDefs.size() != 1) {
-                err("Must 1 params", f.loc);
-            }
-            if (f.prototype.returnType.isVoid()) {
-                err("Must has return", f.loc);
-            }
-        }
-        else if (f.name.equals(Buildin.setOperator)) {
-            if (f.prototype.paramDefs.size() != 2) {
-                err("Must 1 params", f.loc);
-            }
-        }
-    }
-    
     private AstNode resoveOnTarget(Expr target, String name, Loc loc) {
         if (!target.isResolved()) {
             return null;
@@ -532,44 +396,10 @@ public class ExprTypeResolver extends CompilePass {
                 if (def == null) {
                     err("Unkown name:"+name, loc);
                 }
-                else if (def instanceof FieldDef f) {
-                    if (target.resolvedType.isImutable && (f.flags & FConst.Const) == 0) {
-                        err("Const error", loc);
-                    }
-                }
-                else if (def instanceof FuncDef f) {
-                    if (target.resolvedType.isImutable && (f.prototype.postFlags & FConst.Mutable) != 0) {
-                        err("Const error", loc);
-                    }
-                }
                 return def;
             }
         }
         return null;
-    }
-    
-    private void verifyUnsafe(Expr target) {
-        if (target.resolvedType != null && target.resolvedType instanceof PointerType pt) {
-            if (pt.pointerAttr == PointerAttr.raw) {
-                if (inUnsafe == 0) {
-                    err("Expect unsafe block", target.loc);
-                }
-            }
-        }
-        
-        AstNode resolvedDef = idResolvedDef(target);
-        if (resolvedDef != null) {
-            if (resolvedDef instanceof FuncDef f) {
-                if ((f.flags & FConst.Unsafe) != 0) {
-                    err("Expect unsafe block", target.loc);
-                }
-            }
-            if (resolvedDef instanceof FieldDef f) {
-                if ((f.flags & FConst.Unsafe) != 0) {
-                    err("Expect unsafe block", target.loc);
-                }
-            }
-        }
     }
 
     @Override
@@ -578,28 +408,13 @@ public class ExprTypeResolver extends CompilePass {
             resolveId(e);
             if (e.resolvedDef != null) {
                 e.resolvedType = getSlotType(e.resolvedDef);
-                
-                if (e.resolvedDef instanceof FieldDef f) {
-                    checkProtection(f, f.parent, v.loc, e.inLeftSide);
-                }
-                else if (e.resolvedDef instanceof FuncDef f) {
-                    checkProtection(f, f.parent, v.loc, e.inLeftSide);
-                }
             }
         }
         else if (v instanceof Expr.AccessExpr e) {
             this.visit(e.target);
-            verifyUnsafe(e.target);
             e.resolvedDef = resoveOnTarget(e.target, e.name, e.loc);
             if (e.resolvedDef != null) {
                 e.resolvedType = getSlotType(e.resolvedDef);
-                
-                if (e.resolvedDef instanceof FieldDef f) {
-                    checkProtection(f, f.parent, v.loc, e.inLeftSide);
-                }
-                else if (e.resolvedDef instanceof FuncDef f) {
-                    checkProtection(f, f.parent, v.loc, e.inLeftSide);
-                }
             }
             else {
                 err("Unknow access:"+e.name, e.loc);
@@ -632,12 +447,10 @@ public class ExprTypeResolver extends CompilePass {
                 switch (curt) {
                     //~
                     case tilde:
-                        verifyInt(e.operand);
                         e.resolvedType = e.operand.resolvedType;
                         break;
                     //!
                     case bang:
-                        verifyBool(e.operand);
                         e.resolvedType = e.operand.resolvedType;
                         break;
                     //+, -
@@ -652,13 +465,11 @@ public class ExprTypeResolver extends CompilePass {
                         }
                         else {
                             e.resolvedType = e.operand.resolvedType.genericArgs.get(0);
-                            verifyUnsafe(e.operand);
                         }
                         break;
                     //++, --
                     case increment:
                     case decrement:
-                        verifyInt(e.operand);
                         e.resolvedType = e.operand.resolvedType;
                         break;
                     //&
@@ -669,15 +480,6 @@ public class ExprTypeResolver extends CompilePass {
                         e.resolvedType = e.operand.resolvedType;
                         break;
                     case moveKeyword:
-                        AstNode defNode = idResolvedDef(e.operand);
-                        if (defNode != null && defNode instanceof FieldDef f) {
-                            if (!f.isLocalVar) {
-                                err("Can't move", e.loc);
-                            }
-                        }
-                        else {
-                            err("Invalid move", e.loc);
-                        }
                         e.resolvedType = e.operand.resolvedType;
                         break;
                     default:
@@ -690,9 +492,7 @@ public class ExprTypeResolver extends CompilePass {
         }
         else if (v instanceof Expr.IndexExpr e) {
             this.visit(e.target);
-            verifyUnsafe(e.target);
             this.visit(e.index);
-            verifyInt(e.index);
             
             if (e.target.isResolved()) {
                 if (e.target.resolvedType.isArray() && e.target.resolvedType.genericArgs != null) {
@@ -708,10 +508,6 @@ public class ExprTypeResolver extends CompilePass {
                         if ((f.flags & FConst.Operator) == 0) {
                             err("Expected operator", e.loc);
                         }
-                        int expectedParamSize = e.inLeftSide ? 2:1;
-                        if (f.prototype.paramDefs == null || f.prototype.paramDefs.size() != expectedParamSize) {
-                            err("Invalid operator []", e.loc);
-                        }
                         e.resolvedDef = f;
                         e.resolvedType = f.prototype.returnType;
                     }
@@ -722,16 +518,13 @@ public class ExprTypeResolver extends CompilePass {
             }
         }
         else if (v instanceof Expr.GenericInstance e) {
-            this.visit(e.target);
-            for (Type t : e.genericArgs) {
-                this.resolveType(t);
-            }
+
+            resolveGenericInstance(e);
         }
         else if (v instanceof Expr.IfExpr e) {
             this.visit(e.condition);
             this.visit(e.trueExpr);
             this.visit(e.falseExpr);
-            verifyBool(e.condition);
         }
         else if (v instanceof Expr.InitBlockExpr e) {
             resolveInitBlockExpr(e);
@@ -757,7 +550,7 @@ public class ExprTypeResolver extends CompilePass {
             this.visit(e.operand);
             boolean ok = false;
             if (e.operand.resolvedType != null) {
-                if (e.operand.resolvedType instanceof PointerType pt) {
+                if (e.operand.resolvedType instanceof Type.PointerType pt) {
                     if (pt.isNullable) {
                         e.resolvedType = pt.toNonNullable();
                         ok = true;
@@ -801,11 +594,6 @@ public class ExprTypeResolver extends CompilePass {
         else if (e.target instanceof TypeExpr te) {
             if (te.type instanceof ArrayType at) {
                 e.isArray = true;
-                for (Expr.CallArg t : e.args) {
-                    if (t.name != null) {
-                        err("Invalid name for array", t.loc);
-                    }
-                }
                 at.sizeExpr = new LiteralExpr(Long.valueOf(e.args.size()));
                 at.sizeExpr.loc = e.loc;
 
@@ -814,39 +602,6 @@ public class ExprTypeResolver extends CompilePass {
         }
 
         if (sd != null) {
-            if ((sd.flags & FConst.Abstract) != 0) {
-                err("It's abstract", e.target.loc);
-            }
-            if (e.args != null) {
-                for (FieldDef f : sd.fieldDefs) {
-                    if (f.initExpr != null) {
-                        continue;
-                    }
-                    boolean found = false;
-                    for (Expr.CallArg t : e.args) {
-                        if (t.name.equals(f.name)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        err("Field not init:"+f.name, e.loc);
-                    }
-                }
-
-                for (Expr.CallArg t : e.args) {
-                    boolean found = false;
-                    for (FieldDef f : sd.fieldDefs) {
-                        if (t.name.equals(f.name)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        err("Field not found:"+t.name, t.loc);
-                    }
-                }
-            }
             if (e.target.resolvedType.isMetaType()) {
                 Type type = new Type(e.loc, sd.name);
                 type.id.resolvedDef = sd;
@@ -863,6 +618,9 @@ public class ExprTypeResolver extends CompilePass {
     
     private void resolveGenericInstance(Expr.GenericInstance e) {
         this.visit(e.target);
+        for (Type t : e.genericArgs) {
+            this.resolveType(t);
+        }
         if (!e.target.isResolved()) {
             return;
         }
@@ -910,85 +668,13 @@ public class ExprTypeResolver extends CompilePass {
 
     private void resolveCallExpr(Expr.CallExpr e) {
         this.visit(e.target);
-        verifyUnsafe(e.target);
         if (e.args != null) {
             for (Expr.CallArg t : e.args) {
                 this.visit(t.argExpr);
             }
         }
-        if (e.target.isResolved()) {
-            if (e.target.resolvedType instanceof FuncType f) {
-                e.resolvedType = f.prototype.returnType;
-                
-                if (e.args != null) {
-                    if (f.prototype.paramDefs == null) {
-                        err("Args error", e.loc);
-                    }
-                    else {
-                        int i = 0;
-                        for (Expr.CallArg t : e.args) {
-                            if (t.name != null) {
-                                if (!t.name.equals(f.prototype.paramDefs.get(i).name)) {
-                                    err("Arg name error", t.loc);
-                                }
-                            }
-                            verifyTypeFit(t.argExpr, f.prototype.paramDefs.get(i).paramType, t.loc);
-                            ++i;
-                        }
-                        if (i < f.prototype.paramDefs.size()) {
-                            if (f.prototype.paramDefs.get(i).defualtValue == null) {
-                                err("Arg number error", e.loc);
-                            }
-                        }
-                    }
-                }
-                else if (f.prototype.paramDefs != null) {
-                    if (f.prototype.paramDefs.get(0).defualtValue == null) {
-                        err("Arg number error", e.loc);
-                    }
-                }
-            }
-            else {
-                err("Call a non-function type:"+e.target, e.loc);
-            }
-        }
-        else {
-            return;
-        }
     }
     
-    private boolean checkProtection(TopLevelDef slot, AstNode parent, Loc loc, boolean isSet) {
-        int slotFlags = slot.flags;
-        if (isSet && slot instanceof FieldDef f) {
-            if ((f.flags & FConst.Readonly) != 0) {
-                slotFlags |= FConst.Private;
-            }
-        }
-        
-        if (parent instanceof TypeDef tparent) {
-            if (parent != curStruct) {
-                if ((slotFlags & FConst.Private) != 0) {
-                    err("It's private", loc);
-                    return false;
-                }
-
-                if ((slotFlags & FConst.Protected) != 0) {
-                    if (curStruct == null || !curStruct.isInheriteFrom(tparent)) {
-                        err("It's protected", loc);
-                    }
-                }
-            }
-        }
-        else if (parent instanceof FileUnit fu) {
-            if ((slotFlags & FConst.Private) != 0 || (slotFlags & FConst.Protected) != 0) {
-                if (fu.module != this.module) {
-                    err("It's private or protected", loc);
-                }
-            }
-        }
-        return false;
-    }
-
     private void resolveBinaryExpr(Expr.BinaryExpr e) {
 
         this.visit(e.lhs);
@@ -998,11 +684,9 @@ public class ExprTypeResolver extends CompilePass {
             TokenKind curt = e.opToken;
             switch (curt) {
                 case isKeyword:
-                    verifyMetType(e.rhs);
                     e.resolvedType = Type.boolType(e.loc);
                     break;
                 case asKeyword:
-                    verifyMetType(e.rhs);
                     e.resolvedType = e.rhs.resolvedType;
                     break;
                 case eq:
@@ -1013,20 +697,8 @@ public class ExprTypeResolver extends CompilePass {
                 case gt:
                 case ltEq:
                 case gtEq:
-                    if (e.lhs.resolvedType.isInt() && e.rhs.resolvedType.isInt()) {
+                    if (e.lhs.resolvedType.isNum() && e.rhs.resolvedType.isNum()) {
                         //OK
-                    }
-                    else if (e.lhs.resolvedType.isFloat() && e.rhs.resolvedType.isFloat()) {
-                        //OK
-                    }
-                    else if ((e.lhs.resolvedType.isFloat() && e.rhs.resolvedType.isInt()) ||
-                            (e.lhs.resolvedType.isInt() && e.rhs.resolvedType.isFloat())) {
-                        if (curt == TokenKind.eq || curt == TokenKind.notEq || curt == TokenKind.same || curt == TokenKind.notSame) {
-                            err("Cant compare different type", e.loc);
-                        }
-                    }
-                    else if (!e.lhs.resolvedType.equals(e.rhs.resolvedType)) {
-                        err("Cant compare different type", e.loc);
                     }
                     else {
                         String operatorName = Buildin.operatorToName(TokenKind.cmp);
@@ -1048,8 +720,6 @@ public class ExprTypeResolver extends CompilePass {
                 case caret:
                 case amp:
                 case percent:
-                    verifyInt(e.lhs);
-                    verifyInt(e.rhs);
                     e.resolvedType = Type.intType(e.loc);
                     break;
                 case plus:
@@ -1069,7 +739,6 @@ public class ExprTypeResolver extends CompilePass {
                     else {
                         resolveMathOperator(curt, e);
                     }
-                    
                     break;
                 case assign:
                 case assignPlus:
@@ -1077,80 +746,34 @@ public class ExprTypeResolver extends CompilePass {
                 case assignStar:
                 case assignSlash:
                 case assignPercent:
-                    boolean ok = false;
-                    if (e.lhs instanceof IdExpr idExpr) {
-                        if (idExpr.resolvedDef instanceof FieldDef f) {
-                            //if (checkProtection(f, f.parent, f.loc, true)) {
-                                ok = true;
-                            //}
-                        }
-                        else {
-                            err("Not assignable", e.lhs.loc);
-                        }
-                    }
-                    else if (e.lhs instanceof AccessExpr accessExpr) {
-                        if (accessExpr.resolvedDef instanceof FieldDef f) {
-                            //if (checkProtection(f, f.parent, f.loc, true)) {
-                                ok = true;
-                            //}
-                        }
-                    }
-                    else if (e.lhs instanceof IndexExpr indexExpr) {
-                        ok = true;
-                        return;
+                    if (e.lhs.resolvedType.isNum() && e.rhs.resolvedType.isNum()) {
+                        e.resolvedType = e.lhs.resolvedType;
                     }
                     else {
-                        err("Not assignable", e.lhs.loc);
-                    }
-                    
-                    if (ok) {
-                        if (e.lhs.resolvedType.isInt() && e.rhs.resolvedType.isInt()) {
-                            e.resolvedType = e.lhs.resolvedType;
-                        }
-                        else if (e.lhs.resolvedType.isFloat() && e.rhs.resolvedType.isFloat()) {
-                            e.resolvedType = e.lhs.resolvedType;
-                        }
-                        else if (e.lhs.resolvedType.isFloat() && e.rhs.resolvedType.isInt()) {
-                            //OK
-                        }
-                        else {
-                            if (curt == TokenKind.assign) {
-                                verifyTypeFit(e.rhs, e.lhs.resolvedType, e.loc);
+                        if (curt != TokenKind.assign) {
+                            TokenKind overrideToken = null;
+                            if (curt == TokenKind.assignPlus) {
+                                overrideToken = TokenKind.plus;
+                            }
+                            else if (curt == TokenKind.assignMinus) {
+                                overrideToken = TokenKind.minus;
+                            }
+                            else if (curt == TokenKind.assignStar) {
+                                overrideToken = TokenKind.star;
+                            }
+                            else if (curt == TokenKind.assignSlash) {
+                                overrideToken = TokenKind.slash;
+                            }
+
+                            if (overrideToken != null) {
+                                resolveMathOperator(overrideToken, e);
                             }
                             else {
-                                if (!e.lhs.resolvedType.equals(e.rhs.resolvedType)) {
-                                    err("Type mismatch", e.loc);
-                                }
-                                else {
-                                    TokenKind overrideToken = null;
-                                    if (curt == TokenKind.assignPlus) {
-                                        overrideToken = TokenKind.plus;
-                                    }
-                                    else if (curt == TokenKind.assignMinus) {
-                                        overrideToken = TokenKind.minus;
-                                    }
-                                    else if (curt == TokenKind.assignStar) {
-                                        overrideToken = TokenKind.star;
-                                    }
-                                    else if (curt == TokenKind.assignSlash) {
-                                        overrideToken = TokenKind.slash;
-                                    }
-
-                                    if (overrideToken != null) {
-                                        resolveMathOperator(overrideToken, e);
-                                    }
-                                    else {
-                                        err("Unsupport operator:"+curt, e.loc);
-                                    }
-                                }
+                                err("Unsupport operator:"+curt, e.loc);
                             }
                         }
-                        e.resolvedType = e.lhs.resolvedType;
-                        if (e.resolvedType != null && e.resolvedType.isImutable) {
-                            err("Const error", e.loc);
-                        }
                     }
-                    
+
                     break;
                 default:
                     break;
@@ -1171,7 +794,6 @@ public class ExprTypeResolver extends CompilePass {
             if ((f.flags & FConst.Operator) == 0) {
                 err("Expected operator", e.loc);
             }
-            verifyTypeFit(e.rhs, f.prototype.paramDefs.get(0).paramType, e.rhs.loc);
             e.resolvedType = f.prototype.returnType;
         }
         else {

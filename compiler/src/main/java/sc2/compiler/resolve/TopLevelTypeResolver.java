@@ -210,17 +210,6 @@ public class TopLevelTypeResolver  extends CompilePass {
     @Override
     public void visitField(AstNode.FieldDef v) {
         resolveType(v.fieldType, v.loc);
-        if (v.fieldType != null) {
-            boolean isStatic = false;
-            if (v.parent instanceof FileUnit || (v.flags & FConst.Static) != 0) {
-                isStatic = true;
-            }
-            if (isStatic && !v.fieldType.isImutable) {
-                if ((v.flags & FConst.Unsafe) == 0) {
-                    err("Static var must be const", v.loc);
-                }
-            }
-        }
     }
 
     @Override
@@ -234,46 +223,7 @@ public class TopLevelTypeResolver  extends CompilePass {
                 resolveType(p.paramType, p.loc);
             }
         }
-        
-        if (v.parent instanceof StructDef sd) {
-            if ((v.flags & FConst.Virtual) != 0) {
-                if ((sd.flags & FConst.Virtual) != 0 || (sd.flags & FConst.Abstract) != 0) {
-                    //ok
-                }
-                else {
-                    err("Struct must be virtual or abstract", v.loc);
-                }
-            }
-            else if ((v.flags & FConst.Abstract) != 0) {
-                if ((sd.flags & FConst.Abstract) != 0) {
-                    //ok
-                }
-                else {
-                    err("Struct must be abstract", v.loc);
-                }
-                if (v.code != null) {
-                    err("abstract method must no code", v.loc);
-                }
-            }
-        }
-        else if (v.parent instanceof TraitDef tt) {
-            if ((v.flags & FConst.Abstract) != 0) {
-                if (v.code != null) {
-                    err("abstract method must no code", v.loc);
-                }
-            }
-        }
-        else {
-            if ((v.flags & FConst.Abstract) != 0 ||
-                    (v.flags & FConst.Virtual) != 0 ||
-                    (v.flags & FConst.Static) != 0) {
-                err("Invalid flags", v.loc);
-            }
-        }
-        
-        if ((v.flags & FConst.Readonly) != 0) {
-            err("Invalid flags", v.loc);
-        }
+
     }
 
     @Override
@@ -288,17 +238,8 @@ public class TopLevelTypeResolver  extends CompilePass {
                 this.scopes.add(gpScope);
             }
             if (sd.inheritances != null) {
-                int i = 0;
                 for (Type inh : sd.inheritances) {
                     this.resolveType(inh, inh.loc);
-                    if (i > 0) {
-                        if (inh.id.resolvedDef != null) {
-                            if (!(inh.id.resolvedDef instanceof TraitDef)) {
-                                err("Unsupport multi struct inheritance", inh.loc);
-                            }
-                        }
-                    }
-                    ++i;
                 }
             }
         }

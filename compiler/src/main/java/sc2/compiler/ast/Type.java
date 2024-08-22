@@ -249,6 +249,10 @@ public class Type extends AstNode {
         return id.name.equals("Int");
     }
     
+    public boolean isNum() {
+        return isInt() || isFloat();
+    }
+    
     public boolean isFloat() {
         if (id.namespace != null) {
             return false;

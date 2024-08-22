@@ -18,6 +18,7 @@ import sc2.compiler.ast.SModule.Depend;
 import sc2.compiler.backend.CppGenerator;
 import sc2.compiler.backend.ScLibGenerator;
 import sc2.compiler.parser.DeepParser;
+import sc2.compiler.resolve.ErrorChecker;
 import sc2.compiler.resolve.ExprTypeResolver;
 import sc2.compiler.resolve.TopLevelTypeResolver;
 
@@ -116,6 +117,9 @@ public class Compiler {
         
         ExprTypeResolver exprResolver = new ExprTypeResolver(log, module);
         exprResolver.run();
+        
+        ErrorChecker errorChecker = new ErrorChecker(log, module);
+        errorChecker.run();
         
         if (log.hasError()) {
             return;
