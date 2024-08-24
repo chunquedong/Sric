@@ -17,7 +17,6 @@ import sc2.compiler.CompilerLog.CompilerErr;
 import java.util.ArrayList;
 import sc2.compiler.ast.Expr.IdExpr;
 import static sc2.compiler.ast.Token.TokenKind.*;
-import sc2.compiler.ast.Type.NumType;
 
 
 /**
@@ -928,51 +927,51 @@ public class Parser {
         
         //type name rewrite
         if (id.namespace == null) {
-            NumType ntype = null;
+            Type ntype = null;
             switch (id.name) {
                 case "Int8":
                     ntype = Type.intType(loc);
-                    ntype.size = 8;
+                    ((Type.NumInfo)ntype.detail).size = 8;
                     break;
                 case "Int16":
                     ntype = Type.intType(loc);
-                    ntype.size = 16;
+                    ((Type.NumInfo)ntype.detail).size = 16;
                     break;
                 case "Int32":
                     ntype = Type.intType(loc);
-                    ntype.size = 32;
+                    ((Type.NumInfo)ntype.detail).size = 32;
                     break;
                 case "Int64":
                     ntype = Type.intType(loc);
-                    ntype.size = 64;
+                    ((Type.NumInfo)ntype.detail).size = 64;
                     break;
                 case "UInt8":
                     ntype = Type.intType(loc);
-                    ntype.size = 8;
-                    ntype.isUnsigned = true;
+                    ((Type.NumInfo)ntype.detail).size = 8;
+                    ((Type.NumInfo)ntype.detail).isUnsigned = true;
                     break;
                 case "UInt16":
                     ntype = Type.intType(loc);
-                    ntype.size = 16;
-                    ntype.isUnsigned = true;
+                    ((Type.NumInfo)ntype.detail).size = 16;
+                    ((Type.NumInfo)ntype.detail).isUnsigned = true;
                     break;
                 case "UInt32":
                     ntype = Type.intType(loc);
-                    ntype.size = 32;
-                    ntype.isUnsigned = true;
+                    ((Type.NumInfo)ntype.detail).size = 32;
+                    ((Type.NumInfo)ntype.detail).isUnsigned = true;
                     break;
                 case "UInt64":
                     ntype = Type.intType(loc);
-                    ntype.size = 64;
-                    ntype.isUnsigned = true;
+                    ((Type.NumInfo)ntype.detail).size = 64;
+                    ((Type.NumInfo)ntype.detail).isUnsigned = true;
                     break;
                 case "Float32":
                     ntype = Type.floatType(loc);
-                    ntype.size = 32;
+                    ((Type.NumInfo)ntype.detail).size = 32;
                     break;
                 case "Float64":
                     ntype = Type.floatType(loc);
-                    ntype.size = 64;
+                    ((Type.NumInfo)ntype.detail).size = 64;
                     break;
                 case "Int":
                     ntype = Type.intType(loc);

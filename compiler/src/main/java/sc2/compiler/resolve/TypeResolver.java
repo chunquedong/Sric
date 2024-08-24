@@ -23,7 +23,7 @@ public abstract class TypeResolver  extends CompilePass {
     
     protected ArrayList<Scope> scopes = new ArrayList<>();
     protected SModule module;
-    protected StructDef curStruct = null;
+    
     
     public TypeResolver(CompilerLog log, SModule module) {
         super(log);
@@ -55,16 +55,6 @@ public abstract class TypeResolver  extends CompilePass {
     
     protected void resolveId(Expr.IdExpr idExpr) {
         if (idExpr.namespace == null) {
-            if (idExpr.name.equals("this")) {
-                if (curStruct == null) {
-                    err("Use this out of struct", idExpr.loc);
-                    return;
-                }
-                Type self = new Type(curStruct.loc, curStruct.name);
-                self.id.resolvedDef = curStruct;
-                idExpr.resolvedDef = Type.pointerType(idExpr.loc, self, Type.PointerAttr.raw, false);
-                return;
-            }
             idExpr.resolvedDef = findSymbol(idExpr.name, idExpr.loc);
             return;
         }
@@ -148,5 +138,6 @@ public abstract class TypeResolver  extends CompilePass {
                 err("Miss generic args", type.loc);
             }
         }
+
     }
 }

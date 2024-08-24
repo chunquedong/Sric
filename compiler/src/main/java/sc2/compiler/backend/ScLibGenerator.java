@@ -37,57 +37,25 @@ public class ScLibGenerator extends BaseGenerator {
             return;
         }
         
-        if (type.isImutable) {
-            print("const ");
-        }
-        
-        switch (type.id.name) {
-            case "*":
-                Type.PointerType pt = (Type.PointerType)type;
-                print(pt.pointerAttr+"");
-                if (pt.isNullable) {
-                    print("*? ");
-                }
-                else {
-                    print("* ");
-                }
-                printType(pt.genericArgs.get(0));
-                return;
-            case "[]":
-                Type.ArrayType arrayType = (Type.ArrayType)type;
-                printType(type.genericArgs.get(0));
-                print("[");
-                this.visit(arrayType.sizeExpr);
-                print("]");
-                return;
-            case "=>":
-                Type.FuncType ft = (Type.FuncType)type;
-                print("[]");
-                print("(");
-                if (ft.prototype.paramDefs != null) {
-                    for (AstNode.ParamDef p : ft.prototype.paramDefs) {
-                        printType(p.paramType);
-                    }
-                }
-                print("):");
-                printType(ft.prototype.returnType);
-                return;
-        }
-        
-        printIdExpr(type.id);
-        
-        if (type.genericArgs != null) {
-            print("$<");
-            int i = 0;
-            for (Type t : type.genericArgs) {
-                if (i > 0) {
-                    print(", ");
-                }
-                printType(t);
-                ++i;
-            }
-            print(">");
-        }
+//        if (type.isImutable) {
+//            print("const ");
+//        }
+//        
+//        printIdExpr(type.id);
+//        
+//        if (type.genericArgs != null) {
+//            print("$<");
+//            int i = 0;
+//            for (Type t : type.genericArgs) {
+//                if (i > 0) {
+//                    print(", ");
+//                }
+//                printType(t);
+//                ++i;
+//            }
+//            print(">");
+//        }
+        print(type.toString());
     }
 
     private void printIdExpr(Expr.IdExpr id) {
@@ -137,6 +105,17 @@ public class ScLibGenerator extends BaseGenerator {
         
         print("fun ");
         print(v.name);
+        
+        if (v.generiParamDefs != null) {
+            print("$<");
+            int i = 0;
+            for (var gp : v.generiParamDefs) {
+                if (i > 0) print(", ");
+                print(gp.name);
+                ++i;
+            }
+            print(">");
+        }
 
         printFuncPrototype(v.prototype);
 

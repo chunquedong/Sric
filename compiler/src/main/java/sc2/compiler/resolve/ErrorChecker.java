@@ -52,7 +52,7 @@ public class ErrorChecker extends CompilePass {
             return;
         }
         
-        if (from instanceof Type.PointerType p1 && to instanceof Type.PointerType p2) {
+        if (from.detail instanceof Type.PointerInfo p1 && to.detail instanceof Type.PointerInfo p2) {
             if (p1.pointerAttr == Type.PointerAttr.own && p2.pointerAttr == Type.PointerAttr.own) {
                 AstNode resolvedDef = idResolvedDef(target);
                 if (resolvedDef != null) {
@@ -83,12 +83,15 @@ public class ErrorChecker extends CompilePass {
 
     @Override
     public void visitField(AstNode.FieldDef v) {
+        if (v.initExpr != null) {
+            this.visit(v.initExpr);
+        }
         
         if (v.fieldType == null) {
             err("Unkonw field type", v.loc);
         }
         
-        if (v.initExpr == null && v.fieldType != null && v.fieldType instanceof Type.PointerType pt) {
+        if (v.initExpr == null && v.fieldType != null && v.fieldType.detail instanceof Type.PointerInfo pt) {
             if (!pt.isNullable) {
                 if (v.parent instanceof AstNode.StructDef) {
                     //OK
@@ -151,6 +154,25 @@ public class ErrorChecker extends CompilePass {
             }
         }
         
+        if (v.prototype.paramDefs != null) {
+            boolean hasDefaultValue = false;
+            boolean hasVararg = false;
+            for (ParamDef p : v.prototype.paramDefs) {
+                if (p.defualtValue != null) {
+                    if (hasDefaultValue) {
+                        err("Default param must at last", p.loc);
+                    }
+                    hasDefaultValue = true;
+                }
+                if (p.paramType.isVarArgType()) {
+                    if (hasVararg) {
+                        err("Vararg must at last", p.loc);
+                    }
+                    hasVararg = true;
+                }
+            }
+        }
+        
         if ((v.flags & FConst.Readonly) != 0) {
             err("Invalid flags", v.loc);
         }
@@ -158,6 +180,7 @@ public class ErrorChecker extends CompilePass {
         if ((v.flags & FConst.Operator) != 0) {
             verifyOperator(v);
         }
+        
         if (v.code != null) {
             if ((v.flags & FConst.Unsafe) != 0) {
                 ++inUnsafe;
@@ -336,7 +359,12 @@ public class ErrorChecker extends CompilePass {
     }
     
     private void verifyUnsafe(Expr target) {
-        if (target.resolvedType != null && target.resolvedType instanceof Type.PointerType pt) {
+        if (target instanceof IdExpr id) {
+            if (id.name.equals("this")) {
+                return;
+            }
+        }
+        if (target.resolvedType != null && target.resolvedType.detail instanceof Type.PointerInfo pt) {
             if (pt.pointerAttr == Type.PointerAttr.raw) {
                 if (inUnsafe == 0) {
                     err("Expect unsafe block", target.loc);
@@ -503,7 +531,7 @@ public class ErrorChecker extends CompilePass {
             }
         }
         else if (e.target instanceof Expr.TypeExpr te) {
-            if (te.type instanceof Type.ArrayType at) {
+            if (te.type.detail instanceof Type.ArrayInfo at) {
                 for (Expr.CallArg t : e.args) {
                     if (t.name != null) {
                         err("Invalid name for array", t.loc);
@@ -558,7 +586,7 @@ public class ErrorChecker extends CompilePass {
             }
         }
         if (e.target.isResolved()) {
-            if (e.target.resolvedType instanceof Type.FuncType f) {
+            if (e.target.resolvedType.detail instanceof Type.FuncInfo f) {
                 
                 if (e.args != null) {
                     if (f.prototype.paramDefs == null) {
@@ -576,7 +604,7 @@ public class ErrorChecker extends CompilePass {
                             ++i;
                         }
                         if (i < f.prototype.paramDefs.size()) {
-                            if (f.prototype.paramDefs.get(i).defualtValue == null) {
+                            if (f.prototype.paramDefs.get(i).defualtValue == null && !f.prototype.paramDefs.get(i).paramType.isVarArgType()) {
                                 err("Arg number error", e.loc);
                             }
                         }

@@ -18,6 +18,12 @@ public class Buildin {
     private static Scope buildinScope;
     
     private static Loc loc = new Loc("buildin", 0, 0, 0);
+    
+    public static final String funcTypeName = "=>";
+    public static final String arrayTypeName = "[]";
+    public static final String pointerTypeName = "*";
+    public static final String varargTypeName = "...";
+    public static final String metaTypeTypeName = "Type";
 
     private static TypeDef makeBuildinType(Scope scope, String name) {
         return makeBuildinType(scope, name, null);
@@ -81,18 +87,18 @@ public class Buildin {
             gp.name = "T";
             gp.loc = loc;
             gps.add(gp);
-            makeBuildinType(scope, "[]", gps);//array
+            makeBuildinType(scope, arrayTypeName, gps);//array
             
             ArrayList<GenericParamDef> gps2 = new ArrayList<GenericParamDef>();
             GenericParamDef gp2 = new GenericParamDef();
             gp2.name = "T";
             gp2.loc = loc;
             gps2.add(gp2);
-            makeBuildinType(scope, "*", gps2);//pointer
+            makeBuildinType(scope, pointerTypeName, gps2);//pointer
             
             makeBuildinType(scope, "Void");
-            makeBuildinType(scope, "...");//varargs
-            makeBuildinType(scope, "=>");//func
+            makeBuildinType(scope, varargTypeName);//varargs
+            makeBuildinType(scope, funcTypeName);//func
             
             buildinScope = scope;
             

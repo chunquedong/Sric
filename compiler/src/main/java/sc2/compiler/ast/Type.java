@@ -25,199 +25,37 @@ public class Type extends AstNode {
 //    public boolean explicitImutable = false;
     public boolean isImutable = false;
     
-    public static class FuncType extends Type {
-        public FuncPrototype prototype;
-        public FuncDef funcDef = null;
-
-        public FuncType(Loc loc, FuncPrototype prototype) {
-            super(loc, "=>");
-            this.prototype = prototype;
-            this.genericArgs = new ArrayList<>();
-            this.genericArgs.add(prototype.returnType);
-            if (prototype.paramDefs != null) {
-                for (ParamDef p : prototype.paramDefs) {
-                    this.genericArgs.add(p.paramType);
-                }
-            }
-        }
-        
-        @java.lang.Override
-        public String toString() {
-            return prototype.toString();
-        }
+    public TypeInfo detail = null;
+    
+    public static abstract class TypeInfo {
     }
     
-    public static class PointerType extends Type {
+    public static class FuncInfo extends TypeInfo {
+        public FuncPrototype prototype;
+        public FuncDef funcDef = null;
+    }
+    
+    public static class PointerInfo extends TypeInfo {
         public PointerAttr pointerAttr = PointerAttr.ref;
         //** Is this is a nullable type (marked with trailing ?)
         public boolean isNullable = false;
-        
-        public PointerType(Loc loc, Type elemType, PointerAttr pointerAttr, boolean nullable) {
-            super(loc, "*");
-            this.genericArgs = new ArrayList<>();
-            this.genericArgs.add(elemType);
-            this.pointerAttr = pointerAttr;
-            this.isNullable = nullable;
-        }
-        
-        public PointerType toNonNullable() {
-            PointerType n = new PointerType(loc, this.genericArgs.get(0), this.pointerAttr, false);
-            n.id = this.id;
-            return n;
-        }
-        
-        @java.lang.Override
-        public String toString() {
-            String t = super.toString();
-            return pointerAttr + "*" + t;
-        }
-        
-        @Override
-        protected boolean checkEquals(Type target) {
-            if (target instanceof PointerType a) {
-                return (this.pointerAttr == a.pointerAttr) && (this.isNullable == a.isNullable);
-            }
-            else {
-                return false;
-            }
-        }
-        
-        @Override
-        public boolean fit(Type target) {
-            if (target.isVarArgType()) {
-                return true;
-            }
-            if (this.isImutable && !target.isImutable) {
-                return false;
-            }
-            if (equals(target)) {
-                return true;
-            }
-            
-            if (target instanceof PointerType a) {
-                if ((this.pointerAttr == a.pointerAttr) && (this.isNullable == a.isNullable)) {
-                    //ok
-                }
-                else {
-                    if (this.isNullable && !a.isNullable) {
-                        //error to nonnullable
-                        return false;
-                    }
-                    
-                    if (this.pointerAttr == PointerAttr.own && (a.pointerAttr == PointerAttr.ref || a.pointerAttr == PointerAttr.raw)) {
-                        //ok
-                    }
-                    else if (this.pointerAttr == PointerAttr.ref && (a.pointerAttr == PointerAttr.raw)) {
-                        //ok
-                    }
-                    else {
-                        return false;
-                    }
-                }
-
-                if (!genericArgsEquals(target)) {
-                    return false;
-                }
-
-                if (this.id.resolvedDef == target.id.resolvedDef) {
-                    return true;
-                }
-
-                if (this.id.resolvedDef != null && target.id.resolvedDef != null) {
-                    if (this.id.resolvedDef instanceof StructDef sd && target.id.resolvedDef instanceof StructDef td) {
-                        if (sd.genericFrom == td.genericFrom || sd == td.genericFrom || sd.genericFrom == td) {
-                            return true;
-                        }
-                    }
-                }
-
-                if (this.id.resolvedDef != null && target.id.resolvedDef != null) {
-                    if (this.id.resolvedDef instanceof StructDef sd && target.id.resolvedDef instanceof TypeDef td) {
-                        if (sd.isInheriteFrom(td)) {
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            return false;
-        }
     }
     
-    public static class MetaType extends Type {
+    public static class MetaTypeInfo extends TypeInfo {
         public Type type;
-        public MetaType(Loc loc, Type type) {
-            super(loc, "Type");
-            this.type = type;
-        }
-        
-        @java.lang.Override
-        public String toString() {
-            return type.toString();
-        }
     }
     
-    public static class ArrayType extends Type {
+    public static class ArrayInfo extends TypeInfo {
         public Expr sizeExpr;
-        
-        public ArrayType(Loc loc, Type elemType, Expr sizeExpr) {
-            super(loc, "[]");
-            this.genericArgs = new ArrayList<>();
-            this.genericArgs.add(elemType);
-        }
-        
-        @java.lang.Override
-        public String toString() {
-            return "["+sizeExpr.toString()+"]"+this.genericArgs.get(0).toString();
-        }
-     
-        @Override
-        protected boolean checkEquals(Type target) {
-            if (target instanceof ArrayType a) {
-                return this.sizeExpr == a.sizeExpr;
-            }
-            else {
-                return false;
-            }
-        }
+        public int size;
     }
     
-    public static class NumType extends Type {
+    public static class NumInfo extends TypeInfo {
         //** primitive type sized. the Int32 size is 32
         public int size = 0;
 
         //unsigned int
         public boolean isUnsigned = false;
-        
-        public NumType(Loc loc, String name, int size) {
-            super(loc, name);
-            this.size = size;
-        }
-        
-        @java.lang.Override
-        public String toString() {
-            StringBuilder sb = new StringBuilder();
-            if (this.isUnsigned) {
-                sb.append("U");
-            }
-
-            sb.append(id.toString());
-
-            if (size != 0) {
-                sb.append(size);
-            }
-            return sb.toString();
-        }
-        
-        @Override
-        protected boolean checkEquals(Type target) {
-            if (target instanceof NumType a) {
-                return this.isUnsigned == a.isUnsigned;
-            }
-            else {
-                return false;
-            }
-        }
     }
     
     public Type(IdExpr id) {
@@ -267,26 +105,44 @@ public class Type extends AstNode {
         if (id.namespace != null) {
             return false;
         }
-        return id.name.equals("[]");
+        return id.name.equals(Buildin.arrayTypeName);
     }
     
     public boolean isMetaType() {
-        return this instanceof MetaType;
+        if (id.namespace != null) {
+            return false;
+        }
+        return id.name.equals(Buildin.metaTypeTypeName);
     }
     
     public boolean isPointerType() {
-        return this instanceof PointerType;
+        if (id.namespace != null) {
+            return false;
+        }
+        return id.name.equals(Buildin.pointerTypeName);
+    }
+    
+    public boolean isNullType() {
+        if (isPointerType()) {
+            if (this.genericArgs == null) {
+                return true;
+            }
+        }
+        return false;
     }
     
     public boolean isFuncType() {
-        return this instanceof FuncType;
+        if (id.namespace != null) {
+            return false;
+        }
+        return id.name.equals(Buildin.funcTypeName);
     }
     
     public boolean isVarArgType() {
         if (id.namespace != null) {
             return false;
         }
-        return id.name.equals("...");
+        return id.name.equals(Buildin.varargTypeName);
     }
     
     public boolean fit(Type target) {
@@ -296,7 +152,60 @@ public class Type extends AstNode {
         if (this.isImutable && !target.isImutable) {
             return false;
         }
-        return equals(target);
+        if (equals(target)) {
+            return true;
+        }
+        if (this.isNullType() && target.isPointerType()) {
+            return true;
+        }
+        
+        //pointer fit
+        if (this.detail instanceof PointerInfo e && target.detail instanceof PointerInfo a) {
+            if ((e.pointerAttr == a.pointerAttr) && (a.isNullable == a.isNullable)) {
+                //ok
+            }
+            else {
+                if (e.isNullable && !a.isNullable) {
+                    //error to nonnullable
+                    return false;
+                }
+
+                if (e.pointerAttr == PointerAttr.own && (a.pointerAttr == PointerAttr.ref || a.pointerAttr == PointerAttr.raw)) {
+                    //ok
+                }
+                else if (e.pointerAttr == PointerAttr.ref && (a.pointerAttr == PointerAttr.raw)) {
+                    //ok
+                }
+                else {
+                    return false;
+                }
+            }
+
+            if (!genericArgsEquals(target)) {
+                return false;
+            }
+
+            if (this.id.resolvedDef == target.id.resolvedDef) {
+                return true;
+            }
+
+            if (this.id.resolvedDef != null && target.id.resolvedDef != null) {
+                if (this.id.resolvedDef instanceof StructDef sd && target.id.resolvedDef instanceof StructDef td) {
+                    if (sd.genericFrom == td.genericFrom || sd == td.genericFrom || sd.genericFrom == td) {
+                        return true;
+                    }
+                }
+            }
+
+            if (this.id.resolvedDef != null && target.id.resolvedDef != null) {
+                if (this.id.resolvedDef instanceof StructDef sd && target.id.resolvedDef instanceof TypeDef td) {
+                    if (sd.isInheriteFrom(td)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
     
     public boolean equals(Type target) {
@@ -308,8 +217,35 @@ public class Type extends AstNode {
             return false;
         }
         
-        if (!checkEquals(target)) {
-            return false;
+        if (this.isPointerType()) {
+            if (this.detail instanceof PointerInfo e && target.detail instanceof PointerInfo a) {
+                if ( (e.pointerAttr != a.pointerAttr) || (e.isNullable == a.isNullable))  {
+                    return false;
+                }
+            }
+            else {
+                return false;
+            }
+        }
+        else if (this.isArray()) {
+            if (this.detail instanceof ArrayInfo e && target.detail instanceof ArrayInfo a) {
+                if ( (e.size != a.size))  {
+                    return false;
+                }
+            }
+            else {
+                return false;
+            }
+        }
+        else if (this.isNum()) {
+            if (this.detail instanceof NumInfo e && target.detail instanceof NumInfo a) {
+                if ( (e.isUnsigned != a.isUnsigned))  {
+                    return false;
+                }
+            }
+            else {
+                return false;
+            }
         }
 
         if (this.id.resolvedDef == target.id.resolvedDef) {
@@ -347,20 +283,30 @@ public class Type extends AstNode {
         return true;
     }
         
-    public static FuncType funcType(Loc loc, FuncPrototype prototype) {
-        FuncType type = new FuncType(loc, prototype);
+    public static Type funcType(Loc loc, FuncPrototype prototype) {
+        Type type = new Type(loc, Buildin.funcTypeName);
+        FuncInfo info = new FuncInfo();
+        info.prototype = prototype;
+        type.detail = info;
+        type.genericArgs = new ArrayList<>();
+        type.genericArgs.add(prototype.returnType);
+        if (prototype.paramDefs != null) {
+            for (ParamDef p : prototype.paramDefs) {
+                type.genericArgs.add(p.paramType);
+            }
+        }
         type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
         return type;
     }
     
     public static Type funcType(FuncDef f) {
-        FuncType type = funcType(f.loc, f.prototype);
-        type.funcDef = f;
+        Type type = funcType(f.loc, f.prototype);
+        ((FuncInfo)type.detail).funcDef = f;
         return type;
     }
     
     public static Type funcType(ClosureExpr f) {
-        FuncType type = funcType(f.loc, f.prototype);
+        Type type = funcType(f.loc, f.prototype);
         return type;
     }
     
@@ -376,45 +322,73 @@ public class Type extends AstNode {
         return type;
     }
     
-    public static NumType intType(Loc loc) {
-        NumType type = new NumType(loc, "Int", 64);
+    public static Type intType(Loc loc) {
+        Type type = new Type(loc, "Int");
+        NumInfo info = new NumInfo();
+        info.size = 64;
+        type.detail = info;
         type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, loc, null);
         return type;
     }
     
-    public static NumType floatType(Loc loc) {
-        NumType type = new NumType(loc, "Float", 64);
+    public static Type floatType(Loc loc) {
+        Type type = new Type(loc, "Float");
+        NumInfo info = new NumInfo();
+        info.size = 64;
+        type.detail = info;
         type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, loc, null);
         return type;
     }
     
     public static Type strType(Loc loc) {
-        NumType type = new NumType(loc, "Int", 8);
-        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
+        Type type = intType(loc);
+        ((NumInfo)type.detail).size = 8;
         type.isImutable = true;
         return pointerType(loc, type, PointerAttr.raw, false);
     }
+    
+    public static Type nullType(Loc loc) {
+        Type type = new Type(loc, Buildin.pointerTypeName);
+        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
+        return type;
+    }
 
     public static Type arrayType(Loc loc, Type elemType, Expr size) {
-        Type type = new ArrayType(loc, elemType, size);
+        Type type = new Type(loc, Buildin.arrayTypeName);
+        ArrayInfo info = new ArrayInfo();
+        info.sizeExpr = size;
+        type.detail = info;
+        type.genericArgs = new ArrayList<>();
+        type.genericArgs.add(elemType);
+        
         type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
         return type;
     }
     
-    public static PointerType pointerType(Loc loc, Type elemType, PointerAttr pointerAttr, boolean nullable) {
-        PointerType type = new PointerType(loc, elemType, pointerAttr, nullable);
+    public static Type pointerType(Loc loc, Type elemType, PointerAttr pointerAttr, boolean nullable) {
+        Type type = new Type(loc, Buildin.pointerTypeName);
+        type.genericArgs = new ArrayList<>();
+        type.genericArgs.add(elemType);
+        PointerInfo info = new PointerInfo();
+        info.pointerAttr = pointerAttr;
+        info.isNullable = nullable;
+        type.detail = info;
+        
         type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
         return type;
     }
     
     public static Type varArgType(Loc loc) {
-        Type type = new Type(loc, "...");
+        Type type = new Type(loc, Buildin.varargTypeName);
         type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
         return type;
     }
     
     public static Type metaType(Loc loc, Type type) {
-        MetaType t = new MetaType(loc, type);
+        Type t = new Type(loc, Buildin.metaTypeTypeName);
+        MetaTypeInfo info = new MetaTypeInfo();
+        info.type = type;
+        t.detail = info;
         if (type.id.resolvedDef == null && type.id.namespace == null) {
             type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
         }
@@ -422,8 +396,46 @@ public class Type extends AstNode {
     }
     
     @java.lang.Override
-    public String toString() {
+    public String toString() {    
         StringBuilder sb = new StringBuilder();
+        
+        if (this.isImutable) {
+            sb.append("const ");
+        }
+        
+        if (isArray()) {
+            ArrayInfo info = (ArrayInfo)this.detail;
+            sb.append("[").append(info.sizeExpr).append("]");
+            sb.append(this.genericArgs.get(0).toString());
+            return sb.toString();
+        }
+        else if (isNum()) {
+            NumInfo info = (NumInfo)this.detail;
+            if (info.isUnsigned) {
+                sb.append("U");
+            }
+
+            sb.append(id.toString());
+
+            if (info.size != 0) {
+                sb.append(info.size);
+            }
+            return sb.toString();
+        }
+        else if (isPointerType()) {
+            PointerInfo info = (PointerInfo)this.detail;
+            sb.append(info.pointerAttr).append("* ");
+            sb.append(this.genericArgs.get(0).toString());
+            return sb.toString();
+        }
+        else if (isFuncType()) {
+            sb.append(((FuncInfo)this.detail).prototype.toString());
+            return sb.toString();
+        }
+        else if (isMetaType()) {
+            sb.append(((MetaTypeInfo)this.detail).type.toString());
+            return sb.toString();
+        }
         
         sb.append(id.toString());
         
@@ -461,19 +473,34 @@ public class Type extends AstNode {
                 Type at = typeGenericArgs.get(g.index);
                 if (at != null) {
                     nt.id = at.id;
+                    nt.detail = at.detail;
+                    if (at.isImutable) {
+                        nt.isImutable = true;
+                    }
                 }
             }
         }
         return nt;
     }
     
-//    public void setToImutable() {
-//        if (this.explicitImutable) {
-//            return;
-//        }
-//        this.isImutable = true;
-//        if (this instanceof PointerType) {
-//            this.genericArgs.get(0).setToImutable();
-//        }
-//    }
+    public Type toNonNullable() {
+        if (!this.isPointerType()) {
+            return this;
+        }
+        if (!((PointerInfo)this.detail).isNullable) {
+            return this;
+        }
+        
+        Type type = new Type(loc, "*");
+        type.genericArgs = new ArrayList<>();
+        type.genericArgs.add(this.genericArgs.get(0));
+        PointerInfo info = new PointerInfo();
+        info.pointerAttr = ((PointerInfo)this.detail).pointerAttr;
+        info.isNullable = false;
+        type.detail = info;
+        
+        type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, type.loc, null);
+        return type;
+    }
+    
 }

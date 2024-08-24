@@ -22,13 +22,11 @@ import sc2.compiler.ast.Type;
 import sc2.compiler.CompilePass;
 import sc2.compiler.CompilerLog;
 import sc2.compiler.ast.AstNode.*;
+import sc2.compiler.ast.Buildin;
 import sc2.compiler.ast.FConst;
 import sc2.compiler.ast.SModule;
 import sc2.compiler.ast.SModule.Depend;
-import sc2.compiler.ast.Type.ArrayType;
-import sc2.compiler.ast.Type.FuncType;
-import sc2.compiler.ast.Type.NumType;
-import sc2.compiler.ast.Type.PointerType;
+import sc2.compiler.ast.Type.*;
 
 /**
  *
@@ -121,14 +119,14 @@ public class CppGenerator extends BaseGenerator {
                 print("void");
                 return;
             case "Int":
-                NumType intType = (NumType)type;
+                NumInfo intType = (NumInfo)type.detail;
                 if (intType.isUnsigned) {
                     print("u");
                 }
                 print("int"+intType.size+"_t");
                 return;
             case "Float":
-                NumType floatType = (NumType)type;
+                NumInfo floatType = (NumInfo)type.detail;
                 if (floatType.size == 64) {
                     print("double");
                 }
@@ -139,10 +137,10 @@ public class CppGenerator extends BaseGenerator {
             case "Bool":
                 print("bool");
                 return;
-            case "*":
-                PointerType pt = (PointerType)type;
+            case Buildin.pointerTypeName:
+                PointerInfo pt = (PointerInfo)type.detail;
                 if (pt.pointerAttr == Type.PointerAttr.raw) {
-                    printType(pt.genericArgs.get(0));
+                    printType(type.genericArgs.get(0));
                     print("*");
                 }
                 else {
@@ -156,19 +154,19 @@ public class CppGenerator extends BaseGenerator {
                         print("WeakPtr");
                     }
                     print("<");
-                    printType(pt.genericArgs.get(0));
+                    printType(type.genericArgs.get(0));
                     print(">");
                 }
                 return;
-            case "[]":
-                ArrayType arrayType = (ArrayType)type;
+            case Buildin.arrayTypeName:
+                ArrayInfo arrayType = (ArrayInfo)type.detail;
                 printType(type.genericArgs.get(0));
                 print("[");
                 this.visit(arrayType.sizeExpr);
                 print("]");
                 return;
-            case "=>":
-                FuncType ft = (FuncType)type;
+            case Buildin.funcTypeName:
+                FuncInfo ft = (FuncInfo)type.detail;
                 print("std::function<");
                 printType(ft.prototype.returnType);
                 print("(");
@@ -270,6 +268,19 @@ public class CppGenerator extends BaseGenerator {
         
         newLine();
         
+        if (v.generiParamDefs != null) {
+            print("template ");
+            print("<");
+            int i = 0;
+            for (var gp : v.generiParamDefs) {
+                if (i > 0) print(", ");
+                print("typename ");
+                print(gp.name);
+                ++i;
+            }
+            print(">").newLine();
+        }
+        
         if ((v.flags & FConst.Virtual) != 0 || (v.flags & FConst.Abstract) != 0) {
             print("virtual ");
         }
@@ -309,9 +320,9 @@ public class CppGenerator extends BaseGenerator {
                 if (i > 0) {
                     print(", ");
                 }
-                print(p.name);
-                print(" : ");
                 printType(p.paramType);
+                print(" ");
+                print(p.name);
                 if (p.defualtValue != null) {
                     print(" = ");
                     this.visit(p.defualtValue);

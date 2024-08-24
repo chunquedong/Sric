@@ -128,13 +128,25 @@ public class TopLevelTypeResolver extends TypeResolver {
 
     @Override
     public void visitFunc(AstNode.FuncDef v) {
+        Scope gpScope = null;
+        if (v.generiParamDefs != null) {
+            gpScope = pushScope();
+            for (GenericParamDef gp : v.generiParamDefs) {
+                gpScope.put(gp.name, gp);
+            }
+            this.scopes.add(gpScope);
+        }
+        
         resolveTopLevelType(v.prototype.returnType, v.loc);
         if (v.prototype.paramDefs != null) {
             for (AstNode.ParamDef p : v.prototype.paramDefs) {
                 resolveTopLevelType(p.paramType, p.loc);
             }
         }
-
+        
+        if (gpScope != null) {
+            this.popScope();
+        }
     }
 
     @Override
@@ -157,7 +169,7 @@ public class TopLevelTypeResolver extends TypeResolver {
         v.walkChildren(this);
         
         if (gpScope != null) {
-            this.scopes.remove(this.scopes.size()-1);
+            this.popScope();
         }
     }
     

@@ -17,8 +17,6 @@ import sc2.compiler.ast.Expr.*;
 import sc2.compiler.ast.Stmt.LocalDefStmt;
 import sc2.compiler.ast.Token.TokenKind;
 import static sc2.compiler.ast.Token.TokenKind.*;
-import sc2.compiler.ast.Type.ArrayType;
-import sc2.compiler.ast.Type.FuncType;
 
 /**
  *
@@ -31,6 +29,8 @@ public class ExprTypeResolver extends TypeResolver {
     
     private ArrayDeque<AstNode> funcs = new ArrayDeque<AstNode>();
     private ArrayDeque<AstNode> loops = new ArrayDeque<AstNode>();
+    
+    protected StructDef curStruct = null;
     
     public ExprTypeResolver(CompilerLog log, SModule module) {
         super(log, module);
@@ -46,6 +46,34 @@ public class ExprTypeResolver extends TypeResolver {
             return preScope;
         }
         return scopes.get(scopes.size()-1);
+    }
+    
+    @Override
+    protected void resolveId(Expr.IdExpr idExpr) {
+        if (idExpr.namespace == null) {
+            if (idExpr.name.equals("this")) {
+                if (curStruct == null) {
+                    err("Use this out of struct", idExpr.loc);
+                    return;
+                }
+                AstNode func = this.funcs.peek();
+                if (func instanceof FuncDef f) {
+                    if ((f.flags & FConst.Static) != 0) {
+                        err("No this in static", idExpr.loc);
+                    }
+                    Type self = new Type(curStruct.loc, curStruct.name);
+                    self.id.resolvedDef = curStruct;
+                    idExpr.resolvedType = Type.pointerType(idExpr.loc, self, Type.PointerAttr.raw, false);
+                    idExpr.resolvedType.isImutable = (f.flags & FConst.Mutable) == 0;
+                }
+                else {
+                    err("Use this out of method", idExpr.loc);
+                }
+                
+                return;
+            }
+        }
+        super.resolveId(idExpr);
     }
 
     @Override
@@ -63,6 +91,7 @@ public class ExprTypeResolver extends TypeResolver {
 
     @Override
     public void visitField(FieldDef v) {
+        
         if (v.fieldType != null) {
             resolveType(v.fieldType);
         }
@@ -77,6 +106,8 @@ public class ExprTypeResolver extends TypeResolver {
         if (v.isLocalVar) {
             lastScope().put(v.name, v);
         }
+        
+        
     }
     
     private void visitFuncPrototype(AstNode.FuncPrototype prototype, Scope scope) {
@@ -101,6 +132,13 @@ public class ExprTypeResolver extends TypeResolver {
     public void visitFunc(FuncDef v) {
         this.funcs.push(v);
         preScope = new Scope();
+        
+        if (v.generiParamDefs != null) {
+            for (GenericParamDef gp : v.generiParamDefs) {
+                preScope.put(gp.name, gp);
+            }
+        }
+
         visitFuncPrototype(v.prototype, preScope);
         if (v.code != null) {
             this.visit(v.code);
@@ -318,7 +356,10 @@ public class ExprTypeResolver extends TypeResolver {
             }
         }
         else if (v instanceof Expr.LiteralExpr e) {
-            if (e.value instanceof Long) {
+            if (e.value == null) {
+                v.resolvedType = Type.intType(e.loc);
+            }
+            else if (e.value instanceof Long) {
                 v.resolvedType = Type.intType(e.loc);
             }
             else if (e.value instanceof Double) {
@@ -448,9 +489,9 @@ public class ExprTypeResolver extends TypeResolver {
             this.visit(e.operand);
             boolean ok = false;
             if (e.operand.resolvedType != null) {
-                if (e.operand.resolvedType instanceof Type.PointerType pt) {
+                if (e.operand.resolvedType.detail instanceof Type.PointerInfo pt) {
                     if (pt.isNullable) {
-                        e.resolvedType = pt.toNonNullable();
+                        e.resolvedType = e.operand.resolvedType.toNonNullable();
                         ok = true;
                     }
                 }
@@ -500,10 +541,11 @@ public class ExprTypeResolver extends TypeResolver {
             }
         }
         else if (e.target instanceof TypeExpr te) {
-            if (te.type instanceof ArrayType at) {
+            if (te.type.detail instanceof Type.ArrayInfo at) {
                 e.isArray = true;
                 at.sizeExpr = new LiteralExpr(Long.valueOf(e.args.size()));
                 at.sizeExpr.loc = e.loc;
+                at.size = e.args.size();
 
                 e.resolvedType = te.type;
             }
@@ -587,7 +629,7 @@ public class ExprTypeResolver extends TypeResolver {
         }
         
         if (e.target.isResolved()) {
-            if (e.target.resolvedType instanceof FuncType f) {
+            if (e.target.resolvedType.detail instanceof Type.FuncInfo f) {
                 e.resolvedType = f.prototype.returnType;
             }
             else {
@@ -672,7 +714,7 @@ public class ExprTypeResolver extends TypeResolver {
                 case assignSlash:
                 case assignPercent:
                     if (e.lhs.resolvedType.isNum() && e.rhs.resolvedType.isNum()) {
-                        e.resolvedType = e.lhs.resolvedType;
+                        //ok
                     }
                     else {
                         if (curt != TokenKind.assign) {
@@ -698,6 +740,7 @@ public class ExprTypeResolver extends TypeResolver {
                             }
                         }
                     }
+                    e.resolvedType = e.lhs.resolvedType;
 
                     break;
                 default:
