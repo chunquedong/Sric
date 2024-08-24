@@ -39,6 +39,15 @@ public class AstNode {
     
     public static class Comments extends AstNode {
         public ArrayList<Comment> comments = new ArrayList<Comment>();
+        
+        public String getDoc() {
+            for (var c : comments) {
+                if (c.type == TokenKind.docComment) {
+                    return c.content;
+                }
+            }
+            return null;
+        }
     }
     
     public static abstract class TopLevelDef extends AstNode {
@@ -46,6 +55,19 @@ public class AstNode {
         public int flags;
         public Comments comment;
         public String name;
+        
+        public boolean isDeprecated() {
+            if (comment != null) {
+                for (var c : comment.comments) {
+                    if (c.type == TokenKind.cmdComment) {
+                        if (c.content.startsWith("deprecated")) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
     }
     
     public static abstract class TypeDef extends TopLevelDef {
