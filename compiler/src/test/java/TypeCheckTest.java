@@ -25,7 +25,7 @@ import sc2.compiler.resolve.TopLevelTypeResolver;
 public class TypeCheckTest {
     @Test
     public void test() throws IOException {
-        String file = "res/code/testPointer.sc";
+        String file = "res/code/testGeneric.sc";
         String libPath = "res/lib";
         
         sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file, libPath);

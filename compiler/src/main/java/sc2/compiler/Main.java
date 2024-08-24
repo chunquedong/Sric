@@ -4,7 +4,9 @@
 //
 package sc2.compiler;
 
+import java.io.File;
 import java.io.IOException;
+import sc2.compiler.ast.SModule;
 
 /**
  *
@@ -12,9 +14,10 @@ import java.io.IOException;
  */
 public class Main {
     
+    
 
     public static void main(String[] args) throws IOException {
-        String sourceDir = "res/code/testPointer.sc";
+        String sourcePath = "../library/std/module.props";
         String libPath = "res/lib";
         
         for (int i = 1; i<args.length; ++i) {
@@ -23,11 +26,17 @@ public class Main {
                 libPath = args[i];
             }
             else {
-                sourceDir = args[i];
+                sourcePath = args[i];
             }
         }
         
-        Compiler compiler = Compiler.makeDefault(sourceDir, libPath);
+        Compiler compiler;
+        if (sourcePath.endsWith(".props")) {
+            compiler = Compiler.fromProps(sourcePath, libPath);
+        }
+        else {
+            compiler = Compiler.makeDefault(sourcePath, libPath);
+        }
         compiler.run();
     }
 }

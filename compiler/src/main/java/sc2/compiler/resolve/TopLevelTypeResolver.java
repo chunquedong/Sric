@@ -19,35 +19,19 @@ import sc2.compiler.ast.SModule.Depend;
  *
  * @author yangjiandong
  */
-public class TopLevelTypeResolver  extends CompilePass {
+public class TopLevelTypeResolver extends TypeResolver {
     
-    private ArrayList<Scope> scopes = new ArrayList<>();
-    private SModule module;
     private Compiler compiler;
     
     public TopLevelTypeResolver(CompilerLog log, SModule module, Compiler compiler) {
-        super(log);
-        this.module = module;
-        this.log = log;
+        super(log, module);
         this.compiler = compiler;
     }
     
     public void run() {
         module.walkChildren(this);
     }
-    
-    private AstNode findSymbol(String name, Loc loc) {
-        for (int i = scopes.size()-1; i >=0; --i) {
-            Scope scope = scopes.get(i);
-            AstNode node = scope.get(name, loc, log);
-            if (node != null) {
-                return node;
-            }
-        }
-        err("Unknow symbol "+name, loc);
-        return null;
-    }
-    
+
     private void resolveImportId(IdExpr idExpr) {
         if (idExpr.namespace == null) {
             for (Depend d : module.depends) {
@@ -87,82 +71,7 @@ public class TopLevelTypeResolver  extends CompilePass {
             err("Unsupport :: for "+idExpr.namespace.name, idExpr.loc);
         }
     }
-    
-    private void resolveId(IdExpr idExpr) {
-        if (idExpr.namespace == null) {
-            idExpr.resolvedDef = findSymbol(idExpr.name, idExpr.loc);
-            return;
-        }
-        resolveId(idExpr.namespace);
-        if (idExpr.namespace.resolvedDef == null) {
-            return;
-        }
-        if (idExpr.namespace.resolvedDef instanceof SModule m) {
-            AstNode node = m.getScope().get(idExpr.name, idExpr.loc, log);
-            if (node == null) {
-                err("Unknow symbol "+idExpr.name, idExpr.loc);
-            }
-            idExpr.resolvedDef = node;
-            return;
-        }
-        else if (idExpr.namespace.resolvedDef instanceof TypeDef m) {
-            AstNode node = m.getScope().get(idExpr.name, idExpr.loc, log);
-            if (node == null) {
-                err("Unknow symbol "+idExpr.name, idExpr.loc);
-            }
-            idExpr.resolvedDef = node;
-            return;
-        }
-        else {
-            err("Unsupport :: for "+idExpr.namespace.name, idExpr.loc);
-        }
-    }
-        
-    private void resolveType(Type type, Loc loc) {
-        if (type == null) {
-            err("Type inference not support for top level node", loc);
-            return;
-        }
-        resolveId(type.id);
-        if (type.id.resolvedDef != null) {
-            if (type.id.resolvedDef instanceof TypeDef) {
-                //ok
-                type.id.resolvedType = Type.metaType(type.loc, type);
-            }
-            else if (type.id.resolvedDef instanceof TypeAlias ta) {
-                type.id.resolvedDef = ta.type.id.resolvedDef;
-                type.id.resolvedType = Type.metaType(type.loc, type);
-            }
-            else {
-                type.id.resolvedDef = null;
-                err("It's not a type: "+type.id.name, type.loc);
-            }
-        }
-        else {
-            return;
-        }
-        
-        if (type.genericArgs != null) {
-            boolean genericOk = false;
-            if (type.id.resolvedDef instanceof StructDef sd) {
-                if (sd.generiParamDefs != null) {
-                    if (type.genericArgs.size() == sd.generiParamDefs.size()) {
-                        type.id.resolvedDef = sd.parameterize(type.genericArgs);
-                        genericOk = true;
-                    }
-                }
-            }
-            if (!genericOk) {
-                err("Generic args not match", type.loc);
-            }
-        }
-        else if (type.id.resolvedDef instanceof StructDef sd) {
-            if (sd.generiParamDefs != null) {
-                err("Miss generic args", type.loc);
-            }
-        }
-    }
-    
+
     private void importToScope(AstNode.Import i, Scope importScope) {
 
         resolveImportId(i.id);
@@ -209,18 +118,20 @@ public class TopLevelTypeResolver  extends CompilePass {
 
     @Override
     public void visitField(AstNode.FieldDef v) {
-        resolveType(v.fieldType, v.loc);
+        if (v.parent instanceof EnumDef d) {
+            Type self = new Type(d.loc, d.name);
+            self.id.resolvedDef = d;
+            v.fieldType = self;
+        }
+        resolveTopLevelType(v.fieldType, v.loc);
     }
 
     @Override
     public void visitFunc(AstNode.FuncDef v) {
-        resolveType(v.prototype.returnType, v.loc);
+        resolveTopLevelType(v.prototype.returnType, v.loc);
         if (v.prototype.paramDefs != null) {
             for (AstNode.ParamDef p : v.prototype.paramDefs) {
-                if (p.paramType != null) {
-                    p.paramType.setToImutable();
-                }
-                resolveType(p.paramType, p.loc);
+                resolveTopLevelType(p.paramType, p.loc);
             }
         }
 
@@ -239,7 +150,7 @@ public class TopLevelTypeResolver  extends CompilePass {
             }
             if (sd.inheritances != null) {
                 for (Type inh : sd.inheritances) {
-                    this.resolveType(inh, inh.loc);
+                    this.resolveTopLevelType(inh, inh.loc);
                 }
             }
         }
@@ -252,7 +163,7 @@ public class TopLevelTypeResolver  extends CompilePass {
     
     @Override
     public void visitTypeAlias(TypeAlias v) {
-        this.resolveType(v.type, v.loc);
+        this.resolveTopLevelType(v.type, v.loc);
     }
 
     @Override

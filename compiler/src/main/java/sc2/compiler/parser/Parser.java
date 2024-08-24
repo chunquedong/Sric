@@ -232,10 +232,10 @@ public class Parser {
                 Loc gloc = curLoc();
                 String paramName = consumeId();
                 GenericParamDef param = new GenericParamDef();
-                param.loc = gloc;
                 param.name = paramName;
                 param.parent = parent;
                 param.index = gparams.size();
+                endLoc(param, gloc);
                 gparams.add(param);
                 if (curt == TokenKind.comma) {
                     consume();
@@ -520,11 +520,11 @@ public class Parser {
     private void enumDefs(EnumDef def) {
         // parse each enum def
         int ordinal = 0;
-        def.enumDefs.add(enumSlotDef(ordinal++));
+        def.addSlot(enumSlotDef(ordinal++));
         while (curt == TokenKind.comma) {
             consume();
             FieldDef enumDef = enumSlotDef(ordinal++);
-            def.enumDefs.add(enumDef);
+            def.addSlot(enumDef);
         }
         //endOfStmt();
     }
@@ -891,20 +891,20 @@ public class Parser {
     
     private Type imutableType() {
         boolean imutable = false;
-        boolean explicitImutable = false;
+//        boolean explicitImutable = false;
         if (curt == TokenKind.constKeyword) {
             consume();
             imutable = true;
-            explicitImutable = true;
+//            explicitImutable = true;
         }
         else if (curt == TokenKind.mutKeyword) {
             consume();
             imutable = false;
-            explicitImutable = true;
+//            explicitImutable = true;
         }
         
         Type type = typeRef();
-        type.explicitImutable = explicitImutable;
+//        type.explicitImutable = explicitImutable;
         type.isImutable = imutable;
         return type;
     }

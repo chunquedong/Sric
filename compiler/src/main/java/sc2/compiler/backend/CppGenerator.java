@@ -353,9 +353,11 @@ public class CppGenerator extends BaseGenerator {
                     }
                 }
                 for (FieldDef f : sd.fieldDefs) {
-                    if (f.fieldType.id.resolvedDef != null && f.fieldType.id.resolvedDef instanceof TypeDef td) {
-                        if (td.parent != null && ((FileUnit)td.parent).module == this.module) {
-                            this.visitTypeDef(td);
+                    if (!f.fieldType.isPointerType() && f.fieldType.id.resolvedDef != null && f.fieldType.id.resolvedDef instanceof TypeDef td) {
+                        if (td.parent != null && td.parent instanceof FileUnit unit) {
+                            if (unit.module == this.module) {
+                                this.visitTypeDef(td);
+                            }
                         }
                     }
                 }
@@ -394,6 +396,21 @@ public class CppGenerator extends BaseGenerator {
             unindent();
             print("};").newLine();
             return;
+        }
+        
+        if (v instanceof StructDef sd) {
+            if (sd.generiParamDefs != null) {
+                print("template ");
+                print("<");
+                int i = 0;
+                for (var gp : sd.generiParamDefs) {
+                    if (i > 0) print(", ");
+                    print("typename ");
+                    print(gp.name);
+                    ++i;
+                }
+                print(">").newLine();
+            }
         }
         
         print("struct ");
@@ -609,6 +626,9 @@ public class CppGenerator extends BaseGenerator {
         }
         else if (v instanceof ClosureExpr e) {
             printClosureExpr(e);
+        }
+        else if (v instanceof OptionalExpr e) {
+            this.visit(e.operand);
         }
         else {
             err("Unkown expr:"+v, v.loc);

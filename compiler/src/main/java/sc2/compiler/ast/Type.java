@@ -22,7 +22,7 @@ public class Type extends AstNode {
         own, ref, raw, weak
     };
     
-    public boolean explicitImutable = false;
+//    public boolean explicitImutable = false;
     public boolean isImutable = false;
     
     public static class FuncType extends Type {
@@ -84,6 +84,9 @@ public class Type extends AstNode {
         
         @Override
         public boolean fit(Type target) {
+            if (target.isVarArgType()) {
+                return true;
+            }
             if (this.isImutable && !target.isImutable) {
                 return false;
             }
@@ -279,7 +282,17 @@ public class Type extends AstNode {
         return this instanceof FuncType;
     }
     
+    public boolean isVarArgType() {
+        if (id.namespace != null) {
+            return false;
+        }
+        return id.name.equals("...");
+    }
+    
     public boolean fit(Type target) {
+        if (target.isVarArgType()) {
+            return true;
+        }
         if (this.isImutable && !target.isImutable) {
             return false;
         }
@@ -440,7 +453,7 @@ public class Type extends AstNode {
             nt.genericArgs = new ArrayList<Type>();
             for (int i=0; i<this.genericArgs.size(); ++i) {
                 Type t = this.genericArgs.get(i).parameterize(typeGenericArgs);
-                nt.genericArgs.set(i, t);
+                nt.genericArgs.add(t);
             }
         }
         if (this.id.resolvedDef instanceof GenericParamDef g) {
@@ -454,13 +467,13 @@ public class Type extends AstNode {
         return nt;
     }
     
-    public void setToImutable() {
-        if (this.explicitImutable) {
-            return;
-        }
-        this.isImutable = true;
-        if (this instanceof PointerType) {
-            this.genericArgs.get(0).setToImutable();
-        }
-    }
+//    public void setToImutable() {
+//        if (this.explicitImutable) {
+//            return;
+//        }
+//        this.isImutable = true;
+//        if (this instanceof PointerType) {
+//            this.genericArgs.get(0).setToImutable();
+//        }
+//    }
 }

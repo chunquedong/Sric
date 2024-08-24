@@ -83,11 +83,6 @@ public class ErrorChecker extends CompilePass {
 
     @Override
     public void visitField(AstNode.FieldDef v) {
-        if (v.initExpr != null) {
-            if (v.fieldType == null) {
-                v.fieldType = v.initExpr.resolvedType;
-            }
-        }
         
         if (v.fieldType == null) {
             err("Unkonw field type", v.loc);
@@ -462,6 +457,11 @@ public class ErrorChecker extends CompilePass {
             this.visit(e.trueExpr);
             this.visit(e.falseExpr);
             verifyBool(e.condition);
+            if (e.trueExpr.isResolved() && e.falseExpr.isResolved()) {
+                if (!e.trueExpr.resolvedType.equals(e.falseExpr.resolvedType)) {
+                    err("Type must equals", e.falseExpr.loc);
+                }
+            }
         }
         else if (v instanceof Expr.InitBlockExpr e) {
             resolveInitBlockExpr(e);
@@ -660,6 +660,11 @@ public class ErrorChecker extends CompilePass {
                     else if (!e.lhs.resolvedType.equals(e.rhs.resolvedType)) {
                         err("Cant compare different type", e.loc);
                     }
+                    break;
+                case doubleAmp:
+                case doublePipe:
+                    verifyBool(e.lhs);
+                    verifyBool(e.rhs);
                     break;
                 case leftShift:
                 case rightShift:

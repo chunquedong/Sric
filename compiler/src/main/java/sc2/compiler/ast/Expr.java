@@ -76,6 +76,7 @@ public abstract class Expr extends AstNode {
     
     public static class GenericInstance extends Expr {
         public Expr target;
+        public AstNode resolvedDef;
         public ArrayList<Type> genericArgs = new ArrayList<Type>();
     }
     

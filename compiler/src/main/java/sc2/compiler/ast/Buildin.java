@@ -79,12 +79,14 @@ public class Buildin {
             ArrayList<GenericParamDef> gps = new ArrayList<GenericParamDef>();
             GenericParamDef gp = new GenericParamDef();
             gp.name = "T";
+            gp.loc = loc;
             gps.add(gp);
             makeBuildinType(scope, "[]", gps);//array
             
             ArrayList<GenericParamDef> gps2 = new ArrayList<GenericParamDef>();
             GenericParamDef gp2 = new GenericParamDef();
             gp2.name = "T";
+            gp2.loc = loc;
             gps2.add(gp2);
             makeBuildinType(scope, "*", gps2);//pointer
             

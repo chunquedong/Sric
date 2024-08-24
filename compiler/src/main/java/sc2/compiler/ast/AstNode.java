@@ -247,6 +247,12 @@ public class AstNode {
             }
             return scope;
         }
+        
+       @Override public void walkChildren(Visitor visitor) {
+            for (FieldDef field : enumDefs) {
+                visitor.visit(field);
+            }
+        }
     }
     
     public static class TraitDef extends TypeDef {
@@ -338,15 +344,17 @@ public class AstNode {
             nf.prototype = new FuncPrototype();
             nf.prototype.returnType = this.prototype.returnType.parameterize(typeGenericArgs);
             nf.prototype.postFlags = this.prototype.postFlags;
-            nf.prototype.paramDefs = new ArrayList<ParamDef>();
-            for (ParamDef p : this.prototype.paramDefs) {
-                ParamDef np = new ParamDef();
-                np.name = p.name;
-                np.defualtValue = p.defualtValue;
-                np.loc = p.loc;
-                np.len = p.len;
-                np.paramType = p.paramType.parameterize(typeGenericArgs);
-                nf.prototype.paramDefs.add(np);
+            if (this.prototype.paramDefs != null) {
+                nf.prototype.paramDefs = new ArrayList<ParamDef>();
+                for (ParamDef p : this.prototype.paramDefs) {
+                    ParamDef np = new ParamDef();
+                    np.name = p.name;
+                    np.defualtValue = p.defualtValue;
+                    np.loc = p.loc;
+                    np.len = p.len;
+                    np.paramType = p.paramType.parameterize(typeGenericArgs);
+                    nf.prototype.paramDefs.add(np);
+                }
             }
             return nf;
         }

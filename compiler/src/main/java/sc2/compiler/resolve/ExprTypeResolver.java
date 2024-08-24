@@ -18,26 +18,22 @@ import sc2.compiler.ast.Stmt.LocalDefStmt;
 import sc2.compiler.ast.Token.TokenKind;
 import static sc2.compiler.ast.Token.TokenKind.*;
 import sc2.compiler.ast.Type.ArrayType;
+import sc2.compiler.ast.Type.FuncType;
 
 /**
  *
  * @author yangjiandong
  */
-public class ExprTypeResolver extends CompilePass {
-    
-    private ArrayList<Scope> scopes = new ArrayList<>();
-    private SModule module;
+public class ExprTypeResolver extends TypeResolver {
     
     //for func param or for init
     private Scope preScope = null;
     
     private ArrayDeque<AstNode> funcs = new ArrayDeque<AstNode>();
     private ArrayDeque<AstNode> loops = new ArrayDeque<AstNode>();
-    private StructDef curStruct = null;
     
     public ExprTypeResolver(CompilerLog log, SModule module) {
-        super(log);
-        this.module = module;
+        super(log, module);
         this.log = log;
     }
     
@@ -45,114 +41,11 @@ public class ExprTypeResolver extends CompilePass {
         module.walkChildren(this);
     }
     
-    private Scope pushScope() {
-        Scope s = new Scope();
-        scopes.add(s);
-        return s;
-    }
-    
-    private Scope popScope() {
-        return scopes.remove(scopes.size()-1);
-    }
-    
     private Scope lastScope() {
         if (preScope != null) {
             return preScope;
         }
         return scopes.get(scopes.size()-1);
-    }
-    
-    private AstNode findSymbol(String name, Loc loc) {
-        for (int i = scopes.size()-1; i >=0; --i) {
-            Scope scope = scopes.get(i);
-            AstNode node = scope.get(name, loc, log);
-            if (node != null) {
-                return node;
-            }
-        }
-        err("Unknow symbol "+name, loc);
-        return null;
-    }
-    
-    private void resolveId(Expr.IdExpr idExpr) {
-        if (idExpr.namespace == null) {
-            if (idExpr.name.equals("this")) {
-                if (curStruct == null) {
-                    err("Use this out of struct", idExpr.loc);
-                    return;
-                }
-                Type self = new Type(curStruct.loc, curStruct.name);
-                self.id.resolvedDef = curStruct;
-                idExpr.resolvedDef = Type.pointerType(idExpr.loc, self, Type.PointerAttr.raw, false);
-                return;
-            }
-            idExpr.resolvedDef = findSymbol(idExpr.name, idExpr.loc);
-            return;
-        }
-        resolveId(idExpr.namespace);
-        if (idExpr.namespace.resolvedDef == null) {
-            return;
-        }
-        if (idExpr.namespace.resolvedDef instanceof SModule m) {
-            AstNode node = m.getScope().get(idExpr.name, idExpr.loc, log);
-            if (node == null) {
-                err("Unknow symbol "+idExpr.name, idExpr.loc);
-            }
-            idExpr.resolvedDef = node;
-            return;
-        }
-        else if (idExpr.namespace.resolvedDef instanceof TypeDef m) {
-            AstNode node = m.getScope().get(idExpr.name, idExpr.loc, log);
-            if (node == null) {
-                err("Unknow symbol "+idExpr.name, idExpr.loc);
-            }
-            idExpr.resolvedDef = node;
-            return;
-        }
-        else {
-            err("Unsupport :: for "+idExpr.namespace.name, idExpr.loc);
-        }
-    }
-        
-    private void resolveType(Type type) {
-        resolveId(type.id);
-        if (type.id.resolvedDef != null) {
-            if (type.id.resolvedDef instanceof TypeDef) {
-                //ok
-                type.id.resolvedType = Type.metaType(type.loc, type);
-            }
-            else if (type.id.resolvedDef instanceof TypeAlias ta) {
-                type.id.resolvedDef = ta.type.id.resolvedDef;
-                type.id.resolvedType = Type.metaType(type.loc, type);
-            }
-            else {
-                type.id.resolvedDef = null;
-                err("It's not a type: "+type.id.name, type.loc);
-            }
-        }
-        else {
-            return;
-        }
-        
-        if (type.genericArgs != null) {
-            boolean genericOk = false;
-            if (type.id.resolvedDef instanceof StructDef sd) {
-                if (sd.generiParamDefs != null) {
-                    if (type.genericArgs.size() == sd.generiParamDefs.size()) {
-                        type.id.resolvedDef = sd.parameterize(type.genericArgs);
-                        genericOk = true;
-                    }
-                }
-            }
-            if (!genericOk) {
-                err("Generic args mismatch", type.loc);
-            }
-        }
-        else if (type.id.resolvedDef instanceof StructDef sd) {
-            if (sd.generiParamDefs != null) {
-                err("Miss generic args", type.loc);
-            }
-        }
     }
 
     @Override
@@ -175,6 +68,10 @@ public class ExprTypeResolver extends CompilePass {
         }
         if (v.initExpr != null) {
             this.visit(v.initExpr);
+        }
+
+        if (v.fieldType == null) {
+            v.fieldType = v.initExpr.resolvedType;
         }
         
         if (v.isLocalVar) {
@@ -525,6 +422,7 @@ public class ExprTypeResolver extends CompilePass {
             this.visit(e.condition);
             this.visit(e.trueExpr);
             this.visit(e.falseExpr);
+            e.resolvedType = e.trueExpr.resolvedType;
         }
         else if (v instanceof Expr.InitBlockExpr e) {
             resolveInitBlockExpr(e);
@@ -544,7 +442,7 @@ public class ExprTypeResolver extends CompilePass {
             preScope = null;
             this.funcs.pop();
             
-            e.resolvedType = Type.voidType(e.loc);
+            e.resolvedType = Type.funcType(e);
         }
         else if (v instanceof OptionalExpr e) {
             this.visit(e.operand);
@@ -563,6 +461,11 @@ public class ExprTypeResolver extends CompilePass {
         }
         else {
             err("Unkown expr:"+v, v.loc);
+            return;
+        }
+        
+        if (v.resolvedType == null) {
+            err("Resolved fail", v.loc);
         }
     }
 
@@ -581,6 +484,11 @@ public class ExprTypeResolver extends CompilePass {
         if (e.target instanceof IdExpr id) {
             if (id.resolvedDef instanceof StructDef) {
                 sd = (StructDef)id.resolvedDef;
+            }
+        }
+        else if (e.target instanceof GenericInstance gi) {
+            if (gi.resolvedDef instanceof StructDef) {
+                sd = (StructDef)gi.resolvedDef;
             }
         }
         else if (e.target instanceof CallExpr call) {
@@ -639,7 +547,8 @@ public class ExprTypeResolver extends CompilePass {
             if (idExpr.resolvedDef instanceof StructDef sd) {
                 if (sd.generiParamDefs != null) {
                     if (e.genericArgs.size() == sd.generiParamDefs.size()) {
-                        idExpr.resolvedDef = sd.parameterize(e.genericArgs);
+                        e.resolvedDef = sd.parameterize(e.genericArgs);
+                        e.resolvedType = getSlotType(idExpr.resolvedDef);
                         genericOk = true;
                     }
                 }
@@ -647,12 +556,15 @@ public class ExprTypeResolver extends CompilePass {
             else if (idExpr.resolvedDef instanceof FuncDef sd) {
                 if (sd.generiParamDefs != null) {
                     if (e.genericArgs.size() == sd.generiParamDefs.size()) {
-                        idExpr.resolvedDef = sd.parameterize(e.genericArgs);
+                        e.resolvedDef = sd.parameterize(e.genericArgs);
+                        e.resolvedType = getSlotType(idExpr.resolvedDef);
                         genericOk = true;
                     }
                 }
             }
-            err("Generic args not match", e.loc);
+            if (!genericOk) {
+                err("Generic args not match", e.loc);
+            }
         }
         else if (idExpr.resolvedDef instanceof StructDef sd) {
             if (sd.generiParamDefs != null) {
@@ -671,6 +583,15 @@ public class ExprTypeResolver extends CompilePass {
         if (e.args != null) {
             for (Expr.CallArg t : e.args) {
                 this.visit(t.argExpr);
+            }
+        }
+        
+        if (e.target.isResolved()) {
+            if (e.target.resolvedType instanceof FuncType f) {
+                e.resolvedType = f.prototype.returnType;
+            }
+            else {
+                err("Invalid call target", e.loc);
             }
         }
     }
@@ -712,6 +633,10 @@ public class ExprTypeResolver extends CompilePass {
                             err("Invalid operator:"+curt, e.loc);
                         }
                     }
+                    e.resolvedType = Type.boolType(e.loc);
+                    break;
+                case doubleAmp:
+                case doublePipe:
                     e.resolvedType = Type.boolType(e.loc);
                     break;
                 case leftShift:

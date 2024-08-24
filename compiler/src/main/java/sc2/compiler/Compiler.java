@@ -45,29 +45,51 @@ public class Compiler {
         this.outputDir = outputDir;
     }
     
+    private static ArrayList<Depend> listDepends(File libDir) {
+        ArrayList<Depend> depends = new ArrayList<Depend>();
+        File[] list = libDir.listFiles();
+        for (File file2 : list) {
+            if (!file2.getName().endsWith(".meta")) {
+                continue;
+            }
+            Depend depend = new Depend();
+            depend.name = Util.getBaseName(file2.getName());
+            depend.version = "1.0";
+            depends.add(depend);
+        }
+        return depends;
+    }
+    
     public static Compiler makeDefault(String sourcePath, String libPath) {
         File sourceDir = new File(sourcePath);
         
         SModule module = new SModule();
-        Depend selfDepend = Depend.fromFile(sourceDir);
-        if (selfDepend != null) {
-            module.name = selfDepend.name;
-            module.version = selfDepend.version;
-        }
-        else {
-            module.name = Util.getBaseName(sourceDir.getName());
-            module.version = "1.0";
-        }
+        module.name = Util.getBaseName(sourceDir.getName());
+        module.version = "1.0";
         
         File libDir = new File(libPath);
-        File[] list = libDir.listFiles();
-        for (File file2 : list) {
-            if (!file2.getName().endsWith(".sc")) {
-                continue;
+        module.depends= listDepends(libDir);
+        return new Compiler(module, sourceDir, libPath, libDir.getParent()+"/output/");
+    }
+    
+    public static Compiler fromProps(String propsPath, String libPath) throws IOException {
+        return fromProps(propsPath, libPath, null);
+    }
+    
+    public static Compiler fromProps(String propsPath, String libPath, String srcDirs) throws IOException {
+        var props = Util.readProps(propsPath);
+        SModule module = SModule.fromProps(props);
+        if (srcDirs == null) {
+            srcDirs = props.get("srcDirs");
+            if (srcDirs == null) {
+                throw new RuntimeException("Unknow srcDirs");
             }
-            Depend depend = Depend.fromFile(file2);
-            module.depends.add(depend);
+            else {
+                srcDirs = new File(propsPath).getParent() + "/" + srcDirs;
+            }
         }
+        File sourceDir = new File(srcDirs);
+        File libDir = new File(libPath);
         return new Compiler(module, sourceDir, libPath, libDir.getParent()+"/output/");
     }
     
@@ -95,16 +117,18 @@ public class Compiler {
     }
     
     public SModule importModule(String moduleName, String version) {
-        String file = libPath+"/"+moduleName + "-" + version +".sc";
-        Compiler compiler = Compiler.makeDefault(file, libPath);
-        compiler.genCode = false;
+        String libFile = libPath + "/" + moduleName;
         try {
+            Compiler compiler = Compiler.fromProps(libFile+".meta", libPath, libFile+".sc");
+            compiler.genCode = false;
+        
             compiler.run();
+            return compiler.module;
+            
         } catch (IOException ex) {
             ex.printStackTrace();
-            throw new RuntimeException("Load lib fail:"+file);
+            throw new RuntimeException("Load lib fail:"+libFile+".meta");
         }
-        return compiler.module;
     }
     
     private void typeCheck() {
@@ -136,10 +160,12 @@ public class Compiler {
     }
     
     public void genOutput() throws IOException {
-
-        String libFile = libPath + "/" + this.module.name + "-"+ this.module.version + ".sc";
-        ScLibGenerator scGenerator = new ScLibGenerator(log, libFile);
+        String libFile = libPath + "/" + this.module.name;
+        ScLibGenerator scGenerator = new ScLibGenerator(log, libFile + ".sc");
         scGenerator.run(module);
+        
+        var props = this.module.toMetaProps();
+        Util.writeProps(libFile+".meta", props);
         
         new File(outputDir).mkdirs();
         

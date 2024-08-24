@@ -42,6 +42,17 @@ public class ScLibGenerator extends BaseGenerator {
         }
         
         switch (type.id.name) {
+            case "*":
+                Type.PointerType pt = (Type.PointerType)type;
+                print(pt.pointerAttr+"");
+                if (pt.isNullable) {
+                    print("*? ");
+                }
+                else {
+                    print("* ");
+                }
+                printType(pt.genericArgs.get(0));
+                return;
             case "[]":
                 Type.ArrayType arrayType = (Type.ArrayType)type;
                 printType(type.genericArgs.get(0));
@@ -130,11 +141,11 @@ public class ScLibGenerator extends BaseGenerator {
         printFuncPrototype(v.prototype);
 
         
-        if (inlined) {
+        if (inlined && v.code != null) {
             this.visit(v.code);
         }
         else {
-            print(";");
+            print(";").newLine();
         }
     }
     
@@ -198,6 +209,17 @@ public class ScLibGenerator extends BaseGenerator {
         print(v.name);
         
         if (v instanceof AstNode.StructDef sd) {
+            if (sd.generiParamDefs != null) {
+                print("$<");
+                int i = 0;
+                for (var gp : sd.generiParamDefs) {
+                    if (i > 0) print(", ");
+                    print(gp.name);
+                    ++i;
+                }
+                print(">");
+            }
+            
             if (sd.inheritances != null) {
                 int i = 0;
                 for (Type inh : sd.inheritances) {
@@ -214,8 +236,7 @@ public class ScLibGenerator extends BaseGenerator {
         v.walkChildren(this);
         
         unindent();
-        newLine();
-        print("};").newLine();
+        print("}").newLine();
     }
 
     @Override
@@ -404,6 +425,9 @@ public class ScLibGenerator extends BaseGenerator {
         }
         else if (v instanceof ClosureExpr e) {
             printClosureExpr(e);
+        }
+        else if (v instanceof Expr.OptionalExpr e) {
+            this.visit(e.operand);
         }
         else {
             err("Unkown expr:"+v, v.loc);

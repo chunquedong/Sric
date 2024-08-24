@@ -58,8 +58,8 @@ public class DeepParserTest {
             
             if (log.hasError()) {
                 String name = Util.getBaseName(file.getName());
-                GoldenTest.verifyGolden(log.toString(), "parser", name+".cpp");
-                return;
+                GoldenTest.verifyGolden(log.toString(), "deepParser", name+".cpp");
+                continue;
             }
 
             ByteArrayOutputStream stream = new ByteArrayOutputStream();

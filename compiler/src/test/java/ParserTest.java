@@ -57,7 +57,7 @@ public class ParserTest {
             if (log.hasError()) {
                 String name = Util.getBaseName(file.getName());
                 GoldenTest.verifyGolden(log.toString(), "parser", name+".cpp");
-                return;
+                continue;
             }
 
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
