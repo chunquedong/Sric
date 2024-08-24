@@ -158,12 +158,13 @@ var p : const raw* Int;
 var p : const raw* const Int;
 ```
 
-Function params is const by default
-
+'this' is const by default
 ```
-fun foo(a: * mut Int) mut : Int {
-    *a = 1;
-    return *a;
+struct Bar {
+    var i: Int = 0;
+    fun set(a: Int) mut : Int {
+        i = a;
+    }
 }
 ```
 
@@ -211,7 +212,7 @@ summary = standard library
 outType = lib
 version = 1.0
 depends = sys 1.0
-srcDirs = src/*
+srcDirs = src/
 ```
 
 import external module in code:
