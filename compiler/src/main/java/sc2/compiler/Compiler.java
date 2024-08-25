@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import sc2.compiler.ast.AstNode;
+import sc2.compiler.ast.AstNode.FileUnit;
 import sc2.compiler.ast.SModule;
 import sc2.compiler.ast.SModule.Depend;
 import sc2.compiler.backend.CppGenerator;
@@ -113,6 +114,32 @@ public class Compiler {
         if (genCode) {
             genOutput();
         }
+        return true;
+    }
+    
+    public boolean updateFile(String file, String src) throws IOException {
+        AstNode.FileUnit funit = new AstNode.FileUnit(file);
+        DeepParser parser = new DeepParser(log, src, funit);
+        parser.parse();
+        funit.module = module;
+        
+        for (FileUnit f : module.fileUnits) {
+            if (f.name.endsWith(funit.name)) {
+                module.fileUnits.remove(f);
+            }
+        }
+        module.fileUnits.add(funit);
+
+        if (log.printError()) {
+            return false;
+        }
+        
+        typeCheck();
+        
+        if (log.printError()) {
+            return false;
+        }
+
         return true;
     }
     

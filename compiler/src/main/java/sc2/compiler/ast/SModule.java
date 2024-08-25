@@ -33,6 +33,15 @@ public class SModule extends AstNode {
     public Scope scope = null;
     public ArrayList<Depend> depends = new ArrayList<>();
     
+    public FileUnit findFileUnit(String file) {
+        for (FileUnit v : fileUnits) {
+            if (v.name.equals(file)) {
+                return v;
+            }
+        }
+        return null;
+    }
+    
     public static SModule fromProps(HashMap<String, String> props) {
         SModule m = new SModule();
         m.name = props.get("name");

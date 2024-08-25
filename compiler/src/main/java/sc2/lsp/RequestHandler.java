@@ -81,7 +81,7 @@ public class RequestHandler {
         Document doc = this.workspace.getDocument(params.textDocument.uri);
         List<CompletionItem> items = Collections.emptyList();
         if(doc != null) {
-            items = doc.getAutoCompletionList(workspace, params.position);
+            items = doc.getAutoCompletionList(params.position);
         }
         
         RpcResponse resp = new RpcResponse();
@@ -94,7 +94,7 @@ public class RequestHandler {
         Document doc = this.workspace.getDocument(params.textDocument.uri);
         Location location = null;
         if(doc != null) {
-            location = doc.getDefinitionLocation(this.workspace, params.position);
+            location = doc.getDefinitionLocation(params.position);
         }
 
         RpcResponse resp = new RpcResponse();
@@ -107,8 +107,7 @@ public class RequestHandler {
         Document doc = this.workspace.getDocument(params.textDocument.uri);
         List<SymbolInformation> symbols = Collections.emptyList();
         if(doc != null) {
-            this.workspace.processSource(params.textDocument.uri);
-            symbols = doc.getSymbols(this.workspace);
+            symbols = doc.getSymbols();
         }
         
         RpcResponse resp = new RpcResponse();
@@ -121,7 +120,7 @@ public class RequestHandler {
         Document doc = this.workspace.getDocument(params.textDocument.uri);
         List<Location> items = Collections.emptyList();
         if(doc != null) {
-            items = doc.getReferences(this.workspace, params.position);
+            items = doc.getReferences(params.position);
         }
         
         RpcResponse resp = new RpcResponse();
@@ -131,7 +130,7 @@ public class RequestHandler {
     }
     
     public void handleWorkspaceSymbol(RpcRequest rpc, WorkspaceSymbolParams params) {
-        List<SymbolInformation> symbols = this.workspace.findSymbols(params.query);
+        List<SymbolInformation> symbols = this.workspace.findAllSymbols(params.query);
         
         RpcResponse resp = new RpcResponse();
         resp.id = rpc.id;

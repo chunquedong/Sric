@@ -17,9 +17,7 @@ public class AstNode {
 
     public Loc loc;
     public int len = 0;
-    
-    public void getChildren(ArrayList<AstNode> list, Object options) {}
-    
+        
     public interface Visitor {
         public void visit(AstNode node);
     }

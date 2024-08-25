@@ -64,7 +64,7 @@ public class ErrorChecker extends CompilePass {
         }
     }
     
-    private AstNode idResolvedDef(Expr target) {
+    public static AstNode idResolvedDef(Expr target) {
         if (target instanceof Expr.OptionalExpr e) {
             target = e.operand;
         }
@@ -745,6 +745,13 @@ public class ErrorChecker extends CompilePass {
                     if (ok) {
                         if (curt == Token.TokenKind.assign) {
                             verifyTypeFit(e.rhs, e.lhs.resolvedType, e.loc);
+                            if (e.lhs instanceof IdExpr lr && e.rhs instanceof IdExpr ri) {
+                                if (lr.namespace == ri.namespace) {
+                                    if (lr.name.equals(ri.name)) {
+                                        err("Self assign", e.loc);
+                                    }
+                                }
+                            }
                         }
                         else if (!e.lhs.resolvedType.equals(e.rhs.resolvedType)) {
                             err("Type mismatch", e.loc);

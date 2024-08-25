@@ -38,39 +38,26 @@ public class MessageSender {
     }
     
     public void sendDiagnostics(Workspace workspace, String documentUri) {
-        CompilerLog result = workspace.processSource(documentUri);
-        var errors = result.errors;
+        Document doc = workspace.getDocument(documentUri);
+        ArrayList<CompilerErr> errors = doc.compiler.log.errors;
         
         PublishDiagnosticsParams params = new PublishDiagnosticsParams();
         params.uri = documentUri;
-        params.diagnostics = Collections.emptyList();
+        
         if(!errors.isEmpty()) {
-            for(CompilerLog.CompilerErr error : errors) {
-                
-                String uri = new File(error.loc.file).toURI().toString();
-                Document doc = workspace.getDocument(uri);
-                if(doc == null) {
-                    continue;
-                }
-                
-                doc.errors.add(error);
+            params.diagnostics = new ArrayList<>();
+            for(CompilerErr error : errors) {
+                Diagnostic d = new Diagnostic();                
+                d.message = error.msg;
+                d.severity = 1;
+                d.source = error.loc.file;
+                d.range = LspUtil.fromSrcPosLine(error.loc, 0);
+
+                params.diagnostics.add(d);
             }
-            
-            Document doc = workspace.getDocument(documentUri);
-            if(doc != null) {
-                params.diagnostics = new ArrayList<>();
-                for(CompilerErr error : doc.errors) {
-                    Diagnostic d = new Diagnostic();                
-                    d.message = error.msg;
-                    d.severity = 1;
-                    d.source = error.loc.file;
-                    d.range = LspUtil.fromSrcPosLine(error.loc);
-                    
-                    params.diagnostics.add(d);
-                }
-            }
-            
-            doc.errors.clear();
+        }
+        else {
+            params.diagnostics = Collections.emptyList();
         }
         
         RpcNotificationMessage notification = new RpcNotificationMessage();

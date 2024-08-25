@@ -13,8 +13,11 @@ import sc2.compiler.CompilerLog;
 public class Loc {
     
     public final String file;
+    //one base
     public final int line;
+    //one base
     public final int col;
+    //zero base global index
     public final int offset;
     
     public Loc(String file, int line, int col, int offset) {

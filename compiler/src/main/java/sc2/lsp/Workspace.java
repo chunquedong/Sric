@@ -7,8 +7,14 @@ import java.io.*;
 import java.net.URI;
 import java.nio.file.*;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import sc2.compiler.CompilerLog;
+import sc2.compiler.ast.AstNode;
+import sc2.compiler.ast.AstNode.FileUnit;
+import sc2.compiler.ast.SModule;
+import sc2.compiler.ast.Scope;
 
 import sc2.lsp.JsonRpc.*;
 
@@ -18,56 +24,68 @@ import sc2.lsp.JsonRpc.*;
 public class Workspace {
     private String libPath;
     private Map<String, Document> documents;
-    private String latestDocumentUri;
-    private boolean isFullyBuilt;
-    private ReferenceDatabase references;
     
     private LspLogger log;
     
-    /**
-     * 
-     */
+    private Map<String, sc2.compiler.Compiler> moduleList;
+
+    
     public Workspace(String libPath, LspLogger log) {        
         this.libPath = libPath;
         this.log = log;
-                
         this.documents = new HashMap<>();
-        this.isFullyBuilt = false;
-        
-        this.references = new ReferenceDatabase(log);
     }
     
     public void setRoot(File sourceDir) {
-        //TODO
         log.log("Source Directory: '" + sourceDir);
     }
-    
-    
+
     private String canonicalPath(String docUri) {
         return new File(URI.create(docUri)).toString();
     }
     
-    private String getModuleId(String docUri) {
-        return new File(URI.create(docUri)).getPath();
-    }
+    private sc2.compiler.Compiler build(String file, boolean force) throws IOException {
+        File jfile = new File(file);
+        File moduleFile = LspUtil.findModuleFile(jfile);
+        if (moduleFile == null) {
+            moduleFile = jfile;
+        }
+        String key = moduleFile.getPath();
+        
+        if (!force) {
+            sc2.compiler.Compiler sm = moduleList.get(key);
+            if (sm != null) {
+                return sm;
+            }
+        }
 
-    /**
-     * @return the references
-     */
-    public ReferenceDatabase getReferences() {
-        return references;
+        sc2.compiler.Compiler compiler;
+        if (key.endsWith(".props")) {
+            compiler = sc2.compiler.Compiler.fromProps(key, libPath);
+        }
+        else {
+            compiler = sc2.compiler.Compiler.makeDefault(key, libPath);
+        }
+        compiler.genCode = false;
+        compiler.run();
+        
+        moduleList.put(key, compiler);
+        return compiler;
     }
-            
+    
     public void addDocument(TextDocument document) {
-        this.latestDocumentUri = canonicalPath(document.uri);
-        this.documents.put(this.latestDocumentUri, new Document(getModuleId(document.uri), document, this.log));
-        this.isFullyBuilt = false;
+        try {
+            String latestDocumentUri = canonicalPath(document.uri);
+            sc2.compiler.Compiler unit = build(latestDocumentUri, false);
+            this.documents.put(latestDocumentUri, new Document(document, this.log, unit, latestDocumentUri));
+        } catch (IOException ex) {
+            log.log("ERROR:"+ex.getMessage());
+        }
     }
     
     public void removeDocument(String documentUri) {
         String moduleName = canonicalPath(documentUri);
         this.documents.remove(moduleName);
-        this.isFullyBuilt = false;
     }
 
     public void changedDocument(String documentUri, DidChangeParams change) {
@@ -82,93 +100,62 @@ public class Workspace {
             }
         }
         
-        this.isFullyBuilt = false;
+        if (document.compiler != null) {
+            try {
+                document.compiler.updateFile(document.ast.name, document.textBuffer.getText());
+            } catch (IOException ex) {
+                log.log("ERROR:"+ex.getMessage());
+            }
+        }
     }
    
-    public void saveDocument(DidSaveTextDocumentParams params) {        
-        Document document = this.documents.get(canonicalPath(params.textDocument.uri));
-        if(params.text != null) {
-            document.setText(params.text);
+    public void saveDocument(DidSaveTextDocumentParams params) {
+        try {
+            String latestDocumentUri = canonicalPath(params.textDocument.uri);
+            Document document = this.documents.get(latestDocumentUri);
+            if(params.text != null) {
+                document.setText(params.text);
+            }
+            build(latestDocumentUri, true);
+            log.log("Saving: " + params.textDocument.uri);
+        } catch (IOException ex) {
+            log.log("ERROR:"+ex.getMessage());
         }
-        
-        log.log("Saving: " + params.textDocument.uri);
     }
     
     public Document getDocument(String documentUri) {
         return this.documents.get(canonicalPath(documentUri));
     }
-    
-    public List<Document> getDocuments() {
-        return new ArrayList<>(this.documents.values());
-    }
-    
-    private String getDocumentText(String moduleId) {
-        Document document = this.documents.get(moduleId);
-        if(document != null) {
-            return document.getText();
-        }
-                       
-        try {
-            return new String(Files.readAllBytes(Path.of(moduleId)));
-        }
-        catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
-    public List<SymbolInformation> findSymbols(String query) {
-//        if(this.latestProgram == null) {
-//            return Collections.emptyList();
-//        }
-//        
-//        boolean endsWith = query.startsWith("*");
-//        boolean contains = query.startsWith("*") && query.endsWith("*") && query.length() > 2;
-//        String normalizedQuery = query.replace("*", "");
-//        
-//        Map<String, Symbol> symbols = new HashMap<>();
-//        buildSymbols(this.latestProgram.getMainModule(), symbols, new HashSet<>());
-//        
-//        return symbols.values().stream()
-//            .filter(sym -> {
-//                if(contains) {
-//                    return sym.name.contains(normalizedQuery);
-//                }
-//                
-//                if(endsWith) {
-//                    return sym.name.endsWith(normalizedQuery);
-//                }
-//                
-//                return sym.name.startsWith(normalizedQuery) && !sym.isBuiltin();
-//            })                
-//            .map(sym -> LspUtil.fromSymbol(sym))
-//            .sorted((a,b) -> a.name.compareTo(b.name))
-//            .collect(Collectors.toList());
-        return Collections.emptyList();
-    }
-    
-    public boolean isFullyBuilt() {
-        return isFullyBuilt;
-    }
-    
-    public CompilerLog processSource() {
-        this.isFullyBuilt = true;
+    public List<SymbolInformation> findAllSymbols(String query) {
+
+        boolean endsWith = query.startsWith("*");
+        boolean contains = query.startsWith("*") && query.endsWith("*") && query.length() > 2;
+        String normalizedQuery = query.replace("*", "");
         
-        log.log("Doing full rebuild...");
-        
-        //TODO
-        CompilerLog result = null;
-        
-        if(result.hasError()) {
-            log.log("Rebuild failed with errors: " + result.toString());
+        ArrayList<SymbolInformation> list = new ArrayList<SymbolInformation>();
+        for (var sm : moduleList.entrySet()) {
+            Scope scope = sm.getValue().module.getScope();
+            for (HashMap.Entry<String, ArrayList<AstNode>> entry : scope.symbolTable.entrySet()) {
+                String name = entry.getKey();
+                
+                boolean ok = false;
+                if(contains) {
+                    if (name.contains(normalizedQuery)) {
+                        ok = true;
+                    }
+                }
+                if(endsWith) {
+                    if (name.endsWith(normalizedQuery)) {
+                        ok = true;
+                    }
+                }
+                for (AstNode anode : entry.getValue()) {
+                    list.add(LspUtil.toSymbolInfo(anode));
+                }
+            }
         }
-        else {
-            log.log("Rebuild successfully");
-        }
-        
-        return result;
-    }
-    
-    public CompilerLog processSource(String documentUri) {
-        return null;
+
+        return list;
     }
 }

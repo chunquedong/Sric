@@ -3,12 +3,13 @@
  */
 package sc2.lsp;
 
+import java.io.File;
 import java.util.*;
-import java.util.stream.Collectors;
-import sc2.compiler.CompilerLog.CompilerErr;
 import sc2.compiler.ast.AstNode;
 import sc2.compiler.ast.AstNode.FileUnit;
 import sc2.compiler.ast.Expr;
+import sc2.compiler.ast.Expr.*;
+import sc2.compiler.resolve.ErrorChecker;
 
 import sc2.lsp.JsonRpc.*;
 
@@ -17,204 +18,116 @@ import sc2.lsp.JsonRpc.*;
  */
 public class Document {
 
-    private List<Integer> lineMap;
-    private StringBuilder buffer;
-    
-    public TextDocument document;
-    public List<CompilerErr> errors;
-    public final String moduleId;
-    
+    public DocumentText textBuffer;
+    public FileUnit ast;
+    public sc2.compiler.Compiler compiler;
     private LspLogger log;
     
-    public Document(String moduleId, TextDocument document, LspLogger log) {
-        this.moduleId = moduleId;
-        this.document = document;
+    public Document(TextDocument document, LspLogger log, sc2.compiler.Compiler compiler, String file) {
         this.log = log;
-        this.lineMap = new ArrayList<>();
-        this.errors = new ArrayList<>();
-        
-        setText(document.text);
+        this.compiler = compiler;
+        this.ast = compiler.module.findFileUnit(file);
+        textBuffer = new DocumentText();
+        textBuffer.setText(document.text);
     }
 
-    public int getLineStart(int lineNumber) {
-        return this.lineMap.get(lineNumber);
-    }
-        
-    public void insert(Range range, String text) {
-        int fromIndex = getLineStart(range.start.line) + range.start.character;
-        int toIndex = getLineStart(range.end.line) + range.end.character;
-        
-        this.buffer.replace(fromIndex, toIndex, text);   
-        refreshLineMap();
+    public void insert(JsonRpc.Range range, String text) {
+        textBuffer.insert(range, text);
     }
     
     public void setText(String text) {
-        this.buffer = new StringBuilder(text);
-        refreshLineMap();
+        textBuffer.setText(text);
     }
     
-    private void refreshLineMap() {
-        this.lineMap.clear();
-        this.lineMap.add(0); // first line starts with the first character
-         
-        for(int i = 0; i < this.buffer.length(); i++) {
-            char c = this.buffer.charAt(i);
-            if(c == '\n') {
-                this.lineMap.add(i + 1);
-            }
-        }       
-        
-        this.document.text = this.buffer.toString();
+    private AstNode getAstNodeAt(Position pos) {
+        AstFinder sta = new AstFinder(null);
+        int index = textBuffer.getPosIndex(pos);
+        return sta.findSourceNode(ast, index);
     }
     
-    private FileUnit getModule(Workspace workspace, boolean doFullBuild) {
-        if(doFullBuild && !workspace.isFullyBuilt()) {
-            workspace.processSource();
-        }
-        
-        //TODO
-        return null;
-    }
-    
-    private AstNode findSourceNode(Workspace workspace, Position pos, boolean doFullBuild) {
-        FileUnit module = getModule(workspace, doFullBuild);
-        if(module == null) {
-            return null;
-        }
-        
-        SourceToAst sta = new SourceToAst();
-        return sta.findSourceNode(log, module, pos);
-    }
-    
-    public String getText() {
-        return this.document.text;
-    }
-    
-    public Location getDefinitionLocation(Workspace workspace, Position pos) {
-        AstNode node = findSourceNode(workspace, pos, false);
+    public Location getDefinitionLocation(Position pos) {
+        AstNode node = getAstNodeAt(pos);
         if(node == null) {
             return null;
         }
-        
-        return LspUtil.locationFromNode(node);
+        if (node instanceof Expr e) {
+            AstNode def = ErrorChecker.idResolvedDef(e);
+            if(def == null) {
+                return null;
+            }
+            return LspUtil.locationFromNode(def);
+        }
+        return null;
     }
     
-    public List<Location> getReferences(Workspace workspace, Position pos) {
+    public List<Location> getReferences(Position pos) {
         
-        AstNode location = findSourceNode(workspace, pos, true);
-        if(location == null) {
+        AstNode node = getAstNodeAt(pos);
+        if(node == null) {
             log.log("No source location found");
             return Collections.emptyList();
         }
         
-        ReferenceDatabase database = workspace.getReferences();
-        List<Location> locations = database.findReferencesFromNode(location);                
+        ReferenceFinder database = new ReferenceFinder(null);
+        ArrayList<AstNode> refs = database.findRefs(ast.module, node);
+        List<Location> locations = refs.stream().map((x)->LspUtil.locationFromNode(x)).toList();
         return locations;
     }
     
-    public List<CompletionItem> getAutoCompletionList(Workspace workspace, Position pos) {
-        FileUnit module = getModule(workspace, true);
-        if(module == null) {
-            log.log("No program built");
-            return Collections.emptyList();
-        }
+    public List<CompletionItem> getAutoCompletionList(Position pos) {
+        FileUnit funit = ast;
         
-        ReferenceDatabase database = workspace.getReferences();
-        List<String> fields = findIdentifier(pos);
-        return database.findCompletionItems(module, pos, fields);              
+        AstNode node = getAstNodeAt(pos);
+
+        CompletionFinder database = new CompletionFinder();
+        int index = textBuffer.getPosIndex(pos);
+        String fields = findIdentifier(index);
+        ArrayList<AstNode> refs = database.findSugs(funit, node, fields);
+        List<CompletionItem> items = refs.stream().map((x)->LspUtil.toCompletionItem(x)).toList();
+        return items;
     }
     
-    private List<String> findIdentifier(Position pos) {
-        List<String> fields = new ArrayList<>();
-        
-        int index = getLineStart(pos.line) + pos.character - 1;
-        StringBuffer sb = new StringBuffer();
+    private String findIdentifier(int index) {
+        StringBuilder sb = new StringBuilder();
         while(index > -1) {
-            char c = this.buffer.charAt(index);
-            
-            if(Character.isWhitespace(c)) {                
-                index = skipWhitespace(index);
-                if(index < 0) {
-                    break;
-                }
-                
-                continue;
+            char c = textBuffer.buffer.charAt(index);
+
+            if ((Character.isAlphabetic(c) || Character.isDigit(c) || c == '_' || c > 256)) {
+                sb.append(c);
             }
-            
-            if(!(Character.isAlphabetic(c) || Character.isDigit(c) || c == '_' || c > 256) && c != '.') {        
+            else {
                 break;
             }
-            
             index--;
-            sb.append(c);
-        }
-                
-        String split[] = sb.reverse().toString().split("\\.");
-        log.log("Splits: " + Arrays.toString(split) + " vs " + sb.reverse().toString());
-        fields.addAll(Arrays.asList(split));
-                
-        return fields;
-    }
-    
-    private int skipWhitespace(int index) {
-        while(index > -1) {
-            char c = this.buffer.charAt(index);
-            if(Character.isWhitespace(c)) {
-                index--;
-                continue;
-            }
-            if(c == '.') {
-                return index;
-            }
-            return -1;
         }
         
-        return index;
+        String name = sb.toString();
+        log.log("findIdentifier: " + name);
+        return name;
     }
     
-    public List<SymbolInformation> getSymbols(Workspace workspace) {
+    public List<SymbolInformation> getSymbols() {
 
-        FileUnit module = getModule(workspace, true);
+        FileUnit module = ast;
         if(module == null) {
             return null;
         }
         
         ArrayList<SymbolInformation> list = new ArrayList<SymbolInformation>();
         for (AstNode.TypeAlias typeAlias : module.typeAlias) {
-            list.add(fromSymbol(typeAlias));
+            list.add(LspUtil.toSymbolInfo(typeAlias));
         }
         for (AstNode.TypeDef typeDef : module.typeDefs) {
-            list.add(fromSymbol(typeDef));
+            list.add(LspUtil.toSymbolInfo(typeDef));
         }
         for (AstNode.FieldDef field : module.fieldDefs) {
-            list.add(fromSymbol(field));
+            list.add(LspUtil.toSymbolInfo(field));
         }
         for (AstNode.FuncDef func : module.funcDefs) {
-            list.add(fromSymbol(func));
+            list.add(LspUtil.toSymbolInfo(func));
         }
         
         return list;
     }
-    
-    public static SymbolInformation fromSymbol(AstNode sym) {
-        SymbolInformation info = new SymbolInformation();
-        if (sym instanceof Expr.IdExpr id) {
-            info.name = id.name;
-        }
-        else {
-            info.name = sym.toString();
-        }
-        info.kind = SymbolKind.fromSymbol(sym).getValue();
-        
-        if (sym instanceof Expr.IdExpr id) {
-            var decl = id.resolvedDef;
-            if(decl != null) {
-                info.location = LspUtil.locationFromNode(decl);
-            }
-            if(decl instanceof AstNode.TopLevelDef td) {
-                info.deprecated = td.isDeprecated();
-            }
-        }
-        return info;
-    }
+
 }
