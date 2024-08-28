@@ -1,0 +1,79 @@
+{
+  "name": "sc-language",
+  "displayName": "sc-language",
+  "description": "sc language",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [{
+      "id": "sc",
+      "aliases": ["SC", "sc"],
+      "extensions": ["sc"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+        "language": "sc",
+        "scopeName": "source.sc",
+        "path": "./syntaxes/sc.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+			"title": "SC",
+			"properties": {
+				"sc.languageServerPath": {
+					"type": "string",
+					"default": "",
+					"description": "Path of the SC language server binary (e.g. \"C:/sc-lsp.exe\")"
+				},
+				"sc.languageServerArguments": {
+					"type": "string",
+					"default": "-languageServer",
+					"description": "Command line arguments for the SC language server"
+				},
+				"sc.failFast": {
+					"type": "boolean",
+					"default": "",
+					"description": "Prevents the server from being restarted after it has crashed"
+				},				
+				"sc.languageServerLog": {
+					"type": "boolean",
+					"default": "false",
+					"description": "Outputs a log file for debuging the SC Language Server"
+				},
+				"sc.libraryPath": {
+					"type": "string",
+					"default": "",
+					"description": "The path to the SC library, this should be your sc/lib directory"
+				},
+				"sc.testOutputPath": {
+					"type": "string",
+					"default": "",
+					"description": "The path to write out test output files"
+				},
+				"sc.clearTestOutput": {
+					"type": "boolean",
+					"default": "true",
+					"description": "Clears the output before each test run"
+				}
+			}
+		},
+		"commands": [
+			{
+				"command": "sc.runTestsInCurrentFile",
+				"title": "SC: Run tests in current file"
+			}
+		]
+  },
+  "dependencies": {
+      "vscode-languageclient": "^7.0.0"
+  },
+  "devDependencies": {
+	  "@types/vscode": "^1.52.0"
+  }
+}

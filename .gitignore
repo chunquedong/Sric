@@ -40,3 +40,5 @@ compiler/res/lib/
 compiler/.classpath
 compiler/.project
 compiler/.settings/
+ide/vscode/sc-language/node_modules/
+ide/vscode/sc-language/package-lock.json
