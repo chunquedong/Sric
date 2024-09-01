@@ -1,0 +1,279 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Sric",
+	"patterns": [
+	  {
+		"include": "#comments"
+	  },
+	  {
+		"include": "#support"
+	  },
+	  {
+		"include": "#core"
+	  }
+	],
+	"repository": {
+	  "comments": {
+		"patterns": [
+		  {
+			"include": "#line_comment"
+		  },
+		  {
+			"include": "#block_comment"
+		  }
+		]
+	  },
+	  "line_comment": {
+		"patterns": [
+		  {
+			"match": "(//).*$\\n?",
+			"name": "comment.line.double-slash.sric"
+		  }
+		]
+	  },
+	  "block_comment": {
+		"patterns": [
+		  {
+			"name": "comment.block.nested.sric",
+			"begin": "/\\*",
+			"end": "\\*/",
+			"patterns": [
+			  {
+				"include": "#block_comment"
+			  }
+			]
+		  }
+		]
+	  },
+	  "support": {
+		"patterns": [
+		  {
+			"name": "support.type.builtin.sric",
+			"match": "\\b(Void|Bool|Int|Float|String)\\b"
+		  }
+		]
+	  },
+	  "core": {
+		"patterns": [
+		  {
+			"include": "#literal_number"
+		  },
+		  {
+			"include": "#literal_language_constant"
+		  },
+		  {
+			"include": "#literal_keywords"
+		  },
+		  {
+			"include": "#literal_string"
+		  },
+		  {
+			"include": "#literal_language_variable"
+		  }
+		]
+	  },
+	  "literal_number": {
+		"patterns": [
+		  {
+			"name": "invalid.illegal.numeric.hex.sric",
+			"match": "(?i)(?:\\B[-+]\\b)0x_?[0-9a-f_]*\\.(\\B|\\b[0-9]+)"
+		  },
+		  {
+			"name": "constant.numeric.hex.sric",
+			"match": "\\b0x[0-9A-Fa-f][_0-9A-Fa-f]*"
+		  },
+		  {
+			"name": "constant.numeric.numeric.sric",
+			"match": "(?xi)(\\B\\.[0-9][0-9_]*|\\b[0-9][0-9_]*(\\.[0-9][0-9_]*)?)(e[-+]?[0-9][0-9_]*)?[fd]?"
+		  },
+		  {
+			"name": "constant.numeric.escape-unicode.sric",
+			"match": "\\'\\\\u[0-9A-Fa-f]{4}\\'"
+		  },
+		  {
+			"name": "constant.numeric.escape-char.sric",
+			"match": "\\'\\\\[bfnrt'\\\\]\\'"
+		  },
+		  {
+			"name": "constant.numeric.char.sric",
+			"match": "\\'.\\'"
+		  }
+		]
+	  },
+	  "literal_language_constant": {
+		"patterns": [
+		  {
+			"name": "constant.language.boolean.true.sric",
+			"match": "\\btrue\\b"
+		  },
+		  {
+			"name": "constant.language.boolean.false.sric",
+			"match": "\\bfalse\\b"
+		  },
+		  {
+			"name": "constant.language.null.sric",
+			"match": "\\bnull\\b"
+		  }
+		]
+	  },
+	  "literal_keywords": {
+		"patterns": [
+		  {
+			"name": "storage.modifier.sric",
+			"match": "\\b(fun|var|mut|constexpr|operator|reflect|typealias|unsafe|raw|weak|move|ref|own|uninit|await|yield|async|extension|throws|abstract|const|final|internal|native|once|override|private|protected|public|readonly|static|virtual|volatile)\\b"
+		  },
+		  {
+			"name": "storage.modifier.global.sric",
+			"match": "\\bimport\\b"
+		  },
+		  {
+			"name": "storage.type.sric",
+			"match": "\\b(struct|trait|enum)\\b"
+		  },
+		  {
+			"name": "keyword.control.flow.sric",
+			"match": "\\b(return|break|continue)\\b"
+		  },
+		  {
+			"name": "keyword.control.try-catch.sric",
+			"match": "\\b(try|catch|finally|throw|assert)\\b"
+		  },
+		  {
+			"name": "keyword.control.loop.sric",
+			"match": "\\b(for|while|do)\\b"
+		  },
+		  {
+			"name": "keyword.control.switch.sric",
+			"match": "\\b(switch|case|default|fallthrough)\\b"
+		  },
+		  {
+			"name": "keyword.control.if-else.sric",
+			"match": "\\b(if|else)\\b"
+		  },
+		  {
+			"name": "keyword.operator.named.sric",
+			"match": "\\b(new|is|as)\\b"
+		  },
+		  {
+			"match": "(===?|!==?|<=>?|>=|<|>|\\bis(not)?\\b)",
+			"name": "keyword.operator.comparison.sric"
+		  },
+		  {
+			"name": "keyword.operator.assignment.arithmetic.sric",
+			"match": "([+*/%-]=)"
+		  },
+		  {
+			"name": "keyword.operator.assignment.sric",
+			"match": ":?="
+		  },
+		  {
+			"name": "keyword.operator.increment-decrement.sric",
+			"match": "\\-\\-|\\+\\+"
+		  },
+		  {
+			"name": "keyword.operator.arithmetic.sric",
+			"match": "\\-|\\+|\\*|\\/|%"
+		  },
+		  {
+			"name": "keyword.operator.logical.sric",
+			"match": "(!(?!=)|&&|\\|\\|)"
+		  },
+		  {
+			"name": "keyword.operator.elvis.sric",
+			"match": "\\?\\:"
+		  },
+		  {
+			"name": "keyword.operator.trap.sric",
+			"match": "\\->"
+		  },
+		  {
+			"name": "keyword.operator.safe-trap.sric",
+			"match": "\\?\\->"
+		  },
+		  {
+			"name": "keyword.operator.call.sric",
+			"match": "(?<=\\S)\\.(?=\\S)"
+		  },
+		  {
+			"name": "keyword.operator.safe-call.sric",
+			"match": "(?<=\\S)\\?\\.(?=\\S)"
+		  },
+		  {
+			"name": "punctuation.terminator.sric",
+			"match": ";"
+		  }
+		]
+	  },
+	  "literal_language_variable": {
+		"patterns": [
+		  {
+			"name": "variable.language.super.sric",
+			"match": "(?<!\\.)\\b(super)\\b"
+		  },
+		  {
+			"name": "variable.language.this.sric",
+			"match": "(?!\\.)\\b(this)\\b"
+		  },
+		  {
+			"name": "variable.language.it.sric",
+			"match": "(?!\\.)\\b(it)(?=\\.)"
+		  }
+		]
+	  },
+	  "literal_string": {
+		"patterns": [
+		  {
+			"name": "string.quoted.double.sric",
+			"begin": "\"",
+			"beginCaptures": {
+			  "0": {
+				"name": "punctuation.definition.string.begin.sric"
+			  }
+			},
+			"end": "\"",
+			"endCaptures": {
+			  "0": {
+				"name": "punctuation.definition.string.end.sric"
+			  }
+			},
+			"patterns": [
+			  {
+				"include": "#escaped_unicode_char"
+			  },
+			  {
+				"include": "#escaped_char"
+			  },
+			  {
+				"include": "#interpolation"
+			  }
+			]
+		  }
+		]
+	  },
+	  "escaped_unicode_char": {
+		"patterns": [
+		  {
+			"name": "constant.character.unicode.sric",
+			"match": "\\\\u[0-9A-Fa-f]{4}"
+		  }
+		]
+	  },
+	  "escaped_char": {
+		"patterns": [
+		  {
+			"name": "constant.character.escapes.sric",
+			"match": "\\\\[bfnrt\"'`$\\\\]"
+		  }
+		]
+	  },
+	  "interpolation": {
+		"patterns": [
+		  {
+			"name": "variable.other.interpolated.sric",
+			"match": "(?x)\\$(\\{.*?\\}|([A-Za-z_][_\\w]*\\.?)+)"
+		  }
+		]
+	  }
+	},
+	"scopeName": "source.sric"
+}

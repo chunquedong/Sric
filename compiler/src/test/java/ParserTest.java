@@ -11,13 +11,13 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
-import sc2.compiler.CompilerLog;
-import sc2.compiler.Util;
-import sc2.compiler.ast.AstNode.FileUnit;
-import sc2.compiler.ast.Token;
-import sc2.compiler.backend.CppGenerator;
-import sc2.compiler.parser.Parser;
-import sc2.compiler.parser.Tokenizer;
+import sric.compiler.CompilerLog;
+import sric.compiler.Util;
+import sric.compiler.ast.AstNode.FileUnit;
+import sric.compiler.ast.Token;
+import sric.compiler.backend.CppGenerator;
+import sric.compiler.parser.Parser;
+import sric.compiler.parser.Tokenizer;
 
 /**
  *

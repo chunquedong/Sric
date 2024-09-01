@@ -10,12 +10,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
-import sc2.compiler.CompilerLog;
-import sc2.compiler.Util;
-import sc2.compiler.ast.AstNode;
-import sc2.compiler.backend.CppGenerator;
-import sc2.compiler.parser.DeepParser;
-import sc2.compiler.parser.Parser;
+import sric.compiler.CompilerLog;
+import sric.compiler.Util;
+import sric.compiler.ast.AstNode;
+import sric.compiler.backend.CppGenerator;
+import sric.compiler.parser.DeepParser;
+import sric.compiler.parser.Parser;
 
 
 /**

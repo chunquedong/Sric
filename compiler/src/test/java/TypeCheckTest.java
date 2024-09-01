@@ -10,13 +10,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
-import sc2.compiler.CompilerLog;
-import sc2.compiler.Util;
-import sc2.compiler.ast.AstNode;
-import sc2.compiler.backend.CppGenerator;
-import sc2.compiler.parser.DeepParser;
-import sc2.compiler.resolve.ExprTypeResolver;
-import sc2.compiler.resolve.TopLevelTypeResolver;
+import sric.compiler.CompilerLog;
+import sric.compiler.Util;
+import sric.compiler.ast.AstNode;
+import sric.compiler.backend.CppGenerator;
+import sric.compiler.parser.DeepParser;
+import sric.compiler.resolve.ExprTypeResolver;
+import sric.compiler.resolve.TopLevelTypeResolver;
 
 /**
  *
@@ -28,7 +28,7 @@ public class TypeCheckTest {
         String file = "res/code/testGeneric.sc";
         String libPath = "res/lib";
         
-        sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file, libPath);
+        sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file, libPath);
         compiler.genCode = false;
         boolean res = compiler.run();
         assertTrue(res);
@@ -44,7 +44,7 @@ public class TypeCheckTest {
                 continue;
             }
         
-            sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file.getPath(), libPath);
+            sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file.getPath(), libPath);
             compiler.genCode = false;
             boolean res = compiler.run();
             assertTrue(res);

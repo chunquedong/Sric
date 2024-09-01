@@ -1,0 +1,79 @@
+{
+  "name": "sric-language",
+  "displayName": "sric-language",
+  "description": "sric language",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [{
+      "id": "sric",
+      "aliases": ["sric"],
+      "extensions": ["sc"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+        "language": "sric",
+        "scopeName": "source.sric",
+        "path": "./syntaxes/sric.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+			"title": "Sric",
+			"properties": {
+				"sric.languageServerPath": {
+					"type": "string",
+					"default": "",
+					"description": "Path of the Sric language server binary (e.g. \"C:/sric-lsp.exe\")"
+				},
+				"sric.languageServerArguments": {
+					"type": "string",
+					"default": "-languageServer",
+					"description": "Command line arguments for the Sric language server"
+				},
+				"sric.failFast": {
+					"type": "boolean",
+					"default": "",
+					"description": "Prevents the server from being restarted after it has crashed"
+				},				
+				"sric.languageServerLog": {
+					"type": "boolean",
+					"default": "false",
+					"description": "Outputs a log file for debuging the Sric Language Server"
+				},
+				"sric.libraryPath": {
+					"type": "string",
+					"default": "",
+					"description": "The path to the Sric library, this should be your sric/lib directory"
+				},
+				"sric.testOutputPath": {
+					"type": "string",
+					"default": "",
+					"description": "The path to write out test output files"
+				},
+				"sric.clearTestOutput": {
+					"type": "boolean",
+					"default": "true",
+					"description": "Clears the output before each test run"
+				}
+			}
+		},
+		"commands": [
+			{
+				"command": "sric.runTestsInCurrentFile",
+				"title": "Sric: Run tests in current file"
+			}
+		]
+  },
+  "dependencies": {
+      "vscode-languageclient": "^7.0.0"
+  },
+  "devDependencies": {
+	  "@types/vscode": "^1.52.0"
+  }
+}

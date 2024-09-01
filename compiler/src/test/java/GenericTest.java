@@ -16,7 +16,7 @@ public class GenericTest {
         String file = "res/code/testGeneric.sc";
         String libPath = "res/lib";
         
-        sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file, libPath);
+        sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file, libPath);
         compiler.genCode = false;
         boolean res = compiler.run();
         assertTrue(res);

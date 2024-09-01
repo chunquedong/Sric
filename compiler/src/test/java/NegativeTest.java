@@ -21,7 +21,7 @@ public class NegativeTest {
         String libPath = "res/lib";
         File file = new File("res/negative/unsafe.sc");
 
-        sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file.getPath(), libPath);
+        sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file.getPath(), libPath);
         compiler.genCode = false;
         boolean res = compiler.run();
         assertFalse(res, file.getName());
@@ -40,7 +40,7 @@ public class NegativeTest {
                 continue;
             }
 
-            sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file.getPath(), libPath);
+            sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file.getPath(), libPath);
             compiler.genCode = false;
             boolean res = compiler.run();
             assertFalse(res, file.getName());

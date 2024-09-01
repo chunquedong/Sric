@@ -1,4 +1,4 @@
-# safeC
+# Sric Language
 
 A memory safe and compiled systems programming language.
 

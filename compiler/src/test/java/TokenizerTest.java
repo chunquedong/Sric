@@ -12,9 +12,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
-import sc2.compiler.CompilerLog;
-import sc2.compiler.ast.Token;
-import sc2.compiler.parser.Tokenizer;
+import sric.compiler.CompilerLog;
+import sric.compiler.ast.Token;
+import sric.compiler.parser.Tokenizer;
 
 /**
  *

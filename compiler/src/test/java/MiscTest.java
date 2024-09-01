@@ -16,7 +16,7 @@ public class MiscTest {
         String file = "res/code/testEnum.sc";
         String libPath = "res/lib";
         
-        sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file, libPath);
+        sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file, libPath);
         compiler.genCode = false;
         boolean res = compiler.run();
         assertTrue(res);
@@ -27,7 +27,7 @@ public class MiscTest {
         String file = "res/code/testTypealias.sc";
         String libPath = "res/lib";
         
-        sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file, libPath);
+        sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file, libPath);
         compiler.genCode = false;
         boolean res = compiler.run();
         assertTrue(res);
@@ -38,7 +38,7 @@ public class MiscTest {
         String file = "res/code/testParam.sc";
         String libPath = "res/lib";
         
-        sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file, libPath);
+        sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file, libPath);
         compiler.genCode = false;
         boolean res = compiler.run();
         assertTrue(res);
@@ -49,7 +49,7 @@ public class MiscTest {
         String file = "res/code/testArray.sc";
         String libPath = "res/lib";
         
-        sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file, libPath);
+        sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file, libPath);
         compiler.genCode = false;
         boolean res = compiler.run();
         assertTrue(res);
@@ -60,7 +60,7 @@ public class MiscTest {
         String file = "res/code/testOperator.sc";
         String libPath = "res/lib";
         
-        sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file, libPath);
+        sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file, libPath);
         compiler.genCode = false;
         boolean res = compiler.run();
         assertTrue(res);
@@ -71,7 +71,7 @@ public class MiscTest {
         String file = "res/code/testClosure.sc";
         String libPath = "res/lib";
         
-        sc2.compiler.Compiler compiler = sc2.compiler.Compiler.makeDefault(file, libPath);
+        sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file, libPath);
         compiler.genCode = false;
         boolean res = compiler.run();
         assertTrue(res);
