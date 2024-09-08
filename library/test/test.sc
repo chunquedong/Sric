@@ -1,8 +1,8 @@
 
-import std::*;
+import sstd::*;
 
 fun testDArray() {
-    var a : DArray<Int>;
+    var a : DArray$<Int>;
     a.add(1);
     a.add(2);
 

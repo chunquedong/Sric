@@ -1,4 +1,4 @@
-name = std
+name = sstd
 summary = system std lib
 version = 1.0
 depends = 

@@ -13,6 +13,25 @@ import sric.compiler.ast.Expr.ClosureExpr;
 import sric.compiler.ast.FConst;
 import sric.compiler.ast.SModule;
 import sric.compiler.ast.Stmt;
+import static sric.compiler.ast.Token.TokenKind.abstractKeyword;
+import static sric.compiler.ast.Token.TokenKind.asyncKeyword;
+import static sric.compiler.ast.Token.TokenKind.constKeyword;
+import static sric.compiler.ast.Token.TokenKind.constexprKeyword;
+import static sric.compiler.ast.Token.TokenKind.extensionKeyword;
+import static sric.compiler.ast.Token.TokenKind.externKeyword;
+import static sric.compiler.ast.Token.TokenKind.inlineKeyword;
+import static sric.compiler.ast.Token.TokenKind.operatorKeyword;
+import static sric.compiler.ast.Token.TokenKind.overrideKeyword;
+import static sric.compiler.ast.Token.TokenKind.packedKeyword;
+import static sric.compiler.ast.Token.TokenKind.privateKeyword;
+import static sric.compiler.ast.Token.TokenKind.protectedKeyword;
+import static sric.compiler.ast.Token.TokenKind.publicKeyword;
+import static sric.compiler.ast.Token.TokenKind.readonlyKeyword;
+import static sric.compiler.ast.Token.TokenKind.reflectKeyword;
+import static sric.compiler.ast.Token.TokenKind.staticKeyword;
+import static sric.compiler.ast.Token.TokenKind.throwKeyword;
+import static sric.compiler.ast.Token.TokenKind.unsafeKeyword;
+import static sric.compiler.ast.Token.TokenKind.virtualKeyword;
 import sric.compiler.ast.Type;
 
 /**
@@ -30,6 +49,75 @@ public class ScLibGenerator extends BaseGenerator {
     
     public void run(SModule module) {
         module.walkChildren(this);
+    }
+    
+    private void printFlags(int flags) {
+        if ((flags & FConst.Abstract) != 0) {
+            print("abstract ");
+        }
+        if ((flags & FConst.Const) != 0) {
+            print("const ");
+        }
+        if ((flags & FConst.Readonly) != 0) {
+            print("readonly ");
+        }
+        if ((flags & FConst.Extern) != 0) {
+            print("extern ");
+        }
+        if ((flags & FConst.ExternC) != 0) {
+            print("externc ");
+        }
+        if ((flags & FConst.Extension) != 0) {
+            print("extension ");
+        }
+        if ((flags & FConst.Override) != 0) {
+            print("override ");
+        }
+        if ((flags & FConst.Private) != 0) {
+            print("private ");
+        }
+        if ((flags & FConst.Protected) != 0) {
+            print("protected ");
+        }
+        if ((flags & FConst.Public) != 0) {
+            print("public ");
+        }
+        if ((flags & FConst.Static) != 0) {
+            print("static ");
+        }
+        if ((flags & FConst.Virtual) != 0) {
+            print("virtual ");
+        }
+        if ((flags & FConst.Async) != 0) {
+            print("async ");
+        }
+        if ((flags & FConst.Reflect) != 0) {
+            print("reflect ");
+        }
+        if ((flags & FConst.Async) != 0) {
+            print("async ");
+        }
+        if ((flags & FConst.Unsafe) != 0) {
+            print("unsafe ");
+        }
+        if ((flags & FConst.Throws) != 0) {
+            print("throws ");
+        }
+        if ((flags & FConst.Inline) != 0) {
+            print("inline ");
+        }
+        if ((flags & FConst.Inline) != 0) {
+            print("inline ");
+        }
+        if ((flags & FConst.Packed) != 0) {
+            print("packed ");
+        }
+        if ((flags & FConst.ConstExpr) != 0) {
+            print("constexpr ");
+        }
+        if ((flags & FConst.Operator) != 0) {
+            print("operator ");
+        }
     }
 
     private void printType(Type type) {
@@ -74,6 +162,7 @@ public class ScLibGenerator extends BaseGenerator {
 
     @Override
     public void visitField(AstNode.FieldDef v) {
+        printFlags(v.flags);
         printLocalFieldDefAsExpr(v);
         print(";").newLine();
     }
@@ -103,6 +192,7 @@ public class ScLibGenerator extends BaseGenerator {
             }
         }
         
+        printFlags(v.flags);
         print("fun ");
         print(v.name);
         
@@ -159,6 +249,7 @@ public class ScLibGenerator extends BaseGenerator {
     @Override
     public void visitTypeDef(AstNode.TypeDef v) {
         if (v instanceof AstNode.EnumDef edef) {
+            printFlags(v.flags);
             print("enum class ");
             print(v.name);
             print(" {").newLine();
@@ -184,6 +275,7 @@ public class ScLibGenerator extends BaseGenerator {
             return;
         }
         
+        printFlags(v.flags);
         print("struct ");
         print(v.name);
         

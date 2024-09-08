@@ -1,4 +1,4 @@
-import std::*;
+import sstd::*;
 
 fun print(x: Int) {
     printf("%d\n", x);

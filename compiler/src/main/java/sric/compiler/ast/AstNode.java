@@ -213,6 +213,7 @@ public class AstNode {
             }
             
             StructDef nt = new StructDef(this.comment, this.flags, this.name);
+            nt.parent = this.parent;
             nt.genericFrom = this;
             for (FieldDef f : fieldDefs) {
                 nt.addSlot(f.parameterize(typeGenericArgs));

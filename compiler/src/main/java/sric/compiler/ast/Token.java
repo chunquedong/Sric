@@ -108,6 +108,7 @@ public class Token {
         itKeyword("it", true),
         traitKeyword("trait", true),
         externKeyword("extern", true),
+        externcKeyword("externc", true),
         newKeyword("new", true),
         nullKeyword("null", true),
         overrideKeyword("override", true),

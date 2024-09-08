@@ -16,7 +16,7 @@ import sric.lsp.LanguageServer;
 public class Main {
     
     public static void main(String[] args) throws IOException {
-        String sourcePath = "../library/std/module.scm";
+        String sourcePath = "../library/test/module.scm";
         String libPath = "res/lib";
         boolean lsp = false;
         for (int i = 1; i<args.length; ++i) {

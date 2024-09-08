@@ -44,3 +44,4 @@ ide/vscode/sc-language/node_modules/
 ide/vscode/sc-language/package-lock.json
 ide/vscode/sric-language/node_modules/
 ide/vscode/sric-language/package-lock.json
+build/

@@ -1,4 +1,4 @@
-import std::*;
+import sstd::*;
 
 fun main() {
     var a = []Int{ 1,2,3 };

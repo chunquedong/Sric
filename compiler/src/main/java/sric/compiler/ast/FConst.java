@@ -18,14 +18,14 @@ public class FConst {
     public static final int Getter     = 0x00000040;
     public static final int Internal   = 0x00000080;
     public static final int Mixin      = 0x00000100;
-    public static final int Native     = 0x00000200;
+    public static final int Extern     = 0x00000200;
     public static final int Override   = 0x00000400;
     public static final int Private    = 0x00000800;
     public static final int Protected  = 0x00001000;
     public static final int Public     = 0x00002000;
     public static final int Setter     = 0x00004000;
     public static final int Static     = 0x00008000;
-    public static final int Storage    = 0x00010000;
+    public static final int ExternC    = 0x00010000;
     public static final int Synthetic  = 0x00020000;
     public static final int Virtual    = 0x00040000;
     public static final int Struct     = 0x00080000;

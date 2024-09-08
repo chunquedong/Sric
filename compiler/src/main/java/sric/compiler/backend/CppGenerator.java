@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -56,13 +57,16 @@ public class CppGenerator extends BaseGenerator {
             print("#define ").print(marcoName).newLine();
 
             newLine();
+            print("#include \"sc_runtime.h\"").newLine();
+            
             for (Depend d : module.depends) {
                 print("#include \"");
-                print(d.name);
+                print(d.name).print(".h");
                 print("\"").newLine();
             }
             newLine();
-
+            
+            /////////////////////////////////////////////////////////////
             print("namespace ");
             print(module.name);
             print(" {").newLine();
@@ -72,11 +76,57 @@ public class CppGenerator extends BaseGenerator {
             //types decleartion
             for (FileUnit funit : module.fileUnits) {
                 for (TypeDef type : funit.typeDefs) {
-                    print("class ");
+                    if ((type.flags & FConst.ExternC) != 0) {
+                        continue;
+                    }
+                    
+                    if (type instanceof StructDef sd) {
+                        printGenericParamDefs(sd.generiParamDefs);
+                    }
+                    print("struct ");
                     print(type.name).print(";").newLine();
                 }
             }
+            
+            this.unindent();
+            newLine();
+            print("} //ns").newLine();
+            
+            /////////////////////////////////////////////////////////////
+            
+            print("extern \"C\" {");
+            this.indent();
+            
+            for (FileUnit funit : module.fileUnits) {
+                for (TypeDef type : funit.typeDefs) {
+                    if ((type.flags & FConst.ExternC) != 0) {
+                        print("struct ");
+                        print(type.name).print(";").newLine();
+                    }
+                }
+                for (FuncDef f : funit.funcDefs) {
+                    if ((f.flags & FConst.ExternC) != 0) {
+                        printFunc(f, false);
+                    }
+                }
+                for (FieldDef f : funit.fieldDefs) {
+                    if ((f.flags & FConst.ExternC) != 0) {
+                        visitField(f);
+                    }
+                }
+            }
+            
+            this.unindent();
+            newLine();
+            print("} //ns").newLine();
 
+            /////////////////////////////////////////////////////////////
+            print("namespace ");
+            print(module.name);
+            print(" {").newLine();
+            
+            this.indent();
+            
             module.walkChildren(this);
 
             this.unindent();
@@ -90,12 +140,9 @@ public class CppGenerator extends BaseGenerator {
         }
         else {
             print("#include \"");
-            print(module.name);
+            print(module.name).print(".h");
             print("\"").newLine();
             
-            newLine();
-            print("using namespace ");
-            print(module.name).print(";").newLine();
             newLine();
             
             module.walkChildren(this);
@@ -120,10 +167,15 @@ public class CppGenerator extends BaseGenerator {
                 return;
             case "Int":
                 NumInfo intType = (NumInfo)type.detail;
-                if (intType.isUnsigned) {
-                    print("u");
+                if (intType.size == 8 && intType.isUnsigned == false) {
+                    print("char");
                 }
-                print("int"+intType.size+"_t");
+                else {
+                    if (intType.isUnsigned) {
+                        print("u");
+                    }
+                    print("int"+intType.size+"_t");
+                }
                 return;
             case "Float":
                 NumInfo floatType = (NumInfo)type.detail;
@@ -145,13 +197,13 @@ public class CppGenerator extends BaseGenerator {
                 }
                 else {
                     if (pt.pointerAttr == Type.PointerAttr.own) {
-                        print("OwnPtr");
+                        print("sric::OwnPtr");
                     }
                     else if (pt.pointerAttr == Type.PointerAttr.ref) {
-                        print("RefPtr");
+                        print("sric::RefPtr");
                     }
                     else if (pt.pointerAttr == Type.PointerAttr.weak) {
-                        print("WeakPtr");
+                        print("sric::WeakPtr");
                     }
                     print("<");
                     printType(type.genericArgs.get(0));
@@ -182,9 +234,16 @@ public class CppGenerator extends BaseGenerator {
         printIdExpr(type.id);
         
         if (type.genericArgs != null) {
+            print("<");
+            int i= 0;
             for (Type p : type.genericArgs) {
+                if (i > 0) {
+                    print(", ");
+                }
                 printType(p);
+                ++i;
             }
+            print(">");
         }
     }
 
@@ -193,6 +252,14 @@ public class CppGenerator extends BaseGenerator {
         if (ns != null) {
             print(ns);
             print("::");
+        }
+        else {
+            if (id.resolvedDef instanceof TopLevelDef td) {
+                if ((td.flags & FConst.ExternC) == 0 && td.parent instanceof FileUnit fu) {
+                    print(fu.module.name);
+                    print("::");
+                }
+            }
         }
         print(id.name);
     }
@@ -257,9 +324,35 @@ public class CppGenerator extends BaseGenerator {
         return !headMode;
     }
     
-    @Override
-    public void visitFunc(AstNode.FuncDef v) {
+    private void printGenericParamDefs(ArrayList<GenericParamDef> generiParamDefs) {
+        if (generiParamDefs != null) {
+            print("template ");
+            print("<");
+            int i = 0;
+            for (var gp : generiParamDefs) {
+                if (i > 0) print(", ");
+                print("typename ");
+                print(gp.name);
+                ++i;
+            }
+            print(">").newLine();
+        }
+    }
+    
+    private boolean isEntryPoint(AstNode.FuncDef v) {
+        if (v.parent instanceof FileUnit &&  v.name.equals("main")) {
+            return true;
+        }
+        return false;
+    }
+    
+    private void printFunc(AstNode.FuncDef v, boolean isOperator) {
         boolean inlined = (v.flags & FConst.Inline) != 0 || v.generiParamDefs != null;
+        if (v.parent instanceof StructDef sd) {
+            if (sd.generiParamDefs != null) {
+                inlined = true;
+            }
+        }
         if (implMode()) {
             if (v.code == null || inlined) {
                 return;
@@ -268,32 +361,64 @@ public class CppGenerator extends BaseGenerator {
         
         newLine();
         
-        if (v.generiParamDefs != null) {
-            print("template ");
-            print("<");
-            int i = 0;
-            for (var gp : v.generiParamDefs) {
-                if (i > 0) print(", ");
-                print("typename ");
-                print(gp.name);
-                ++i;
-            }
-            print(">").newLine();
-        }
+        printGenericParamDefs(v.generiParamDefs);
         
         if ((v.flags & FConst.Virtual) != 0 || (v.flags & FConst.Abstract) != 0) {
             print("virtual ");
         }
         
+//        if ((v.flags & FConst.Extern) != 0) {
+//            print("extern ");
+//        }
+        
         printType(v.prototype.returnType);
         print(" ");
         if (implMode()) {
             if (v.parent instanceof TypeDef t) {
+                if (t.parent instanceof FileUnit fu) {
+                    print(fu.module.name).print("::");
+                }
                 print(t.name).print("::");
             }
+            else if (v.parent instanceof FileUnit fu) {
+                if (!isEntryPoint(v)) {
+                    print(fu.module.name).print("::");
+                }
+            }
         }
-        print(v.name);
-
+        
+        if (isOperator) {
+            print("operator");
+            switch (v.name) {
+                case "plus":
+                    print("+");
+                    break;
+//                case "set":
+//                    print("[]");
+//                    break;
+                case "get":
+                    print("[]");
+                    break;
+                case "minus":
+                    print("-");
+                    break;
+                case "mult":
+                    print("-");
+                    break;
+                case "div":
+                    print("-");
+                    break;
+                case "compare":
+                    print("<=>");
+                    break;
+                default:
+                    break;
+            }
+        }
+        else {
+            print(v.name);
+        }
+        
         printFuncPrototype(v.prototype, false);
         
         if (v.code == null) {
@@ -312,6 +437,21 @@ public class CppGenerator extends BaseGenerator {
         }
     }
     
+    @Override
+    public void visitFunc(AstNode.FuncDef v) {
+        if ((v.flags & FConst.ExternC) != 0) {
+            return;
+        }
+        if (isEntryPoint(v) && headMode) {
+            return;
+        }
+        
+        printFunc(v, false);
+        if ((v.flags & FConst.Operator) != 0 && !v.name.equals("set")) {
+            printFunc(v, true);
+        }
+    }
+    
     private void printFuncPrototype(FuncPrototype prototype, boolean isLambda) {
         print("(");
         if (prototype != null && prototype.paramDefs != null) {
@@ -320,9 +460,14 @@ public class CppGenerator extends BaseGenerator {
                 if (i > 0) {
                     print(", ");
                 }
-                printType(p.paramType);
-                print(" ");
-                print(p.name);
+                if (p.paramType.isVarArgType()) {
+                    print("...");
+                }
+                else {
+                    printType(p.paramType);
+                    print(" ");
+                    print(p.name);
+                }
                 if (p.defualtValue != null) {
                     print(" = ");
                     this.visit(p.defualtValue);
@@ -342,6 +487,10 @@ public class CppGenerator extends BaseGenerator {
 
     @Override
     public void visitTypeDef(TypeDef v) {
+        if ((v.flags & FConst.ExternC) != 0) {
+            return;
+        }
+        
         if (headMode) {
             //Topo sort
             if (this.emitState.get(v) != null) {
@@ -410,18 +559,7 @@ public class CppGenerator extends BaseGenerator {
         }
         
         if (v instanceof StructDef sd) {
-            if (sd.generiParamDefs != null) {
-                print("template ");
-                print("<");
-                int i = 0;
-                for (var gp : sd.generiParamDefs) {
-                    if (i > 0) print(", ");
-                    print("typename ");
-                    print(gp.name);
-                    ++i;
-                }
-                print(">").newLine();
-            }
+            printGenericParamDefs(sd.generiParamDefs);
         }
         
         print("struct ");

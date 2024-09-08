@@ -1,4 +1,4 @@
-import std::*;
+import sstd::*;
 
 fun foo() : Int {
     if (true) {

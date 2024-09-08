@@ -414,7 +414,10 @@ public class Parser {
 //                    protection = true;
 //                    break;
                 case externKeyword:
-                    flags = flags | (FConst.Native);
+                    flags = flags | (FConst.Extern);
+                    break;
+                case externcKeyword:
+                    flags = flags | (FConst.ExternC);
                     break;
                 case extensionKeyword:
                     flags = flags | (FConst.Extension);
@@ -990,7 +993,7 @@ public class Parser {
         }
 
         //generic param
-        if (curt == TokenKind.lt) {
+        if (curt == TokenKind.dollar && !peek.whitespace && peekt == TokenKind.lt) {
             type.genericArgs = genericArgs();
         }
 

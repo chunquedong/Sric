@@ -1,4 +1,4 @@
-import std::*;
+import sstd::*;
 
 struct A {
     var a: own* Int;

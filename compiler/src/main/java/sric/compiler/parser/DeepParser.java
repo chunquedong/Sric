@@ -736,7 +736,7 @@ public class DeepParser extends Parser {
         }
         
         // target$<...>
-        if (cur.kind == TokenKind.dollar && peekt == TokenKind.lt) {
+        if (curt == TokenKind.dollar && !peek.whitespace && peekt == TokenKind.lt) {
             GenericInstance gi = new GenericInstance();
             gi.target = target;
             gi.genericArgs = genericArgs();

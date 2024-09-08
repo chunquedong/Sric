@@ -325,7 +325,7 @@ public class Type extends AstNode {
     public static Type intType(Loc loc) {
         Type type = new Type(loc, "Int");
         NumInfo info = new NumInfo();
-        info.size = 64;
+        info.size = 32;
         type.detail = info;
         type.id.resolvedDef = Buildin.getBuildinScope().get(type.id.name, loc, null);
         return type;
@@ -457,7 +457,7 @@ public class Type extends AstNode {
 
     public Type parameterize(ArrayList<Type> typeGenericArgs) {
         if (!(this.id.resolvedDef instanceof GenericParamDef g) && this.genericArgs == null) {
-            return null;
+            return this;
         }
         
         Type nt = new Type(this.id);
