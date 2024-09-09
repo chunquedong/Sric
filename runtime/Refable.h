@@ -71,6 +71,8 @@ public:
     void _setRefCount(int rc);
 
     WeakRefBlock* getWeakRefBlock();
+
+    int32_t getCheckCode() { return checkCode; }
 protected:
 
     /**
@@ -93,6 +95,7 @@ protected:
 private:
     void disposeWeakRef();
 
+    int32_t checkCode;
 #if NO_THREAD_SAFE
     unsigned int _refCount;
 #else
