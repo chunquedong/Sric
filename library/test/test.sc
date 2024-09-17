@@ -6,7 +6,7 @@ fun testDArray() {
     a.add(1);
     a.add(2);
 
-    for (var i = 0; i<a.size; ++i) {
+    for (var i = 0; i<a.size(); ++i) {
         var v = a[i];
         printf("%d\n", v);
     }

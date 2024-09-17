@@ -59,7 +59,7 @@ public:
      * will decrement the reference count. When an object reaches a
      * reference count of zero, the object is destroyed.
      */
-    void release();
+    bool release();
 
     /**
      * Returns the current reference count of this object.
@@ -72,7 +72,7 @@ public:
 
     WeakRefBlock* getWeakRefBlock();
 
-    int32_t getCheckCode() { return checkCode; }
+    int32_t getCheckCode() { return _checkCode; }
 protected:
 
     /**
@@ -95,7 +95,7 @@ protected:
 private:
     void disposeWeakRef();
 
-    int32_t checkCode;
+    uint32_t _checkCode;
 #if NO_THREAD_SAFE
     unsigned int _refCount;
 #else

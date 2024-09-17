@@ -89,11 +89,21 @@ public:
     bool isNull() { return pointer == nullptr; }
 
     void clear() {
-        //TODO
-        //doFree(pointer);
-        pointer = nullptr;
+        if (pointer) {
+            doFree(pointer);
+            pointer = nullptr;
+        }
     }
 
+private:
+    void doFree(T* pointer) {
+        Refable* p = getRefable(pointer);
+        if (p->release()) {
+            pointer->~T();
+            ::operator delete(p);
+        }
+    }
+public:
     T* take() {
         T* p = pointer;
         pointer = nullptr;
@@ -120,22 +130,37 @@ public:
 
     OwnPtr<T> share() {
         if (pointer)
-            pointer->addRef();
+            getRefable(pointer)->addRef();
         return OwnPtr<T>(pointer);
     }
 };
+
+inline Refable* getRefable(void *pointer) {
+    Refable* p = (Refable*)pointer;
+    --p;
+    return p;
+}
+
+template<typename T>
+OwnPtr<T> alloc() {
+    Refable* p = (Refable*)::operator new(sizeof(Refable) + sizeof(T));
+    new (p) Refable();
+    void* m = (p + 1);
+    T* t = new(m) T();
+    return OwnPtr(t);
+}
 
 template <class T>
 OwnPtr<T> share(OwnPtr<T> p) {
     T* pointer = p.get();
     if (pointer)
-        pointer->addRef();
+        getRefable(pointer)->addRef();
     return OwnPtr<T>(pointer);
 }
 
 template <class T>
 OwnPtr<T> rawToOwn(T* ptr) {
-    ptr->addRef();
+    getRefable(ptr)->addRef();
     return OwnPtr<T>(ptr);
 }
 
@@ -149,9 +174,16 @@ class RefPtr {
 private:
     void onDeref() {
         sc_assert(pointer != nullptr, "try deref null pointer");
-        sc_assert(checkCode = pointer->getCheckCode(), "try deref error pointer");
+        if (type == 0) {
+            sc_assert(checkCode = getRefable(pointer)->getCheckCode(), "try deref error pointer");
+        }
     }
 public:
+    RefPtr(T* p) : pointer(p), checkCode(0), type(1) {
+    }
+
+    RefPtr(OwnPtr<T> p) : pointer(p.get()), checkCode(getRefable(pointer)->getCheckCode()), type(0) {
+    }
 
     T* operator->() const { onDeref(); return pointer; }
 

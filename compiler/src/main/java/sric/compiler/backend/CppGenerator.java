@@ -67,6 +67,20 @@ public class CppGenerator extends BaseGenerator {
             newLine();
             
             /////////////////////////////////////////////////////////////
+            for (FileUnit funit : module.fileUnits) {
+                for (TypeDef type : funit.typeDefs) {
+                    if ((type.flags & FConst.Extern) != 0) {
+                        for (Comment comment : type.comment.comments) {
+                           if (comment.content.startsWith("#")) {
+                               print(comment.content);
+                               newLine();
+                           }
+                        }
+                    }
+                }
+            }
+            
+            /////////////////////////////////////////////////////////////
             print("namespace ");
             print(module.name);
             print(" {").newLine();
@@ -487,7 +501,7 @@ public class CppGenerator extends BaseGenerator {
 
     @Override
     public void visitTypeDef(TypeDef v) {
-        if ((v.flags & FConst.ExternC) != 0) {
+        if ((v.flags & FConst.ExternC) != 0 || (v.flags & FConst.Extern) != 0) {
             return;
         }
         

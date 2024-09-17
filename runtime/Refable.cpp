@@ -1,6 +1,7 @@
 #include "Refable.h"
 #include <mutex>
 #include "common.h"
+#include <thread>
 
 namespace sric
 {
@@ -10,9 +11,14 @@ void* trackRef(Refable* ref);
 void untrackRef(Refable* ref);
 #endif
 
+uint32_t checkCodeCount = 0;
+
 Refable::Refable() :
     _refCount(1), _isUnique(true), _weakRefBlock(NULL)
 {
+    std::hash<std::thread::id> hasher;
+    size_t tid = hasher(std::this_thread::get_id());
+    _checkCode = (tid << 24) | (++checkCodeCount);
 #ifdef GP_USE_REF_TRACE
     trackRef(this);
 #endif
@@ -31,7 +37,7 @@ Refable::~Refable()
     if (!_isUnique) {
         sc_assert(_refCount == 0);
     }
-
+    _checkCode = 0;
     _refCount = 1000000;
 #ifdef GP_USE_REF_TRACE
     untrackRef(this);
@@ -57,12 +63,12 @@ void Refable::disposeWeakRef() {
     }
 }
 
-void Refable::release()
+bool Refable::release()
 {
     if (_isUnique) {
         disposeWeakRef();
         delete this;
-        return;
+        return true;
     }
 
     sc_assert(_refCount > 0 && _refCount < 1000000);
@@ -70,7 +76,9 @@ void Refable::release()
     {
         disposeWeakRef();
         delete this;
+        return true;
     }
+    return false;
 }
 
 void Refable::_setRefCount(int rc) {

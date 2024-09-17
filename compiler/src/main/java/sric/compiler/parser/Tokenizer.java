@@ -596,7 +596,11 @@ public class Tokenizer {
         int line = this.line;
         consume();   // first slash
         consume();   // next slash
-        boolean isDoc = peek == '@';
+        boolean isDoc = false;
+        if (cur == '@') {
+            isDoc = true;
+            consume();
+        }
         StringBuilder s = new StringBuilder();
         while (true) {
             if (cur == '\n') {

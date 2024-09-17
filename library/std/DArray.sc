@@ -1,18 +1,21 @@
+//@#include "DArray.h"
+/**
+* Dynamic Array
+*/
+extern struct DArray$<T> {
+    fun data(): raw* T;
 
+    fun size(): Int;
 
-struct DArray$<T> {
-    readonly var data: own* T;
-    readonly var size: Int;
+    fun add(d: T) mut;
 
-    fun add(d: T) mut {
+    operator fun get(i: Int): T;
 
-    }
+    operator fun set(i: Int, d: T) mut;
 
-    operator fun get(i: Int): T {
+    fun resize(size: Int);
+    fun reserve(capacity: Int);
+    fun removeAt(i: Int);
 
-    }
-
-    operator fun set(i: Int, d: T)  mut {
-
-    }
+    fun getPtr(i: Int) mut : ref* T;
 }
