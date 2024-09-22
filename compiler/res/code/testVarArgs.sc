@@ -1,4 +1,4 @@
-import sstd::*;
+import sric::*;
 
 fun main()
 {

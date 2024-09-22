@@ -9,7 +9,7 @@ extern struct DArray$<T> {
 
     fun add(d: T) mut;
 
-    operator fun get(i: Int): T;
+    operator fun get(i: Int): ref* T;
 
     operator fun set(i: Int, d: T) mut;
 
@@ -17,5 +17,4 @@ extern struct DArray$<T> {
     fun reserve(capacity: Int);
     fun removeAt(i: Int);
 
-    fun getPtr(i: Int) mut : ref* T;
 }

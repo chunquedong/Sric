@@ -1,4 +1,4 @@
-import sstd::*;
+import sric::*;
 
 fun foo() : Int {
     if (true) {

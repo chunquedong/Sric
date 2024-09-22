@@ -1,5 +1,5 @@
 
-import sstd::*;
+import sric::*;
 
 fun testDArray() {
     var a : DArray$<Int>;
@@ -8,7 +8,7 @@ fun testDArray() {
 
     for (var i = 0; i<a.size(); ++i) {
         var v = a[i];
-        printf("%d\n", v);
+        printf("%d\n", *v);
     }
 }
 

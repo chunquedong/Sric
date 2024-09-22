@@ -3,11 +3,11 @@
 
 using namespace sric;
 
-namespace sstd {
-	template<typename T>
-	OwnPtr<T> alloc() {
-		return sric::alloc<T>();
-	}
+namespace sric {
+	//template<typename T>
+	//OwnPtr<T> alloc() {
+	//	return sric::alloc<T>();
+	//}
 
 	template<typename T>
 	T* unsafeAlloc() {

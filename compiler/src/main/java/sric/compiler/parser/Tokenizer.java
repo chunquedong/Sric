@@ -41,7 +41,7 @@ public class Tokenizer {
         this.log = log;
         this.buf = buf;
         this.filename = filename;
-        this.parseComment = true;
+        this.parseComment = false;
 
         this.tokens = new ArrayList<Token>();
         this.inStrLiteral = false;
@@ -635,7 +635,10 @@ public class Tokenizer {
         int line = this.line;
         consume();   // first slash
         consume();   // next slash
-        boolean isDoc = peek == '*';
+        boolean isDoc = cur == '*';
+        if (isDoc) {
+            consume();
+        }
         int depth = 1;
         StringBuilder s = new StringBuilder();
         while (true) {

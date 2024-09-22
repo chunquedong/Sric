@@ -4,7 +4,7 @@
 #include "common.h"
 #include <vector>
 
-namespace sstd
+namespace sric
 {
 template <typename T>
 class DArray {
@@ -14,18 +14,24 @@ public:
         data.resize(size);
     }
 
-    T operator[](int i) { return get(i); }
-
-    const T operator[](int i) const { return get(i); }
-
-    T get(int i) {
+    T& operator[](int i) {
         sric::sc_assert(i >= 0 && i < data.size(), "index out of array");
         return data[i];
     }
 
-    const T get(int i) const {
+    const T& operator[](int i) const {
         sric::sc_assert(i >= 0 && i < data.size(), "index out of array");
         return data[i];
+    }
+
+    sric::RefPtr<T> get(int i) {
+        sric::sc_assert(i >= 0 && i < data.size(), "index out of array");
+        return RefPtr<T>(&data[i]);
+    }
+
+    const sric::RefPtr<T> get(int i) const {
+        sric::sc_assert(i >= 0 && i < data.size(), "index out of array");
+        return RefPtr<T>(&data[i]);
     }
 
     void set(int i, T d) {
@@ -49,9 +55,6 @@ public:
         data.reserve(capacity);
     }
 
-    sric::RefPtr<T> getPtr(int i) {
-        return RefPtr(&data[i]);
-    }
 };
 }
 #endif

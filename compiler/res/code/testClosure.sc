@@ -1,5 +1,5 @@
 
-import sstd::*;
+import sric::*;
 
 fun foo(a: fun(a:Int, b:Int):Int) {
     var r = a(1, 2);

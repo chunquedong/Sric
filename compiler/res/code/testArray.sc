@@ -1,4 +1,4 @@
-import sstd::*;
+import sric::*;
 
 fun main() {
     var a = []Int{ 1,2,3 };

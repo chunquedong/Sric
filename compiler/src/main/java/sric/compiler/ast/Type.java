@@ -468,6 +468,7 @@ public class Type extends AstNode {
                 nt.genericArgs.add(t);
             }
         }
+        nt.detail = this.detail;
         if (this.id.resolvedDef instanceof GenericParamDef g) {
             if (g.index < typeGenericArgs.size()) {
                 Type at = typeGenericArgs.get(g.index);

@@ -762,6 +762,7 @@ public class ExprTypeResolver extends TypeResolver {
                 err("Expected operator", e.loc);
             }
             e.resolvedType = f.prototype.returnType;
+            e.operatorName = operatorName;
         }
         else {
             err("Invalid operator:"+curt, e.loc);

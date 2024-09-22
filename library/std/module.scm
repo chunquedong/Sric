@@ -1,4 +1,4 @@
-name = sstd
+name = sric
 summary = system std lib
 version = 1.0
 depends = 

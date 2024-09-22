@@ -27,6 +27,7 @@ import sric.compiler.ast.Buildin;
 import sric.compiler.ast.FConst;
 import sric.compiler.ast.SModule;
 import sric.compiler.ast.SModule.Depend;
+import sric.compiler.ast.Token.TokenKind;
 import sric.compiler.ast.Type.*;
 
 /**
@@ -69,7 +70,7 @@ public class CppGenerator extends BaseGenerator {
             /////////////////////////////////////////////////////////////
             for (FileUnit funit : module.fileUnits) {
                 for (TypeDef type : funit.typeDefs) {
-                    if ((type.flags & FConst.Extern) != 0) {
+                    if ((type.flags & FConst.Extern) != 0 && type.comment != null) {
                         for (Comment comment : type.comment.comments) {
                            if (comment.content.startsWith("#")) {
                                print(comment.content);
@@ -734,11 +735,30 @@ public class CppGenerator extends BaseGenerator {
             printLiteral(e);
         }
         else if (v instanceof BinaryExpr e) {
-            this.visit(e.lhs);
-            print(" ");
-            print(e.opToken.symbol);
-            print(" ");
-            this.visit(e.rhs);
+            //index set operator: a[i] = b
+            if (e.opToken == TokenKind.assign && e.lhs instanceof IndexExpr iexpr) {
+                this.visit(iexpr.target);
+                print(".set(");
+                this.visit(iexpr.index);
+                print(", ");
+                this.visit(e.rhs);
+                print(")");
+            }
+            else {
+                if (e.operatorName !=  null) {
+                    this.visit(e.lhs);
+                    print(".").print(e.operatorName).print("(");
+                    this.visit(e.rhs);
+                    print(")");
+                }
+                else {
+                    this.visit(e.lhs);
+                    print(" ");
+                    print(e.opToken.symbol);
+                    print(" ");
+                    this.visit(e.rhs);
+                }
+            }
         }
         else if (v instanceof CallExpr e) {
             this.visit(e.target);
@@ -762,9 +782,9 @@ public class CppGenerator extends BaseGenerator {
         }
         else if (v instanceof IndexExpr e) {
             this.visit(e.target);
-            print("[");
+            print(".get(");
             this.visit(e.index);
-            print("]");
+            print(")");
         }
         else if (v instanceof GenericInstance e) {
             this.visit(e.target);

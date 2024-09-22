@@ -1,6 +1,6 @@
 
 
-struct String {
-    readonly var data: own* const Int8;
-    readonly var size: Int;
+extern struct String {
+    fun c_str(): raw* Int8;
+    fun size(): Int;
 }
