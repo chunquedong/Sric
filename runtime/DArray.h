@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include <vector>
+#include "Ptr.h"
 
 namespace sric
 {
@@ -40,6 +41,10 @@ public:
     }
 
     void add(T d) {
+        data.push_back(d);
+    }
+
+    void add(T& d) {
         data.push_back(d);
     }
 

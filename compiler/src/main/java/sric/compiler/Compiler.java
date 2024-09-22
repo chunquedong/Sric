@@ -67,7 +67,7 @@ public class Compiler {
         SModule module = new SModule();
         module.name = Util.getBaseName(sourceDir.getName());
         module.version = "1.0";
-        
+        module.sourcePath = sourcePath;
         File libDir = new File(libPath);
         module.depends= listDepends(libDir);
         return new Compiler(module, sourceDir, libPath, libDir.getParent()+"/output/");
@@ -89,6 +89,7 @@ public class Compiler {
                 srcDirs = new File(propsPath).getParent() + "/" + srcDirs;
             }
         }
+        module.sourcePath = propsPath;
         File sourceDir = new File(srcDirs);
         File libDir = new File(libPath);
         return new Compiler(module, sourceDir, libPath, libDir.getParent()+"/output/");

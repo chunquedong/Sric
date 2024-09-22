@@ -12,7 +12,15 @@ fun testDArray() {
     }
 }
 
+fun testString() {
+    var cstr = "Hello";
+    var str = asStr(cstr);
+    str.add("World");
+
+    printf("%s\n", str.c_str());
+}
 
 fun main() {
     testDArray();
+    testString();
 }

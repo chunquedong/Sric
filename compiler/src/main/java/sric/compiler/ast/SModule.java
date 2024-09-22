@@ -33,6 +33,8 @@ public class SModule extends AstNode {
     public Scope scope = null;
     public ArrayList<Depend> depends = new ArrayList<>();
     
+    public String sourcePath;
+    
     public FileUnit findFileUnit(String file) {
         for (FileUnit v : fileUnits) {
             if (v.name.equals(file)) {
@@ -80,6 +82,7 @@ public class SModule extends AstNode {
         HashMap<String, String> map = new HashMap<String, String>();
         map.put("name", name);
         map.put("version", version);
+        map.put("sourcePath", sourcePath);
         
         StringBuilder sb = new StringBuilder();
         for (var d : depends) {
