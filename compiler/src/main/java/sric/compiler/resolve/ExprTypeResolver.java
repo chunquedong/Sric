@@ -356,7 +356,7 @@ public class ExprTypeResolver extends TypeResolver {
         }
         else if (v instanceof Expr.LiteralExpr e) {
             if (e.value == null) {
-                v.resolvedType = Type.intType(e.loc);
+                v.resolvedType = Type.nullType(e.loc);
             }
             else if (e.value instanceof Long) {
                 v.resolvedType = Type.intType(e.loc);

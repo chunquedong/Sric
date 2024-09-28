@@ -40,6 +40,31 @@ public class ErrorChecker extends CompilePass {
         v.walkChildren(this);
     }
     
+    private boolean isCopyable(Type type) {
+        if (type.id.resolvedDef == null) {
+            return false;
+        }
+        
+        if (type.detail instanceof Type.PointerInfo p2) {
+            if (p2.pointerAttr == Type.PointerAttr.own) {
+                return false;
+            }
+        }
+        
+        if (type.id.resolvedDef instanceof StructDef sd) {
+            if ((sd.flags & FConst.Noncopyable) != 0) {
+                return false;
+            }
+            for (FieldDef f : sd.fieldDefs) {
+                if (!isCopyable(f.fieldType)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return true;
+    }
+    
     private void verifyTypeFit(Expr target, Type to, Loc loc) {
         Type from = target.resolvedType;
         if (from == null) {
@@ -51,13 +76,11 @@ public class ErrorChecker extends CompilePass {
             return;
         }
         
-        if (from.detail instanceof Type.PointerInfo p1 && to.detail instanceof Type.PointerInfo p2) {
-            if (p1.pointerAttr == Type.PointerAttr.own && p2.pointerAttr == Type.PointerAttr.own) {
-                AstNode resolvedDef = idResolvedDef(target);
-                if (resolvedDef != null) {
-                    if (resolvedDef instanceof AstNode.FieldDef) {
-                        err("Miss move keyword", loc);
-                    }
+        AstNode resolvedDef = idResolvedDef(target);
+        if (resolvedDef != null) {
+            if (resolvedDef instanceof AstNode.FieldDef) {
+                if (!isCopyable(target.resolvedType)) {
+                    err("Miss move keyword", loc);
                 }
             }
         }
@@ -90,7 +113,7 @@ public class ErrorChecker extends CompilePass {
             err("Unkonw field type", v.loc);
         }
         
-        if (v.initExpr == null && v.fieldType != null) {
+        if (v.initExpr != null && v.fieldType != null) {
             verifyTypeFit(v.initExpr, v.fieldType, v.loc);
         }
         

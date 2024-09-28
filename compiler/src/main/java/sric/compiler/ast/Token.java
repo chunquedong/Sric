@@ -154,6 +154,7 @@ public class Token {
         fallthroughKeyword("fallthrough", true),
         constexprKeyword("constexpr", true),
         operatorKeyword("operator", true),
+        noncopyableKeyword("noncopyable", true),
         
         // misc
         eof("eof", false);

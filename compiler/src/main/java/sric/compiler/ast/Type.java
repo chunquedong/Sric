@@ -367,8 +367,10 @@ public class Type extends AstNode {
     
     public static Type pointerType(Loc loc, Type elemType, PointerAttr pointerAttr, boolean nullable) {
         Type type = new Type(loc, Buildin.pointerTypeName);
-        type.genericArgs = new ArrayList<>();
-        type.genericArgs.add(elemType);
+        if (elemType != null) {
+            type.genericArgs = new ArrayList<>();
+            type.genericArgs.add(elemType);
+        }
         PointerInfo info = new PointerInfo();
         info.pointerAttr = pointerAttr;
         info.isNullable = nullable;

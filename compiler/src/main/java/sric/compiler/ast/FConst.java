@@ -26,7 +26,7 @@ public class FConst {
     public static final int Setter     = 0x00004000;
     public static final int Static     = 0x00008000;
     public static final int ExternC    = 0x00010000;
-    public static final int Synthetic  = 0x00020000;
+    public static final int Noncopyable= 0x00020000;
     public static final int Virtual    = 0x00040000;
     public static final int Struct     = 0x00080000;
     public static final int Extension  = 0x00100000;

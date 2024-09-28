@@ -468,6 +468,9 @@ public class Parser {
                 case operatorKeyword:
                     flags = flags | (FConst.Operator);
                     break;
+                case noncopyableKeyword:
+                    flags = flags | (FConst.Noncopyable);
+                    break;
                 default:
                     done = true;
             }

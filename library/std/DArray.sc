@@ -2,7 +2,7 @@
 /**
 * Dynamic Array
 */
-extern struct DArray$<T> {
+extern noncopyable struct DArray$<T> {
     fun data(): raw* T;
 
     fun size(): Int;
