@@ -20,7 +20,7 @@ Work in process ...
 var p: own* Int;       //ownership pointer, both unique and shared
 var p: ref* Int;       //non-ownership pointer, safe check at runtime
 var p: raw* Int;       //unsafe raw pointer
-var p: weak* Int;      //weak pointer
+var p: WeakPtr$<Int>;  //weak pointer
 ```
 
 ### Explicit Copy and Move

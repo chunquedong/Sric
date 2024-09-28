@@ -19,7 +19,7 @@ public class Type extends AstNode {
     public ArrayList<Type> genericArgs = null;
     
     public static enum PointerAttr {
-        own, ref, raw, weak
+        own, ref, raw
     };
     
 //    public boolean explicitImutable = false;

@@ -4,7 +4,7 @@ struct A {
     var a: own* Int;
     var b: ref* Int;
     var c: raw* Int;
-    var d: weak* Int;
+    var d: WeakPtr$<Int>;
 }
 
 fun foo(c: ref* Int) {

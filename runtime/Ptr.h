@@ -214,6 +214,18 @@ public:
         }
     }
 
+    void init(OwnPtr<T>& p) {
+        if (pointer) {
+            pointer->release();
+        }
+
+        Refable* refp = dynamic_cast<Refable*>(p.get());
+        if (refp) {
+            pointer = refp->getWeakRefBlock();
+            pointer->addRef();
+        }
+    }
+
     WeakPtr(T* other) : pointer(NULL) {
         if (other) {
             Refable* refp = dynamic_cast<Refable*>(other);
@@ -243,7 +255,7 @@ public:
         return *this;
     }
 
-    OwnPtr<T> lockOwn() {
+    OwnPtr<T> lock() {
         if (!pointer) {
             return OwnPtr<T>();
         }

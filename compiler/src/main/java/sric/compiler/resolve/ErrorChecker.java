@@ -90,6 +90,10 @@ public class ErrorChecker extends CompilePass {
             err("Unkonw field type", v.loc);
         }
         
+        if (v.initExpr == null && v.fieldType != null) {
+            verifyTypeFit(v.initExpr, v.fieldType, v.loc);
+        }
+        
         if (v.initExpr == null && v.fieldType != null && v.fieldType.detail instanceof Type.PointerInfo pt) {
             if (!pt.isNullable) {
                 if (v.parent instanceof AstNode.StructDef) {

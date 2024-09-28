@@ -843,9 +843,9 @@ public class Parser {
             case refKeyword:
                 consume();
                 return pointerType(Type.PointerAttr.ref);
-            case weakKeyword:
-                consume();
-                return pointerType(Type.PointerAttr.weak);
+//            case weakKeyword:
+//                consume();
+//                return pointerType(Type.PointerAttr.weak);
 //            case star:
 //                return pointerType(Type.PointerAttr.ref);
             case constKeyword:

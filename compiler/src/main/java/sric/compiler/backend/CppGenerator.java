@@ -217,9 +217,9 @@ public class CppGenerator extends BaseGenerator {
                     else if (pt.pointerAttr == Type.PointerAttr.ref) {
                         print("sric::RefPtr");
                     }
-                    else if (pt.pointerAttr == Type.PointerAttr.weak) {
-                        print("sric::WeakPtr");
-                    }
+//                    else if (pt.pointerAttr == Type.PointerAttr.weak) {
+//                        print("sric::WeakPtr");
+//                    }
                     print("<");
                     printType(type.genericArgs.get(0));
                     print(">");
