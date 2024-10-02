@@ -67,7 +67,8 @@ bool Refable::release()
 {
     if (_isUnique) {
         disposeWeakRef();
-        delete this;
+        //delete this;
+        this->~Refable();
         return true;
     }
 
@@ -75,7 +76,8 @@ bool Refable::release()
     if ((--_refCount) <= 0)
     {
         disposeWeakRef();
-        delete this;
+        //delete this;
+        this->~Refable();
         return true;
     }
     return false;

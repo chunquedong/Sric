@@ -17,6 +17,7 @@ public abstract class Expr extends AstNode {
     public Type resolvedType;
     public boolean inLeftSide = false;
     public boolean isStmt = false;
+    public String implicitTypeConvert = null;
     
     public boolean isResolved() {
         return resolvedType != null;
@@ -156,6 +157,7 @@ public abstract class Expr extends AstNode {
     
     public static class LiteralExpr extends Expr {
         public Object value;
+        public Type nullPtrType;
         
         public LiteralExpr(Object value) {
             this.value = value;

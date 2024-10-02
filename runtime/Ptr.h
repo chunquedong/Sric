@@ -147,7 +147,7 @@ OwnPtr<T> alloc() {
     new (p) Refable();
     void* m = (p + 1);
     T* t = new(m) T();
-    return OwnPtr(t);
+    return OwnPtr<T>(t);
 }
 
 template <class T>
@@ -156,6 +156,11 @@ OwnPtr<T> share(OwnPtr<T> p) {
     if (pointer)
         getRefable(pointer)->addRef();
     return OwnPtr<T>(pointer);
+}
+
+template<typename T>
+T* ownToRaw(OwnPtr<T>& p) {
+    return p.get();
 }
 
 template <class T>
@@ -175,14 +180,14 @@ private:
     void onDeref() {
         sc_assert(pointer != nullptr, "try deref null pointer");
         if (type == 0) {
-            sc_assert(checkCode = getRefable(pointer)->getCheckCode(), "try deref error pointer");
+            sc_assert(checkCode == getRefable(pointer)->getCheckCode(), "try deref error pointer");
         }
     }
 public:
     RefPtr(T* p) : pointer(p), checkCode(0), type(1) {
     }
 
-    RefPtr(OwnPtr<T> p) : pointer(p.get()), checkCode(getRefable(pointer)->getCheckCode()), type(0) {
+    RefPtr(OwnPtr<T>& p) : pointer(p.get()), checkCode(getRefable(pointer)->getCheckCode()), type(0) {
     }
 
     T* operator->() const { onDeref(); return pointer; }
@@ -195,6 +200,17 @@ public:
 
     bool isNull() { return pointer == nullptr; }
 };
+
+
+template<typename T>
+RefPtr<T> ownToRef(OwnPtr<T>& p) {
+    return RefPtr<T>(p);
+}
+
+template<typename T>
+RefPtr<T> addressOf(T& p) {
+    return RefPtr<T>(&p);
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 

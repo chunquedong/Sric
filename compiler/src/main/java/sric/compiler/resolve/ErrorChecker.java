@@ -80,8 +80,33 @@ public class ErrorChecker extends CompilePass {
         if (resolvedDef != null) {
             if (resolvedDef instanceof AstNode.FieldDef) {
                 if (!isCopyable(target.resolvedType)) {
-                    err("Miss move keyword", loc);
+                    if (to.detail instanceof Type.PointerInfo p2) {
+                        if (p2.pointerAttr == Type.PointerAttr.own) {
+                            err("Miss move keyword", loc);
+                        }
+                    }
+                    else {
+                        err("Miss move keyword", loc);
+                    }
                 }
+            }
+        }
+        
+        if (target instanceof LiteralExpr lit && to.detail instanceof Type.PointerInfo p2) {
+            if (p2.pointerAttr == Type.PointerAttr.own) {
+                lit.nullPtrType = to;
+            }
+        }
+        
+        if (from.detail instanceof Type.PointerInfo p1 && to.detail instanceof Type.PointerInfo p2) {
+            if (p1.pointerAttr != Type.PointerAttr.raw && p2.pointerAttr == Type.PointerAttr.raw) {
+                target.implicitTypeConvert = p1.pointerAttr.toString() + "ToRaw";
+            }
+            else if (p1.pointerAttr != Type.PointerAttr.ref && p2.pointerAttr == Type.PointerAttr.ref) {
+                target.implicitTypeConvert = p1.pointerAttr.toString() + "ToRef";
+            }
+            else if (p1.pointerAttr != p2.pointerAttr) {
+                err("Unknow convert", loc);
             }
         }
     }

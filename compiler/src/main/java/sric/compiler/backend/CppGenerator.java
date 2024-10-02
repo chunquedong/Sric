@@ -723,20 +723,43 @@ public class CppGenerator extends BaseGenerator {
             print("(");
         }
         
+        if (v.implicitTypeConvert != null) {
+            print("sric::").print(v.implicitTypeConvert).print("(");
+        }
+        
         if (v instanceof IdExpr e) {
             this.printIdExpr(e);
         }
         else if (v instanceof AccessExpr e) {
             this.visit(e.target);
-            print(".");
+            if (e.target.resolvedType.isPointerType()) {
+                print("->");
+            }
+            else {
+                print(".");
+            }
             print(e.name);
         }
         else if (v instanceof LiteralExpr e) {
             printLiteral(e);
         }
         else if (v instanceof BinaryExpr e) {
+            if (e.opToken == TokenKind.asKeyword) {
+                print("cast_as<");
+                printType(e.rhs.resolvedType);
+                print(" >(");
+                this.visit(e.lhs);
+                print(")");
+            }
+            else if (e.opToken == TokenKind.isKeyword) {
+                print("type_is<");
+                printType(e.rhs.resolvedType);
+                print(" >(");
+                this.visit(e.lhs);
+                print(") != nullptr");
+            }
             //index set operator: a[i] = b
-            if (e.opToken == TokenKind.assign && e.lhs instanceof IndexExpr iexpr) {
+            else if (e.opToken == TokenKind.assign && e.lhs instanceof IndexExpr iexpr) {
                 this.visit(iexpr.target);
                 print(".set(");
                 this.visit(iexpr.index);
@@ -774,8 +797,15 @@ public class CppGenerator extends BaseGenerator {
             print(")");
         }
         else if (v instanceof UnaryExpr e) {
-            print(e.opToken.symbol);
-            this.visit(e.operand);
+            if (e.opToken == TokenKind.amp) {
+                print("sric::addressOf(");
+                this.visit(e.operand);
+                print(")");
+            }
+            else {
+                print(e.opToken.symbol);
+                this.visit(e.operand);
+            }
         }
         else if (v instanceof TypeExpr e) {
             this.printType(e.type);
@@ -817,13 +847,27 @@ public class CppGenerator extends BaseGenerator {
             err("Unkown expr:"+v, v.loc);
         }
         
+        if (v.implicitTypeConvert != null) {
+            print(")");
+        }
+        
         if (!isPrimitive) {
             print(")");
         }
     }
     
     void printLiteral(LiteralExpr e) {
-        if (e.value instanceof Long li) {
+        if (e.value == null) {
+            if (e.nullPtrType != null) {
+                print("sric::OwnPtr<");
+                printType(e.nullPtrType.genericArgs.get(0));
+                print(">()");
+            }
+            else {
+                print("nullptr");
+            }
+        }
+        else if (e.value instanceof Long li) {
             print(li.toString()).print("LL");
         }
         else if (e.value instanceof Double li) {

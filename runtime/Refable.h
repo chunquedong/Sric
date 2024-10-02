@@ -73,7 +73,7 @@ public:
     WeakRefBlock* getWeakRefBlock();
 
     int32_t getCheckCode() { return _checkCode; }
-protected:
+public:
 
     /**
      * Constructor.

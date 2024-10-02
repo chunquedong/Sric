@@ -21,6 +21,7 @@ fun testString() {
 }
 
 fun main() {
-    testDArray();
-    testString();
+    //testDArray();
+    //testString();
+    testPtr();
 }

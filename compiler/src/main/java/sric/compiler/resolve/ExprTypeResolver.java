@@ -313,8 +313,20 @@ public class ExprTypeResolver extends TypeResolver {
         if (!target.isResolved()) {
             return null;
         }
-        
         AstNode resolvedDef = target.resolvedType.id.resolvedDef;
+        if (target.resolvedType.isPointerType()) {
+            if (target.resolvedType.genericArgs == null || target.resolvedType.genericArgs.size() > 0) {
+                Type type = target.resolvedType.genericArgs.get(0);
+                resolvedDef = type.id.resolvedDef;
+            }
+            else {
+                resolvedDef = null;
+            }
+            if (resolvedDef == null) {
+                return null;
+            }
+        }
+        
         if (resolvedDef != null) {
             if (resolvedDef instanceof TypeDef t) {
                 Scope scope = t.getScope();
@@ -589,7 +601,7 @@ public class ExprTypeResolver extends TypeResolver {
                 if (sd.generiParamDefs != null) {
                     if (e.genericArgs.size() == sd.generiParamDefs.size()) {
                         e.resolvedDef = sd.parameterize(e.genericArgs);
-                        e.resolvedType = getSlotType(idExpr.resolvedDef);
+                        e.resolvedType = getSlotType(e.resolvedDef);
                         genericOk = true;
                     }
                 }
@@ -598,7 +610,7 @@ public class ExprTypeResolver extends TypeResolver {
                 if (sd.generiParamDefs != null) {
                     if (e.genericArgs.size() == sd.generiParamDefs.size()) {
                         e.resolvedDef = sd.parameterize(e.genericArgs);
-                        e.resolvedType = getSlotType(idExpr.resolvedDef);
+                        e.resolvedType = getSlotType(e.resolvedDef);
                         genericOk = true;
                     }
                 }
@@ -649,6 +661,19 @@ public class ExprTypeResolver extends TypeResolver {
                     e.resolvedType = Type.boolType(e.loc);
                     break;
                 case asKeyword:
+                    Type from = e.lhs.resolvedType;
+                    Type to = e.rhs.resolvedType;
+                    if (from.detail instanceof Type.PointerInfo p1 && to.detail instanceof Type.PointerInfo p2) {
+                        if (p1.pointerAttr != Type.PointerAttr.raw && p2.pointerAttr == Type.PointerAttr.raw) {
+                            e.lhs.implicitTypeConvert = p1.pointerAttr.toString() + "_to_raw";
+                        }
+                        else if (p1.pointerAttr != Type.PointerAttr.ref && p2.pointerAttr == Type.PointerAttr.ref) {
+                            e.lhs.implicitTypeConvert = p1.pointerAttr.toString() + "_to_ref";
+                        }
+                        else if (p1.pointerAttr != p2.pointerAttr) {
+                            err("Unknow convert", e.loc);
+                        }
+                    }
                     e.resolvedType = e.rhs.resolvedType;
                     break;
                 case eq:
