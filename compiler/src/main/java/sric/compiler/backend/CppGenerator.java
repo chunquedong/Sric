@@ -383,8 +383,13 @@ public class CppGenerator extends BaseGenerator {
         
         printGenericParamDefs(v.generiParamDefs);
         
-        if ((v.flags & FConst.Virtual) != 0 || (v.flags & FConst.Abstract) != 0) {
-            print("virtual ");
+        if (headMode) {
+            if ((v.flags & FConst.Virtual) != 0 || (v.flags & FConst.Abstract) != 0) {
+                print("virtual ");
+            }
+            if ((v.flags & FConst.Static) != 0) {
+                print("static ");
+            }
         }
         
 //        if ((v.flags & FConst.Extern) != 0) {
@@ -595,6 +600,7 @@ public class CppGenerator extends BaseGenerator {
                     else print(", ");
                     print("public ");
                     printType(inh);
+                    ++i;
                 }
             }
         }
@@ -752,18 +758,43 @@ public class CppGenerator extends BaseGenerator {
         }
         else if (v instanceof BinaryExpr e) {
             if (e.opToken == TokenKind.asKeyword) {
-                print("cast_as<");
-                printType(e.rhs.resolvedType);
-                print(" >(");
-                this.visit(e.lhs);
-                print(")");
+                Type targetType = ((TypeExpr)e.rhs).type;
+                boolean processed = false;
+                if (targetType.isPointerType()) {
+                    if (targetType.detail instanceof Type.PointerInfo pinfo) {
+                        if (pinfo.pointerAttr != Type.PointerAttr.raw && targetType.genericArgs != null) {
+                            this.visit(e.lhs);
+                            print(".castTo<");
+                            printType(targetType.genericArgs.get(0));
+                            print(" >()");
+                            processed = true;
+                        }
+                    }
+                }
+                if (!processed) {
+                    print("(");
+                    printType(targetType);
+                    print(")(");
+                    this.visit(e.lhs);
+                    print(")");
+                }
             }
             else if (e.opToken == TokenKind.isKeyword) {
-                print("type_is<");
-                printType(e.rhs.resolvedType);
-                print(" >(");
-                this.visit(e.lhs);
-                print(") != nullptr");
+                Type targetType = ((TypeExpr)e.rhs).type;
+                if (targetType.isPointerType()) {
+                    if (targetType.genericArgs != null) {
+                        print("sric::ptr_is<");
+                        printType(e.lhs.resolvedType);
+                        print(", ");
+                        printType(targetType.genericArgs.get(0));
+                        print(" >(");
+                        this.visit(e.lhs);
+                        print(")");
+                    }
+                }
+                else {
+                    print(e.lhs.resolvedType.equals(targetType) ? "true" : "false");
+                }
             }
             //index set operator: a[i] = b
             else if (e.opToken == TokenKind.assign && e.lhs instanceof IndexExpr iexpr) {

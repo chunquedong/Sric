@@ -1,5 +1,5 @@
-#ifndef REF_H_
-#define REF_H_
+#ifndef _SRIC_REF_H_
+#define _SRIC_REF_H_
 
 #ifndef NO_THREAD_SAFE
 #include <atomic>

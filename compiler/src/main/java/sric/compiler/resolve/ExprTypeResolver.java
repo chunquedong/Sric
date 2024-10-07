@@ -437,6 +437,7 @@ public class ExprTypeResolver extends TypeResolver {
             }
         }
         else if (v instanceof Expr.TypeExpr e) {
+            this.resolveType(e.type);
             e.resolvedType = Type.metaType(e.loc, e.type);
         }
         else if (v instanceof Expr.IndexExpr e) {
@@ -661,20 +662,24 @@ public class ExprTypeResolver extends TypeResolver {
                     e.resolvedType = Type.boolType(e.loc);
                     break;
                 case asKeyword:
-                    Type from = e.lhs.resolvedType;
-                    Type to = e.rhs.resolvedType;
-                    if (from.detail instanceof Type.PointerInfo p1 && to.detail instanceof Type.PointerInfo p2) {
-                        if (p1.pointerAttr != Type.PointerAttr.raw && p2.pointerAttr == Type.PointerAttr.raw) {
-                            e.lhs.implicitTypeConvert = p1.pointerAttr.toString() + "_to_raw";
+                    if (e.rhs instanceof TypeExpr te) {
+                        Type from = e.lhs.resolvedType;
+                        Type to = te.type;
+                        if (from.detail instanceof Type.PointerInfo p1 && to.detail instanceof Type.PointerInfo p2) {
+                            if (p1.pointerAttr != Type.PointerAttr.raw && p2.pointerAttr == Type.PointerAttr.raw) {
+                                e.lhs.implicitTypeConvert = p1.pointerAttr.toString() + "ToRaw";
+                                //e.lhs.implicitTypeConvertTo = to;
+                            }
+                            else if (p1.pointerAttr != Type.PointerAttr.ref && p2.pointerAttr == Type.PointerAttr.ref) {
+                                e.lhs.implicitTypeConvert = p1.pointerAttr.toString() + "ToRef";
+                                //e.lhs.implicitTypeConvertTo = to;
+                            }
+                            else if (p1.pointerAttr != p2.pointerAttr) {
+                                err("Unknow convert", e.loc);
+                            }
                         }
-                        else if (p1.pointerAttr != Type.PointerAttr.ref && p2.pointerAttr == Type.PointerAttr.ref) {
-                            e.lhs.implicitTypeConvert = p1.pointerAttr.toString() + "_to_ref";
-                        }
-                        else if (p1.pointerAttr != p2.pointerAttr) {
-                            err("Unknow convert", e.loc);
-                        }
+                        e.resolvedType = to;
                     }
-                    e.resolvedType = e.rhs.resolvedType;
                     break;
                 case eq:
                 case notEq:

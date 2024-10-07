@@ -1,5 +1,5 @@
-#ifndef ARRAY_H_
-#define ARRAY_H_
+#ifndef _SRIC_ARRAY_H_
+#define _SRIC_ARRAY_H_
 
 namespace sric
 {

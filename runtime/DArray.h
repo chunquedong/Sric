@@ -1,5 +1,5 @@
-#ifndef DARRAY_H_
-#define DARRAY_H_
+#ifndef _SRIC_DARRAY_H_
+#define _SRIC_DARRAY_H_
 
 #include "common.h"
 #include <vector>

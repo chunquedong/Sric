@@ -7,8 +7,8 @@
  * History:
  *   2012-12-23  Jed Young  Creation
  */
-#ifndef PTR_H_
-#define PTR_H_
+#ifndef _SRIC_PTR_H_
+#define _SRIC_PTR_H_
 
 #include <cstdio>
 #include <cstdlib>
@@ -24,7 +24,7 @@ class Refable;
 template<typename T>
 class OwnPtr {
     T* pointer;
-
+    template <class U> friend class OwnPtr;
 public:
     OwnPtr() : pointer(nullptr) {
     }
@@ -116,9 +116,9 @@ public:
         other.pointer = p;
     }
 
-    template <class U> OwnPtr<U> staticCastTo()
+    template <class U> OwnPtr<U> castTo()
     {
-        OwnPtr<U> copy(static_cast<U*>(take()));
+        OwnPtr<U> copy((U*)(take()));
         return copy;
     }
 
@@ -176,8 +176,10 @@ class RefPtr {
     T* pointer;
     int32_t checkCode;
     int32_t type;
+
+    template <class U> friend class RefPtr;
 private:
-    void onDeref() {
+    void onDeref() const {
         sc_assert(pointer != nullptr, "try deref null pointer");
         if (type == 0) {
             sc_assert(checkCode == getRefable(pointer)->getCheckCode(), "try deref error pointer");
@@ -190,6 +192,10 @@ public:
     RefPtr(OwnPtr<T>& p) : pointer(p.get()), checkCode(getRefable(pointer)->getCheckCode()), type(0) {
     }
 
+    template <class U>
+    RefPtr(RefPtr<U>& p) : pointer(p.pointer), checkCode(p.checkCode), type(p.type) {
+    }
+
     T* operator->() const { onDeref(); return pointer; }
 
     T* operator->() { onDeref(); return pointer; }
@@ -199,6 +205,22 @@ public:
     T* get() const { onDeref(); return pointer; }
 
     bool isNull() { return pointer == nullptr; }
+
+    template <class U> RefPtr<U> castTo()
+    {
+        RefPtr<U> copy((U*)(pointer));
+        copy.checkCode = checkCode;
+        copy.type = type;
+        return copy;
+    }
+
+    template <class U> RefPtr<U> dynamicCastTo()
+    {
+        RefPtr<U> copy(dynamic_cast<U*>(pointer));
+        copy.checkCode = checkCode;
+        copy.type = type;
+        return copy;
+    }
 };
 
 

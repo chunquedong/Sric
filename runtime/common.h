@@ -1,5 +1,5 @@
-#ifndef COMMON_H_
-#define COMMON_H_
+#ifndef _SRIC_COMMON_H_
+#define _SRIC_COMMON_H_
 
 
 namespace sric

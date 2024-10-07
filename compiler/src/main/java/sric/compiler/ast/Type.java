@@ -409,8 +409,14 @@ public class Type extends AstNode {
     }
     
     @java.lang.Override
-    public String toString() {    
+    public String toString() {
+                
+        if (this.isVarArgType()) {
+            return Buildin.varargTypeName;
+        }
+        
         StringBuilder sb = new StringBuilder();
+
         
         if (this.isImutable) {
             sb.append("const ");

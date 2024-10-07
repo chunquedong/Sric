@@ -101,9 +101,11 @@ public class ErrorChecker extends CompilePass {
         if (from.detail instanceof Type.PointerInfo p1 && to.detail instanceof Type.PointerInfo p2) {
             if (p1.pointerAttr != Type.PointerAttr.raw && p2.pointerAttr == Type.PointerAttr.raw) {
                 target.implicitTypeConvert = p1.pointerAttr.toString() + "ToRaw";
+                //target.implicitTypeConvertTo = to;
             }
             else if (p1.pointerAttr != Type.PointerAttr.ref && p2.pointerAttr == Type.PointerAttr.ref) {
                 target.implicitTypeConvert = p1.pointerAttr.toString() + "ToRef";
+                //target.implicitTypeConvertTo = to;
             }
             else if (p1.pointerAttr != p2.pointerAttr) {
                 err("Unknow convert", loc);
@@ -397,13 +399,18 @@ public class ErrorChecker extends CompilePass {
     }
     
     private void verifyAccess(Expr target, AstNode resolvedSlotDef, Loc loc) {
+        boolean isImutable = target.resolvedType.isImutable;
+        if (target.resolvedType.isPointerType() && target.resolvedType.genericArgs != null) {
+            isImutable = target.resolvedType.genericArgs.get(0).isImutable;
+        }
+        
         if (resolvedSlotDef instanceof AstNode.FieldDef f) {
-            if (target.resolvedType.isImutable && (f.flags & FConst.Const) == 0) {
+            if (isImutable && (f.flags & FConst.Const) == 0) {
                 err("Const error", loc);
             }
         }
         else if (resolvedSlotDef instanceof AstNode.FuncDef f) {
-            if (target.resolvedType.isImutable && (f.prototype.postFlags & FConst.Mutable) != 0) {
+            if (isImutable && (f.prototype.postFlags & FConst.Mutable) != 0) {
                 err("Const error", loc);
             }
         }

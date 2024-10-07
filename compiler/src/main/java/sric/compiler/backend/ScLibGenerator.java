@@ -297,6 +297,7 @@ public class ScLibGenerator extends BaseGenerator {
                     if (i == 0) print(" : ");
                     else print(", ");
                     printType(inh);
+                    ++i;
                 }
             }
         }

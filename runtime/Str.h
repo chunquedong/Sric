@@ -1,5 +1,5 @@
-#ifndef STRING_H_
-#define STRING_H_
+#ifndef _SRIC_STRING_H_
+#define _SRIC_STRING_H_
 
 #include <string>
 #include "DArray.h"

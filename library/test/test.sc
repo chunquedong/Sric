@@ -24,4 +24,5 @@ fun main() {
     //testDArray();
     //testString();
     testPtr();
+    testInherit();
 }
