@@ -816,6 +816,11 @@ public class Parser {
             param.paramType = typeRef();
         }
         
+        //param type default to const
+        if (!param.paramType.explicitImutable) {
+            param.paramType.isImutable = true;
+        }
+        
         if (curt == TokenKind.assign) {
             //if (curt === TokenKind.assign) err("Must use := for parameter default");
             consume();
@@ -896,20 +901,20 @@ public class Parser {
     
     private Type imutableType() {
         boolean imutable = false;
-//        boolean explicitImutable = false;
+        boolean explicitImutable = false;
         if (curt == TokenKind.constKeyword) {
             consume();
             imutable = true;
-//            explicitImutable = true;
+            explicitImutable = true;
         }
         else if (curt == TokenKind.mutKeyword) {
             consume();
             imutable = false;
-//            explicitImutable = true;
+            explicitImutable = true;
         }
         
         Type type = typeRef();
-//        type.explicitImutable = explicitImutable;
+        type.explicitImutable = explicitImutable;
         type.isImutable = imutable;
         return type;
     }

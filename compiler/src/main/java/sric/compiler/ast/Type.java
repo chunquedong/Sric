@@ -17,12 +17,13 @@ import sric.compiler.ast.Expr.IdExpr;
 public class Type extends AstNode {
     public IdExpr id;
     public ArrayList<Type> genericArgs = null;
+    public Type resolvedAlias = null;
     
     public static enum PointerAttr {
         own, ref, raw
     };
     
-//    public boolean explicitImutable = false;
+    public boolean explicitImutable = false;
     public boolean isImutable = false;
     
     public TypeInfo detail = null;
@@ -146,12 +147,17 @@ public class Type extends AstNode {
     }
     
     public boolean fit(Type target) {
+        if (this.resolvedAlias != null) {
+            return this.resolvedAlias.fit(target);
+        }
+        if (target.resolvedAlias != null) {
+            return this.fit(target.resolvedAlias);
+        }
+        
         if (target.isVarArgType()) {
             return true;
         }
-        if (this.isImutable && !target.isImutable) {
-            return false;
-        }
+
         if (equals(target)) {
             return true;
         }
@@ -161,6 +167,11 @@ public class Type extends AstNode {
         
         //pointer fit
         if (this.detail instanceof PointerInfo e && target.detail instanceof PointerInfo a) {
+            
+            if (this.isImutable && !target.isImutable) {
+                return false;
+            }
+                    
             if ((e.pointerAttr == a.pointerAttr) && (a.isNullable == a.isNullable)) {
                 //ok
             }

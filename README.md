@@ -158,11 +158,11 @@ var p : const raw* Int;
 var p : const raw* const Int;
 ```
 
-'this' is const by default
+Function params is const by default
 ```
 struct Bar {
     var i: Int = 0;
-    fun set(a: Int) mut : Int {
+    fun set(a: mut Int) mut : Int {
         i = a;
     }
 }

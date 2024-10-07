@@ -67,7 +67,7 @@ public class ParserTest {
             
             String str = stream.toString("UTF-8");
             String name = file.getName().substring(0, file.getName().lastIndexOf("."));
-            GoldenTest.verifyGolden(str, "parser", name+".cpp");
+            GoldenTest.verifyGolden(str, "parser", name+".h");
         }
     }
 }

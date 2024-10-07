@@ -35,7 +35,7 @@ public:
         return RefPtr<T>(&data[i]);
     }
 
-    void set(int i, T d) {
+    void set(int i, const T& d) {
         sric::sc_assert(i >= 0 && i < data.size(), "index out of array");
         data[i] = d;
     }

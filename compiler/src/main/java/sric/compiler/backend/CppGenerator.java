@@ -172,6 +172,11 @@ public class CppGenerator extends BaseGenerator {
             return;
         }
         
+        if (type.resolvedAlias != null) {
+            printType(type.resolvedAlias);
+            return;
+        }
+        
         if (type.isImutable) {
             print("const ");
         }
@@ -391,12 +396,14 @@ public class CppGenerator extends BaseGenerator {
         if (implMode()) {
             if (v.parent instanceof TypeDef t) {
                 if (t.parent instanceof FileUnit fu) {
-                    print(fu.module.name).print("::");
+                    if (fu.module != null) {
+                        print(fu.module.name).print("::");
+                    }
                 }
                 print(t.name).print("::");
             }
             else if (v.parent instanceof FileUnit fu) {
-                if (!isEntryPoint(v)) {
+                if (fu.module != null && !isEntryPoint(v)) {
                     print(fu.module.name).print("::");
                 }
             }
@@ -732,7 +739,7 @@ public class CppGenerator extends BaseGenerator {
         }
         else if (v instanceof AccessExpr e) {
             this.visit(e.target);
-            if (e.target.resolvedType.isPointerType()) {
+            if (e.target.resolvedType != null && e.target.resolvedType.isPointerType()) {
                 print("->");
             }
             else {
