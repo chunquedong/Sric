@@ -497,7 +497,7 @@ public class ExprTypeResolver extends TypeResolver {
             
             e.resolvedType = Type.funcType(e);
         }
-        else if (v instanceof OptionalExpr e) {
+        else if (v instanceof NonNullableExpr e) {
             this.visit(e.operand);
             boolean ok = false;
             if (e.operand.resolvedType != null) {

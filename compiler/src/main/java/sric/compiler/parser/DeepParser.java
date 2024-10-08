@@ -696,7 +696,7 @@ public class DeepParser extends Parser {
         if (curt == TokenKind.bang) {
             consume();
             Loc loc = target.loc;
-            target = new OptionalExpr(target);
+            target = new NonNullableExpr(target);
             endLoc(target, loc);
         }
         while (curt != TokenKind.semicolon) {
@@ -708,7 +708,7 @@ public class DeepParser extends Parser {
             if (curt == TokenKind.bang) {
                 consume();
                 Loc loc = target.loc;
-                target = new OptionalExpr(target);
+                target = new NonNullableExpr(target);
                 endLoc(target, loc);
             }
         }

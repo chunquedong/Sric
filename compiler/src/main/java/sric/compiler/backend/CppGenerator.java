@@ -729,9 +729,9 @@ public class CppGenerator extends BaseGenerator {
 
     @Override
     public void visitExpr(Expr v) {
-        boolean isPrimitive = false;
-        if (v.isStmt || v instanceof IdExpr || v instanceof LiteralExpr || v instanceof CallExpr || v instanceof AccessExpr) {
-            isPrimitive = true;
+        boolean parentheses = false;
+        if (v.isStmt || v instanceof IdExpr || v instanceof LiteralExpr || v instanceof CallExpr || v instanceof AccessExpr || v instanceof NonNullableExpr) {
+            parentheses = true;
         }
         else {
             print("(");
@@ -763,6 +763,11 @@ public class CppGenerator extends BaseGenerator {
                 boolean processed = false;
                 if (targetType.isPointerType()) {
                     if (targetType.detail instanceof Type.PointerInfo pinfo) {
+                        
+                        if (!pinfo.isNullable) {
+                            print("nonNullable(");
+                        }
+                        
                         if (pinfo.pointerAttr != Type.PointerAttr.raw && targetType.genericArgs != null) {
                             this.visit(e.lhs);
                             print(".dynamicCastTo<");
@@ -778,6 +783,10 @@ public class CppGenerator extends BaseGenerator {
                             print(")");
                             processed = true;
                         }
+                        
+                        if (!pinfo.isNullable) {
+                            print(")");
+                        }
                     }
                 }
                 if (!processed) {
@@ -792,7 +801,7 @@ public class CppGenerator extends BaseGenerator {
                 Type targetType = ((TypeExpr)e.rhs).type;
                 if (targetType.isPointerType()) {
                     if (targetType.genericArgs != null) {
-                        print("sric::ptr_is<");
+                        print("sric::ptrIs<");
                         printType(targetType.genericArgs.get(0));
                         print(" >(");
                         this.visit(e.lhs);
@@ -885,8 +894,10 @@ public class CppGenerator extends BaseGenerator {
         else if (v instanceof ClosureExpr e) {
             printClosureExpr(e);
         }
-        else if (v instanceof OptionalExpr e) {
+        else if (v instanceof NonNullableExpr e) {
+            print("nonNullable(");
             this.visit(e.operand);
+            print(")");
         }
         else {
             err("Unkown expr:"+v, v.loc);
@@ -896,7 +907,7 @@ public class CppGenerator extends BaseGenerator {
             print(")");
         }
         
-        if (!isPrimitive) {
+        if (!parentheses) {
             print(")");
         }
     }

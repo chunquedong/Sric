@@ -20,3 +20,8 @@ fun testPtr() {
     p = null;
     //printf("%d\n", rp.a);
 }
+
+fun testNullable() {
+    var p: ref*? A;
+    var i = p!.a;
+}

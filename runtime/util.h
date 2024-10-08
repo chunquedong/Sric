@@ -19,13 +19,29 @@ namespace sric {
 	}
 
 	template<typename T>
-	bool ptr_is(void* p) {
+	bool ptrIs(void* p) {
 		return dynamic_cast<T*>(p) != nullptr;
 	}
 
 	template<typename T, typename F>
-	bool ptr_is(F p) {
+	bool ptrIs(F p) {
 		return dynamic_cast<T*>(p.get()) != nullptr;
+	}
+
+	template<typename T>
+	T* nonNullable(T* p) {
+		sc_assert(p != nullptr, "Non-Nullable");
+		return p;
+	}
+
+	template<typename T>
+	T& nonNullable(T& p) {
+		sc_assert(!p.isNull(), "Non-Nullable");
+		return p;
+	}
+
+	inline bool notNull(void* p) {
+		return p;
 	}
 }
 

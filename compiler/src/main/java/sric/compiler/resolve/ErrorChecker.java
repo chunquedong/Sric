@@ -114,7 +114,7 @@ public class ErrorChecker extends CompilePass {
     }
     
     public static AstNode idResolvedDef(Expr target) {
-        if (target instanceof Expr.OptionalExpr e) {
+        if (target instanceof Expr.NonNullableExpr e) {
             target = e.operand;
         }
 
@@ -399,6 +399,12 @@ public class ErrorChecker extends CompilePass {
     }
     
     private void verifyAccess(Expr target, AstNode resolvedSlotDef, Loc loc) {
+        if (target.resolvedType.detail instanceof Type.PointerInfo pinfo) {
+            if (pinfo.isNullable) {
+                err("Maybe null", target.loc);
+            }
+        }
+        
         boolean isImutable = target.resolvedType.isImutable;
         if (target.resolvedType.isPointerType() && target.resolvedType.genericArgs != null) {
             isImutable = target.resolvedType.genericArgs.get(0).isImutable;
@@ -555,8 +561,16 @@ public class ErrorChecker extends CompilePass {
         else if (v instanceof Expr.ClosureExpr e) {
             this.visit(e.code);
         }
-        else if (v instanceof Expr.OptionalExpr e) {
+        else if (v instanceof Expr.NonNullableExpr e) {
             this.visit(e.operand);
+            if (e.operand.resolvedType.detail instanceof Type.PointerInfo pinfo) {
+                if (!pinfo.isNullable) {
+                    err("Must nullable expr", v.loc);
+                }
+            }
+            else {
+                err("Must nullable expr", v.loc);
+            }
         }
         else {
             err("Unkown expr:"+v, v.loc);

@@ -259,7 +259,7 @@ public class AstFinder extends CompilePass {
             visitFuncPrototype(e, e.prototype);
             this.visit(e.code);
         }
-        else if (v instanceof Expr.OptionalExpr e) {
+        else if (v instanceof Expr.NonNullableExpr e) {
             this.visit(e.operand);
         }
         else {

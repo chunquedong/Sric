@@ -498,7 +498,7 @@ public class ScLibGenerator extends BaseGenerator {
         else if (v instanceof ClosureExpr e) {
             printClosureExpr(e);
         }
-        else if (v instanceof Expr.OptionalExpr e) {
+        else if (v instanceof Expr.NonNullableExpr e) {
             this.visit(e.operand);
         }
         else {

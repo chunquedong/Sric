@@ -51,11 +51,10 @@ public abstract class Expr extends AstNode {
         }
     }
     
-    public static class OptionalExpr extends Expr {
+    public static class NonNullableExpr extends Expr {
         public Expr operand;    // operand expression
-        public boolean isNullable = false;
         
-        public OptionalExpr(Expr operand) {
+        public NonNullableExpr(Expr operand) {
             this.operand = operand;
         }
     }

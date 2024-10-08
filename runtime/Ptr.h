@@ -196,6 +196,9 @@ private:
         }
     }
 public:
+    RefPtr() : pointer(nullptr), checkCode(0), type(1) {
+    }
+
     RefPtr(T* p) : pointer(p), checkCode(0), type(1) {
     }
 
@@ -212,7 +215,7 @@ public:
 
     T& operator*() { onDeref(); return *pointer; }
 
-    T* get() const { onDeref(); return pointer; }
+    T* get() const { return pointer; }
 
     bool isNull() { return pointer == nullptr; }
 
