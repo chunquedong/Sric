@@ -456,6 +456,7 @@ public class CppGenerator extends BaseGenerator {
         }
         else {
             if (implMode() || inlined) {
+                print(" ");
                 this.visit(v.code);
             }
             else {
@@ -764,9 +765,17 @@ public class CppGenerator extends BaseGenerator {
                     if (targetType.detail instanceof Type.PointerInfo pinfo) {
                         if (pinfo.pointerAttr != Type.PointerAttr.raw && targetType.genericArgs != null) {
                             this.visit(e.lhs);
-                            print(".castTo<");
+                            print(".dynamicCastTo<");
                             printType(targetType.genericArgs.get(0));
                             print(" >()");
+                            processed = true;
+                        }
+                        else {
+                            print("dynamic_cast<");
+                            printType(targetType);
+                            print(" >(");
+                            this.visit(e.lhs);
+                            print(")");
                             processed = true;
                         }
                     }
@@ -784,8 +793,6 @@ public class CppGenerator extends BaseGenerator {
                 if (targetType.isPointerType()) {
                     if (targetType.genericArgs != null) {
                         print("sric::ptr_is<");
-                        printType(e.lhs.resolvedType);
-                        print(", ");
                         printType(targetType.genericArgs.get(0));
                         print(" >(");
                         this.visit(e.lhs);

@@ -23,7 +23,7 @@ namespace sric {
 		return dynamic_cast<T*>(p) != nullptr;
 	}
 
-	template<typename F, typename T>
+	template<typename T, typename F>
 	bool ptr_is(F p) {
 		return dynamic_cast<T*>(p.get()) != nullptr;
 	}

@@ -135,8 +135,18 @@ public:
     }
 };
 
-inline Refable* getRefable(void *pointer) {
-    Refable* p = (Refable*)pointer;
+template<typename U>
+typename std::enable_if<std::is_polymorphic<U>::value, Refable*>::type  getRefable(U* pointer) {
+    void* mostTop = dynamic_cast<void*>(pointer);
+    Refable* p = (Refable*)mostTop;
+    --p;
+    return p;
+}
+
+template<typename U>
+typename std::enable_if<!std::is_polymorphic<U>::value, Refable*>::type  getRefable(U* pointer) {
+    void* mostTop = pointer;
+    Refable* p = (Refable*)mostTop;
     --p;
     return p;
 }

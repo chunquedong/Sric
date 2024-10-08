@@ -24,8 +24,8 @@ fun testInherit() {
     var p3: ref* I = p1 as ref* I;
     p3.foo();
     var p4: ref* I = x as ref* I;
-    //TODO
-    //p4.foo();
+    
+    p4.foo();
 
     var b1 = p1 is ref* I;
 

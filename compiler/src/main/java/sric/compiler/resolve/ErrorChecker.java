@@ -723,11 +723,19 @@ public class ErrorChecker extends CompilePass {
         if (e.lhs.isResolved() && e.rhs.isResolved()) {
             Token.TokenKind curt = e.opToken;
             switch (curt) {
-                case isKeyword:
+                case isKeyword: {
                     verifyMetType(e.rhs);
+                    Type targetType = ((TypeExpr)e.rhs).type;
+                    if (targetType.detail instanceof Type.PointerInfo pinfo) {
+                        if (pinfo.isNullable) {
+                            err("Must non-nullable", e.rhs.loc);
+                        }
+                    }
+                }
                     break;
-                case asKeyword:
+                case asKeyword: {
                     verifyMetType(e.rhs);
+                }
                     break;
                 case eq:
                 case notEq:
