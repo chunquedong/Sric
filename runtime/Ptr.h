@@ -22,6 +22,9 @@ namespace sric
 class Refable;
 
 template<typename T>
+class RefPtr;
+
+template<typename T>
 class OwnPtr {
     T* pointer;
     template <class U> friend class OwnPtr;
@@ -83,6 +86,8 @@ public:
     T* operator->() { sc_assert(pointer != nullptr, "try deref null pointer"); return pointer; }
 
     T& operator*() { sc_assert(pointer != nullptr, "try deref null pointer"); return *pointer; }
+
+    operator T* () { return pointer; }
 
     T* get() const { return pointer; }
 
@@ -162,10 +167,7 @@ OwnPtr<T> alloc() {
 
 template <class T>
 OwnPtr<T> share(OwnPtr<T> p) {
-    T* pointer = p.get();
-    if (pointer)
-        getRefable(pointer)->addRef();
-    return OwnPtr<T>(pointer);
+    return p.share();
 }
 
 template<typename T>
@@ -214,6 +216,8 @@ public:
     T* operator->() { onDeref(); return pointer; }
 
     T& operator*() { onDeref(); return *pointer; }
+
+    operator T* () { return pointer; }
 
     T* get() const { return pointer; }
 

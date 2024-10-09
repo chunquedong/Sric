@@ -745,7 +745,17 @@ public class CppGenerator extends BaseGenerator {
             this.printIdExpr(e);
         }
         else if (v instanceof AccessExpr e) {
+            boolean isNullable = false;
+            if (e.target.resolvedType != null && e.target.resolvedType.detail instanceof Type.PointerInfo pinfo) {
+                if (pinfo.isNullable) {
+                    print("nonNullable(");
+                    isNullable = true;
+                }
+            }
             this.visit(e.target);
+            if (isNullable) {
+                print(")");
+            }
             if (e.target.resolvedType != null && e.target.resolvedType.isPointerType()) {
                 print("->");
             }

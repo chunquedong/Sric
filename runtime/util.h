@@ -40,8 +40,8 @@ namespace sric {
 		return p;
 	}
 
-	inline bool notNull(void* p) {
-		return p;
+	inline bool isNull(void* p) {
+		return p == nullptr;
 	}
 }
 

@@ -23,5 +23,5 @@ fun testPtr() {
 
 fun testNullable() {
     var p: ref*? A;
-    var i = p!.a;
+    var i = p.a;
 }

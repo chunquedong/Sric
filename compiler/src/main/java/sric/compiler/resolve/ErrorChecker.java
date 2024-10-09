@@ -399,11 +399,11 @@ public class ErrorChecker extends CompilePass {
     }
     
     private void verifyAccess(Expr target, AstNode resolvedSlotDef, Loc loc) {
-        if (target.resolvedType.detail instanceof Type.PointerInfo pinfo) {
-            if (pinfo.isNullable) {
-                err("Maybe null", target.loc);
-            }
-        }
+//        if (target.resolvedType.detail instanceof Type.PointerInfo pinfo) {
+//            if (pinfo.isNullable) {
+//                err("Maybe null", target.loc);
+//            }
+//        }
         
         boolean isImutable = target.resolvedType.isImutable;
         if (target.resolvedType.isPointerType() && target.resolvedType.genericArgs != null) {
