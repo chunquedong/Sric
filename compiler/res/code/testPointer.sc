@@ -28,4 +28,8 @@ fun main()
     foo(x!);
 
     foo2(move p2);
+
+    if (!isNull(x)) {
+        printf("%d", *x);
+    }
 }

@@ -39,10 +39,10 @@ namespace sric {
 		sc_assert(!p.isNull(), "Non-Nullable");
 		return p;
 	}
+}
 
-	inline bool isNull(void* p) {
-		return p == nullptr;
-	}
+inline bool isNull(void* p) {
+	return p == nullptr;
 }
 
 #endif

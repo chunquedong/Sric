@@ -36,6 +36,22 @@ public class Buildin {
         return typeDef;
     }
     
+    private static FuncDef isNullFunc(Scope scope) {
+        FuncDef f = new FuncDef();
+        f.loc = loc;
+        f.name = "isNull";
+        f.prototype.returnType = Type.boolType(loc);
+        f.prototype.paramDefs = new ArrayList<ParamDef>();
+        ParamDef param = new ParamDef();
+        param.loc = loc;
+        param.name = "pointer";
+        param.paramType = Type.pointerType(loc, Type.voidType(loc), Type.PointerAttr.raw, true);
+        f.prototype.paramDefs.add(param);
+        
+        scope.put(f.name, f);
+        return f;
+    }
+    
     private static FuncDef sizeofFunc(Scope scope) {
         FuncDef f = new FuncDef();
         f.loc = loc;
@@ -104,7 +120,7 @@ public class Buildin {
             
             sizeofFunc(scope);
             offsetofFunc(scope);
-            
+            isNullFunc(scope);
         }
         return buildinScope;
     }

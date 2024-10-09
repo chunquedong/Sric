@@ -231,7 +231,7 @@ public class ErrorChecker extends CompilePass {
         }
         
         if ((v.flags & FConst.Operator) != 0) {
-            verifyOperator(v);
+            verifyOperatorDef(v);
         }
         
         if (v.code != null) {
@@ -365,7 +365,7 @@ public class ErrorChecker extends CompilePass {
         }
     }
     
-    private void verifyOperator(AstNode.FuncDef f) {
+    private void verifyOperatorDef(AstNode.FuncDef f) {
         if (f.name.equals("plus") || f.name.equals("minus") || 
                 f.name.equals("mult") || f.name.equals("div")) {
             if (f.prototype.paramDefs.size() != 1) {
@@ -539,7 +539,11 @@ public class ErrorChecker extends CompilePass {
             this.visit(e.target);
             verifyUnsafe(e.target);
             this.visit(e.index);
-            verifyInt(e.index);
+            //verifyInt(e.index);
+            if (e.resolvedDef != null) {
+                Type paramType = e.resolvedDef.prototype.paramDefs.get(0).paramType;
+                verifyTypeFit(e.index, paramType, e.index.loc);
+            }
         }
         else if (v instanceof Expr.GenericInstance e) {
             this.visit(e.target);
@@ -787,8 +791,10 @@ public class ErrorChecker extends CompilePass {
                 case minus:
                 case star:
                 case slash:
-
-                    
+                    if (e.resolvedOperator != null) {
+                        Type paramType = e.resolvedOperator.prototype.paramDefs.get(0).paramType;
+                        verifyTypeFit(e.rhs, paramType, e.rhs.loc);
+                    }
                     break;
                 case assign:
                 case assignPlus:
@@ -815,6 +821,10 @@ public class ErrorChecker extends CompilePass {
                         }
                     }
                     else if (e.lhs instanceof Expr.IndexExpr indexExpr) {
+                        if (indexExpr.resolvedDef != null && indexExpr.resolvedDef.prototype.paramDefs.size() > 1) {
+                            Type paramType = indexExpr.resolvedDef.prototype.paramDefs.get(1).paramType;
+                            verifyTypeFit(e.rhs, paramType, e.rhs.loc);
+                        }
                         ok = true;
                         return;
                     }

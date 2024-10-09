@@ -25,7 +25,7 @@ import sric.compiler.parser.Parser;
 public class DeepParserTest {
     @Test
     public void test() throws IOException {
-        String file = "res/code/testStruct.sc";
+        String file = "res/code/testOperator.sc";
         String src = Files.readString(Path.of(file));
         
         CompilerLog log = new CompilerLog();

@@ -192,9 +192,14 @@ public class Type extends AstNode {
                 }
             }
 
-            if (!genericArgsEquals(target)) {
+            
+            if (target.genericArgs != null && target.genericArgs.get(0).isVoid()) {
+                //ok
+            }
+            else if (!genericArgsFit(target)) {
                 return false;
             }
+            
 
             if (this.id.resolvedDef == target.id.resolvedDef) {
                 return true;
@@ -205,11 +210,7 @@ public class Type extends AstNode {
                     if (sd.genericFrom == td.genericFrom || sd == td.genericFrom || sd.genericFrom == td) {
                         return true;
                     }
-                }
-            }
 
-            if (this.id.resolvedDef != null && target.id.resolvedDef != null) {
-                if (this.id.resolvedDef instanceof StructDef sd && target.id.resolvedDef instanceof TypeDef td) {
                     if (sd.isInheriteFrom(td)) {
                         return true;
                     }
@@ -273,10 +274,6 @@ public class Type extends AstNode {
         return false;
     }
     
-    protected boolean checkEquals(Type target) {
-        return true;
-    }
-    
     protected boolean genericArgsEquals(Type target) {
         if (this.genericArgs != null || target.genericArgs != null) {
             if (this.genericArgs == null || target.genericArgs == null) {
@@ -287,6 +284,23 @@ public class Type extends AstNode {
             }
             for (int i=0; i<this.genericArgs.size(); ++i) {
                 if (!this.genericArgs.get(i).equals(target.genericArgs.get(i))) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    
+    protected boolean genericArgsFit(Type target) {
+        if (this.genericArgs != null || target.genericArgs != null) {
+            if (this.genericArgs == null || target.genericArgs == null) {
+                return false;
+            }
+            if (this.genericArgs.size() != target.genericArgs.size()) {
+                return false;
+            }
+            for (int i=0; i<this.genericArgs.size(); ++i) {
+                if (!this.genericArgs.get(i).fit(target.genericArgs.get(i))) {
                     return false;
                 }
             }

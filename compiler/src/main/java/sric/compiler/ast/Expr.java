@@ -38,7 +38,7 @@ public abstract class Expr extends AstNode {
         public Expr lhs;           // left hand side
         public Expr rhs;           // right hand side
         
-        public String operatorName;// resolved opertor name
+        public FuncDef resolvedOperator = null;// resolved opertor name
         
         public BinaryExpr(Expr lhs, TokenKind tok, Expr rhs) {
             this.lhs = lhs;
@@ -73,7 +73,7 @@ public abstract class Expr extends AstNode {
     public static class IndexExpr extends Expr {
         public Expr target;
         public Expr index;
-        public AstNode resolvedDef;
+        public AstNode.FuncDef resolvedDef;
     }
     
     public static class GenericInstance extends Expr {

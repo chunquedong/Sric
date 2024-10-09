@@ -832,9 +832,9 @@ public class CppGenerator extends BaseGenerator {
                 print(")");
             }
             else {
-                if (e.operatorName !=  null) {
+                if (e.resolvedOperator !=  null) {
                     this.visit(e.lhs);
-                    print(".").print(e.operatorName).print("(");
+                    print(".").print(e.resolvedOperator.name).print("(");
                     this.visit(e.rhs);
                     print(")");
                 }
@@ -865,6 +865,16 @@ public class CppGenerator extends BaseGenerator {
                 print("sric::addressOf(");
                 this.visit(e.operand);
                 print(")");
+            }
+            else if (e.opToken == TokenKind.moveKeyword) {
+                print("std::move(");
+                this.visit(e.operand);
+                print(")");
+            }
+            else if (e.opToken == TokenKind.awaitKeyword) {
+                print("co_await ");
+                this.visit(e.operand);
+                //print("");
             }
             else {
                 print(e.opToken.symbol);
