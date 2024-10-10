@@ -16,7 +16,7 @@ fun testPtr() {
     var p: own* A = alloc$<A>();
     testA(p);
 
-    if (!isNull(p)) {
+    if (p != null) {
         printf("%d\n", p.a);
     }
 

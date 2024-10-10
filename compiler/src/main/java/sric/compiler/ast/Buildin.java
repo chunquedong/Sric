@@ -120,7 +120,7 @@ public class Buildin {
             
             sizeofFunc(scope);
             offsetofFunc(scope);
-            isNullFunc(scope);
+            //isNullFunc(scope);
         }
         return buildinScope;
     }

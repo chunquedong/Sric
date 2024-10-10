@@ -769,6 +769,16 @@ public class ErrorChecker extends CompilePass {
                             err("Cant compare different type", e.loc);
                         }
                     }
+                    else if (e.lhs.resolvedType.isPointerType() && e.rhs.resolvedType.isPointerType()) {
+                        if (e.lhs.resolvedType.isNullType() || e.rhs.resolvedType.isNullType()) {
+                            //OK
+                        }
+                        else if (e.lhs.resolvedType.detail instanceof Type.PointerInfo p1 && e.rhs.resolvedType.detail instanceof Type.PointerInfo p2) {
+                            if (p1.pointerAttr != p2.pointerAttr) {
+                                err("Cant compare different type", e.loc);
+                            }
+                        }
+                    }
                     else if (!e.lhs.resolvedType.equals(e.rhs.resolvedType)) {
                         err("Cant compare different type", e.loc);
                     }
@@ -795,6 +805,7 @@ public class ErrorChecker extends CompilePass {
                         Type paramType = e.resolvedOperator.prototype.paramDefs.get(0).paramType;
                         verifyTypeFit(e.rhs, paramType, e.rhs.loc);
                     }
+                    verifyUnsafe(e.lhs);
                     break;
                 case assign:
                 case assignPlus:

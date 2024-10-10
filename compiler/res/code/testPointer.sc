@@ -29,7 +29,7 @@ fun main()
 
     foo2(move p2);
 
-    if (!isNull(x)) {
+    if (x != null) {
         printf("%d", *x);
     }
 }

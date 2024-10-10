@@ -123,6 +123,16 @@ public class Type extends AstNode {
         return id.name.equals(Buildin.pointerTypeName);
     }
     
+    public boolean isRawPointerType() {
+        if (!isPointerType()) {
+            return false;
+        }
+        if (this.detail instanceof PointerInfo pinfo) {
+            return pinfo.pointerAttr == PointerAttr.raw;
+        }
+        return false;
+    }
+    
     public boolean isNullType() {
         if (isPointerType()) {
             if (this.genericArgs == null) {
