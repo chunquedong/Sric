@@ -123,6 +123,16 @@ public class Type extends AstNode {
         return id.name.equals(Buildin.pointerTypeName);
     }
     
+    public boolean isNullablePointerType() {
+        if (!isPointerType()) {
+            return false;
+        }
+        if (this.detail instanceof PointerInfo pinfo) {
+            return pinfo.isNullable;
+        }
+        return true;
+    }
+    
     public boolean isRawPointerType() {
         if (!isPointerType()) {
             return false;

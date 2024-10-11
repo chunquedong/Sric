@@ -197,6 +197,7 @@ mult       a * b
 div        a / b 
 get        a[b] 
 set        a[b] = c
+compare    == != < > <= >=
 ```
 
 ### Module

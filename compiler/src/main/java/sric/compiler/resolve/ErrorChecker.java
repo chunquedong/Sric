@@ -366,6 +366,11 @@ public class ErrorChecker extends CompilePass {
     }
     
     private void verifyOperatorDef(AstNode.FuncDef f) {
+        
+        if ((f.flags & FConst.Static) != 0) {
+            err("Can't be static", f.loc);
+        }
+        
         if (f.name.equals("plus") || f.name.equals("minus") || 
                 f.name.equals("mult") || f.name.equals("div")) {
             if (f.prototype.paramDefs.size() != 1) {
@@ -519,9 +524,17 @@ public class ErrorChecker extends CompilePass {
                         break;
                     case moveKeyword:
                         AstNode defNode = idResolvedDef(e.operand);
-                        if (defNode != null && defNode instanceof AstNode.FieldDef f) {
-                            if (!f.isLocalVar) {
-                                err("Can't move", e.loc);
+                        if (defNode != null) {
+                            if (defNode instanceof AstNode.FieldDef f) {
+                                if (!f.isLocalVar && !f.fieldType.isNullablePointerType()) {
+                                    err("Can't move", e.loc);
+                                }
+                            }
+                            else if (defNode instanceof AstNode.ParamDef f) {
+                                //ok
+                            }
+                            else {
+                                err("Invalid move", e.loc);
                             }
                         }
                         else {
@@ -816,9 +829,7 @@ public class ErrorChecker extends CompilePass {
                     boolean ok = false;
                     if (e.lhs instanceof Expr.IdExpr idExpr) {
                         if (idExpr.resolvedDef instanceof AstNode.FieldDef f) {
-                            //if (checkProtection(f, f.parent, f.loc, true)) {
-                                ok = true;
-                            //}
+                            ok = true;
                         }
                         else {
                             err("Not assignable", e.lhs.loc);

@@ -617,7 +617,7 @@ public class ExprTypeResolver extends TypeResolver {
                 }
             }
             if (!genericOk) {
-                err("Generic args not match", e.loc);
+                err("Generic args size not match", e.loc);
             }
         }
         else if (idExpr.resolvedDef instanceof StructDef sd) {
@@ -754,26 +754,7 @@ public class ExprTypeResolver extends TypeResolver {
                     }
                     else {
                         if (curt != TokenKind.assign) {
-                            TokenKind overrideToken = null;
-                            if (curt == TokenKind.assignPlus) {
-                                overrideToken = TokenKind.plus;
-                            }
-                            else if (curt == TokenKind.assignMinus) {
-                                overrideToken = TokenKind.minus;
-                            }
-                            else if (curt == TokenKind.assignStar) {
-                                overrideToken = TokenKind.star;
-                            }
-                            else if (curt == TokenKind.assignSlash) {
-                                overrideToken = TokenKind.slash;
-                            }
-
-                            if (overrideToken != null) {
-                                resolveMathOperator(overrideToken, e);
-                            }
-                            else {
-                                err("Unsupport operator:"+curt, e.loc);
-                            }
+                            err("Unsupport operator:"+curt, e.loc);
                         }
                     }
                     e.resolvedType = e.lhs.resolvedType;
