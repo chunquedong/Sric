@@ -492,15 +492,64 @@ public class DeepParser extends Parser {
      */
     private Expr condAndExpr() {
         Loc loc = curLoc();
-        Expr expr = bitOrExpr();
+        Expr expr = equalityExpr();
         while (curt == TokenKind.doubleAmp) {
             consume();
             Expr lhs = expr;
-            Expr rhs = bitOrExpr();
+            Expr rhs = equalityExpr();
 
             BinaryExpr cond = new BinaryExpr(lhs, TokenKind.doubleAmp, rhs);
             endLoc(cond, loc);
             expr = cond;
+        }
+        return expr;
+    }
+    
+    /**
+     ** Equality expression:
+     **   <equalityExpr> =  <relationalExpr> [("==" | "!=" | "==" | "!=") <relationalExpr>]
+     */
+    private Expr equalityExpr() {
+        Loc loc = curLoc();
+        Expr expr = relationalExpr();
+        if (curt == TokenKind.eq || curt == TokenKind.notEq
+                || curt == TokenKind.same || curt == TokenKind.notSame) {
+            Expr lhs = expr;
+            TokenKind tok = consume().kind;
+            Expr rhs = relationalExpr();
+
+            BinaryExpr bexpr = new BinaryExpr(lhs, tok, rhs);
+            expr = bexpr;
+            endLoc(expr, loc);
+        }
+        return expr;
+    }
+    
+    /**
+     ** Relational expression:
+     **   <relationalExpr> =  <typeCheckExpr> | <compareExpr>
+     **   <typeCheckExpr> =  [("is" | "as") <type>]
+     **   <compareExpr> =  [("<" | "<=" | ">" | ">=" | "<=>")
+     */
+    private Expr relationalExpr() {
+        Loc loc = curLoc();
+        Expr expr = bitOrExpr();
+        
+        if (curt == TokenKind.isKeyword
+                || curt == TokenKind.asKeyword) {
+            expr = new BinaryExpr(expr, consume().kind, typeExpr());
+            endLoc(expr, loc);
+        }
+        else if (curt == TokenKind.lt || curt == TokenKind.ltEq
+                || curt == TokenKind.gt || curt == TokenKind.gtEq
+                //|| curt == TokenKind.cmp
+                ) {
+            
+            //not >> or <<
+            if (peekt != curt) {
+                expr = new BinaryExpr(expr, consume().kind, bitOrExpr());
+                endLoc(expr, loc);
+            }
         }
         return expr;
     }
@@ -537,11 +586,11 @@ public class DeepParser extends Parser {
     
     private Expr bitAndExpr() {
         Loc loc = curLoc();
-        Expr expr = equalityExpr();
+        Expr expr = bitShiftExpr();
         while (curt == TokenKind.amp) {
             consume();
             Expr lhs = expr;
-            Expr rhs = equalityExpr();
+            Expr rhs = bitShiftExpr();
 
             BinaryExpr cond = new BinaryExpr(lhs, TokenKind.amp, rhs);
             endLoc(cond, loc);
@@ -550,54 +599,6 @@ public class DeepParser extends Parser {
         return expr;
     }
 
-    /**
-     ** Equality expression:
-     **   <equalityExpr> =  <relationalExpr> [("==" | "!=" | "==" | "!=") <relationalExpr>]
-     */
-    private Expr equalityExpr() {
-        Loc loc = curLoc();
-        Expr expr = relationalExpr();
-        if (curt == TokenKind.eq || curt == TokenKind.notEq
-                || curt == TokenKind.same || curt == TokenKind.notSame) {
-            Expr lhs = expr;
-            TokenKind tok = consume().kind;
-            Expr rhs = relationalExpr();
-
-            BinaryExpr bexpr = new BinaryExpr(lhs, tok, rhs);
-            expr = bexpr;
-            endLoc(expr, loc);
-        }
-        return expr;
-    }
-
-    /**
-     ** Relational expression:
-     **   <relationalExpr> =  <typeCheckExpr> | <compareExpr>
-     **   <typeCheckExpr> =  [("is" | "as") <type>]
-     **   <compareExpr> =  [("<" | "<=" | ">" | ">=" | "<=>")
-     */
-    private Expr relationalExpr() {
-        Loc loc = curLoc();
-        Expr expr = bitShiftExpr();
-        
-        if (curt == TokenKind.isKeyword
-                || curt == TokenKind.asKeyword) {
-            expr = new BinaryExpr(expr, consume().kind, typeExpr());
-            endLoc(expr, loc);
-        }
-        else if (curt == TokenKind.lt || curt == TokenKind.ltEq
-                || curt == TokenKind.gt || curt == TokenKind.gtEq
-                //|| curt == TokenKind.cmp
-                ) {
-            
-            //not >> or <<
-            if (peekt != curt) {
-                expr = new BinaryExpr(expr, consume().kind, bitShiftExpr());
-                endLoc(expr, loc);
-            }
-        }
-        return expr;
-    }
     
     private Expr bitShiftExpr() {
         Loc loc = curLoc();
