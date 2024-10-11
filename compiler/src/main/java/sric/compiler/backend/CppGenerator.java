@@ -343,8 +343,14 @@ public class CppGenerator extends BaseGenerator {
         }
         
         if (init && v.initExpr != null) {
-            print(" = ");
-            this.visit(v.initExpr);
+            if (v.initExpr instanceof Expr.InitBlockExpr initBlockExpr) {
+                print(" ");
+                this.visit(v.initExpr);
+            }
+            else {
+                print(" = ");
+                this.visit(v.initExpr);
+            }
         }
     }
     
@@ -737,9 +743,10 @@ public class CppGenerator extends BaseGenerator {
 
     @Override
     public void visitExpr(Expr v) {
-        boolean parentheses = false;
-        if (v.isStmt || v instanceof IdExpr || v instanceof LiteralExpr || v instanceof CallExpr || v instanceof AccessExpr || v instanceof NonNullableExpr) {
-            parentheses = true;
+        boolean parentheses = true;
+        if (v.isStmt || v instanceof IdExpr || v instanceof LiteralExpr || v instanceof CallExpr 
+                || v instanceof AccessExpr || v instanceof NonNullableExpr || v instanceof InitBlockExpr) {
+            parentheses = false;
         }
         else {
             print("(");
@@ -858,7 +865,7 @@ public class CppGenerator extends BaseGenerator {
             print(")");
         }
         
-        if (!parentheses) {
+        if (parentheses) {
             print(")");
         }
     }
@@ -1024,26 +1031,74 @@ public class CppGenerator extends BaseGenerator {
     }
     
     void printInitBlockExpr(InitBlockExpr e) {
-        if (!e.target.isResolved()) {
-            return;
+//        if (!e.target.isResolved()) {
+//            return;
+//        }
+        
+        boolean isThis = false;
+        if (e.target instanceof Expr.IdExpr id) {
+            if (id.name.equals(TokenKind.thisKeyword.symbol)) {
+                isThis = true;
+            }
         }
-        if (!e.target.resolvedType.isMetaType()) {
+        
+        boolean isArray = e._isArray;
+        if (isArray) {
+            print(" = ");
+        }
+        else if (e._isType) {
+            print(";");
+        }
+        else if (e._storeVar != null) {
+            print(" = ");
             this.visit(e.target);
+            print(";");
         }
+        else {
+            print(" = ");
+        }
+        
         if (e.args != null) {
             int i = 0;
             print("{");
             for (CallArg t : e.args) {
-                if (i > 0)
-                    print(",");
+                if (isArray && i > 0) {
+                    print(", ");
+                }
+                
+                if (!isArray) {
+                    if (!isThis) {
+                        if (e._storeVar != null)
+                            print(e._storeVar.name);
+                        if (e.target.resolvedType != null && e.target.resolvedType.isPointerType()) {
+                            print("->");
+                        }
+                        else {
+                            print(".");
+                        }
+                    }
+                    else {
+                        print("this->");
+                    }
+                }
+                
                 if (t.name != null) {
                     print(t.name);
                     print(" = ");
                 }
                 this.visit(t.argExpr);
                 ++i;
+                
+                if (!isArray) {
+                    print("; ");
+                }
             }
             print("}");
+        }
+        if (isArray) {
+            if (e.args == null) {
+                print("{}");
+            }
         }
     }
     

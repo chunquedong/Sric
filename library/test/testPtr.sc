@@ -2,11 +2,15 @@
 import sric::*;
 
 struct A {
-    var a: Int = 1;
+    var i: Int = 1;
+
+    operator fun compare(b: ref* A) : Int {
+        return i - b.i;
+    }
 }
 
 fun testA(a: ref* A) {
-    printf("%d\n", a.a);
+    printf("%d\n", a.i);
 }
 
 fun testPtr() {
@@ -17,15 +21,23 @@ fun testPtr() {
     testA(p);
 
     if (p != null) {
-        printf("%d\n", p.a);
+        printf("%d\n", p.i);
     }
 
     var rp: ref* A = p;
     p = null;
-    //printf("%d\n", rp.a);
+    //printf("%d\n", rp.i);
 }
 
 fun testNullable() {
     var p: ref*? A;
-    var i = p.a;
+    var i = p.i;
+}
+
+fun testCompare() {
+    var a = A { i = 1 };
+    var b = A { i = 2 };
+    if (a < &b) {
+        printf("compare OK\n");
+    }
 }

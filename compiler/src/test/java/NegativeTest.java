@@ -19,7 +19,7 @@ public class NegativeTest {
     @Test
     public void test() throws IOException {
         String libPath = "res/lib";
-        File file = new File("res/negative/unsafe.sc");
+        File file = new File("res/negative/const.sc");
 
         sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file.getPath(), libPath);
         compiler.genCode = false;

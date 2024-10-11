@@ -537,11 +537,18 @@ public class ExprTypeResolver extends TypeResolver {
         if (e.target instanceof IdExpr id) {
             if (id.resolvedDef instanceof StructDef) {
                 sd = (StructDef)id.resolvedDef;
+                e._isType = true;
+            }
+            else if (id.resolvedDef instanceof FieldDef fd) {
+                if (fd.fieldType.id.resolvedDef instanceof StructDef fieldSF) {
+                    sd = fieldSF;
+                }
             }
         }
         else if (e.target instanceof GenericInstance gi) {
             if (gi.resolvedDef instanceof StructDef) {
                 sd = (StructDef)gi.resolvedDef;
+                e._isType = true;
             }
         }
         else if (e.target instanceof CallExpr call) {
@@ -554,14 +561,17 @@ public class ExprTypeResolver extends TypeResolver {
         }
         else if (e.target instanceof TypeExpr te) {
             if (te.type.detail instanceof Type.ArrayInfo at) {
-                e.isArray = true;
+                e._isArray = true;
                 at.sizeExpr = new LiteralExpr(Long.valueOf(e.args.size()));
                 at.sizeExpr.loc = e.loc;
                 at.size = e.args.size();
 
                 e.resolvedType = te.type;
             }
+            e._isType = true;
         }
+        
+        e._structDef = sd;
 
         if (sd != null) {
             if (e.target.resolvedType.isMetaType()) {
@@ -573,7 +583,7 @@ public class ExprTypeResolver extends TypeResolver {
                 e.resolvedType = e.target.resolvedType;
             }
         }
-        else if (!e.isArray) {
+        else if (!e._isArray) {
             err("Invalid init block", e.loc);
         }
     }

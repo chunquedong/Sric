@@ -151,7 +151,11 @@ public abstract class Expr extends AstNode {
     public static class InitBlockExpr extends Expr {
         public Expr target;
         public ArrayList<CallArg> args = null;
-        public boolean isArray = false;
+        
+        public FieldDef _storeVar;
+        public StructDef _structDef;
+        public boolean _isArray = false;
+        public boolean _isType = false;
     }
     
     public static class LiteralExpr extends Expr {

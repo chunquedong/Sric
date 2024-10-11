@@ -133,6 +133,9 @@ public class ErrorChecker extends CompilePass {
     @Override
     public void visitField(AstNode.FieldDef v) {
         if (v.initExpr != null) {
+            if (v.initExpr instanceof Expr.InitBlockExpr initBlockExpr) {
+                initBlockExpr._storeVar = v;
+            }
             this.visit(v.initExpr);
         }
         
@@ -596,6 +599,20 @@ public class ErrorChecker extends CompilePass {
 
     private void resolveInitBlockExpr(Expr.InitBlockExpr e) {
         this.visit(e.target);
+        
+        if (e._storeVar == null) {
+            boolean ok = false;
+            if (e.target instanceof Expr.IdExpr id) {
+                if (id.name.equals(TokenKind.thisKeyword.symbol)) {
+                    //allow this{...} for ctor
+                    ok = true;
+                }
+            }
+            if (!ok) {
+                err("Init block must in standalone assgin statement", e.loc);
+            }
+        }
+        
         if (e.args != null) {
             for (Expr.CallArg t : e.args) {
                 this.visit(t.argExpr);
@@ -605,26 +622,11 @@ public class ErrorChecker extends CompilePass {
             return;
         }
         
-        AstNode.StructDef sd = null;
-        if (e.target instanceof Expr.IdExpr id) {
-            if (id.resolvedDef instanceof AstNode.StructDef) {
-                sd = (AstNode.StructDef)id.resolvedDef;
-            }
-        }
-        else if (e.target instanceof Expr.CallExpr call) {
-            AstNode rdef = e.target.resolvedType.id.resolvedDef;
-            if (rdef != null) {
-                if (rdef instanceof AstNode.StructDef) {
-                    sd = (AstNode.StructDef)rdef;
-                }
-            }
-        }
-        else if (e.target instanceof Expr.TypeExpr te) {
-            if (te.type.detail instanceof Type.ArrayInfo at) {
-                for (Expr.CallArg t : e.args) {
-                    if (t.name != null) {
-                        err("Invalid name for array", t.loc);
-                    }
+        AstNode.StructDef sd = e._structDef;
+        if (e._isArray) {
+            for (Expr.CallArg t : e.args) {
+                if (t.name != null) {
+                    err("Invalid name for array", t.loc);
                 }
             }
         }
@@ -791,6 +793,10 @@ public class ErrorChecker extends CompilePass {
                                 err("Cant compare different type", e.loc);
                             }
                         }
+                    }
+                    else if (e.resolvedOperator != null) {
+                        Type paramType = e.resolvedOperator.prototype.paramDefs.get(0).paramType;
+                        verifyTypeFit(e.rhs, paramType, e.rhs.loc);
                     }
                     else if (!e.lhs.resolvedType.equals(e.rhs.resolvedType)) {
                         err("Cant compare different type", e.loc);

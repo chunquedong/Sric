@@ -25,4 +25,5 @@ fun main() {
     //testString();
     testPtr();
     testInherit();
+    testCompare();
 }
