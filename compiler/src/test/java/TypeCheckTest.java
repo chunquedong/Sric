@@ -25,7 +25,7 @@ import sric.compiler.resolve.TopLevelTypeResolver;
 public class TypeCheckTest {
     @Test
     public void test() throws IOException {
-        String file = "res/code/testGeneric.sc";
+        String file = "res/code/testOperator.sc";
         String libPath = "res/lib";
         
         sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file, libPath);

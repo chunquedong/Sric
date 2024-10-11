@@ -507,13 +507,12 @@ public class DeepParser extends Parser {
     
     /**
      ** Equality expression:
-     **   <equalityExpr> =  <relationalExpr> [("==" | "!=" | "==" | "!=") <relationalExpr>]
+     **   <equalityExpr> =  <relationalExpr> [("==" | "!=") <relationalExpr>]
      */
     private Expr equalityExpr() {
         Loc loc = curLoc();
         Expr expr = relationalExpr();
-        if (curt == TokenKind.eq || curt == TokenKind.notEq
-                || curt == TokenKind.same || curt == TokenKind.notSame) {
+        if (curt == TokenKind.eq || curt == TokenKind.notEq) {
             Expr lhs = expr;
             TokenKind tok = consume().kind;
             Expr rhs = relationalExpr();

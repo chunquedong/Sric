@@ -683,8 +683,8 @@ public class ExprTypeResolver extends TypeResolver {
                     break;
                 case eq:
                 case notEq:
-                case same:
-                case notSame:
+//                case same:
+//                case notSame:
                 case lt:
                 case gt:
                 case ltEq:
@@ -698,10 +698,11 @@ public class ExprTypeResolver extends TypeResolver {
                     else {
                         String operatorName = Buildin.operatorToName(TokenKind.cmp);
                         AstNode rdef = resoveOnTarget(e.lhs, operatorName, e.loc, false);
-                        if (rdef != null) {
+                        if (rdef == null) {
                             err("Unknow operator:"+curt, e.loc);
                         }
                         else if (rdef instanceof FuncDef f) {
+                            e.resolvedOperator = f;
                         }
                         else {
                             err("Invalid operator:"+curt, e.loc);
