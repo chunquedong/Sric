@@ -137,6 +137,22 @@ public class AstNode {
             }
         }
         
+        public void getAllFields(HashMap<String,FieldDef> fields) {
+            for (FieldDef field : fieldDefs) {
+                fields.put(field.name, field);
+            }
+            
+            if (this.inheritances != null) {
+                for (Type inh : this.inheritances) {
+                    if (inh.id.resolvedDef != null) {
+                        if (inh.id.resolvedDef instanceof StructDef inhSd) {
+                            inhSd.getAllFields(fields);
+                        }
+                    }
+                }
+            }
+        }
+        
         public Scope getScope() {
             if (scope == null) {
                 scope = new Scope();

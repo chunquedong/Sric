@@ -454,6 +454,7 @@ public class DeepParser extends Parser {
             ifExpr.trueExpr = trueExpr;
             ifExpr.falseExpr = falseExpr;
             expr = ifExpr;
+            endLoc(expr, loc);
         }
 //        else if (curt == TokenKind.elvis) {
 //            Expr lhs = expr;
@@ -462,8 +463,6 @@ public class DeepParser extends Parser {
 //            BinaryExpr bexpr = new BinaryExpr(cur.loc, lhs, TokenKind.elvis, rhs);
 //            expr = bexpr;
 //        }
-
-        endLoc(expr, loc);
         return expr;
     }
 

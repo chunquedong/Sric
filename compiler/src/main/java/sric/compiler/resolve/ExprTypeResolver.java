@@ -17,6 +17,7 @@ import sric.compiler.ast.Stmt.LocalDefStmt;
 import sric.compiler.ast.Token.TokenKind;
 import static sric.compiler.ast.Token.TokenKind.*;
 import sric.compiler.ast.*;
+import sric.compiler.ast.Type.MetaTypeInfo;
 /**
  *
  * @author yangjiandong
@@ -300,8 +301,9 @@ public class ExprTypeResolver extends TypeResolver {
             return Type.metaType(f.loc, f.type);
         }
         else if (resolvedDef instanceof TypeDef f) {
-            //TODO
-            return Type.metaType(f.loc, new Type(f.loc, f.name));
+            Type type = new Type(f.loc, f.name);
+            type.id.resolvedDef = f;
+            return Type.metaType(f.loc, type);
         }
         else if (resolvedDef instanceof ParamDef p) {
             return p.paramType;
@@ -521,14 +523,19 @@ public class ExprTypeResolver extends TypeResolver {
             err("Resolved fail", v.loc);
         }
     }
+    
+    private StructDef getTypeStructDef(Type type) {
+        if (type.isPointerType() && type.genericArgs != null) {
+            type = type.genericArgs.get(0);
+        }
+        if (type.id.resolvedDef instanceof StructDef sd) {
+            return sd;
+        }
+        return null;
+    }
 
     private void resolveInitBlockExpr(Expr.InitBlockExpr e) {
         this.visit(e.target);
-        if (e.args != null) {
-            for (Expr.CallArg t : e.args) {
-                this.visit(t.argExpr);
-            }
-        }
         if (!e.target.isResolved()) {
             return;
         }
@@ -537,27 +544,25 @@ public class ExprTypeResolver extends TypeResolver {
         if (e.target instanceof IdExpr id) {
             if (id.resolvedDef instanceof StructDef) {
                 sd = (StructDef)id.resolvedDef;
-                e._isType = true;
+                //e._isType = true;
             }
             else if (id.resolvedDef instanceof FieldDef fd) {
                 if (fd.fieldType.id.resolvedDef instanceof StructDef fieldSF) {
                     sd = fieldSF;
                 }
             }
+            else {
+                sd = getTypeStructDef(e.target.resolvedType);
+            }
         }
         else if (e.target instanceof GenericInstance gi) {
             if (gi.resolvedDef instanceof StructDef) {
                 sd = (StructDef)gi.resolvedDef;
-                e._isType = true;
+                //e._isType = true;
             }
         }
         else if (e.target instanceof CallExpr call) {
-            AstNode rdef = e.target.resolvedType.id.resolvedDef;
-            if (rdef != null) {
-                if (rdef instanceof StructDef) {
-                    sd = (StructDef)rdef;
-                }
-            }
+            sd = getTypeStructDef(e.target.resolvedType);
         }
         else if (e.target instanceof TypeExpr te) {
             if (te.type.detail instanceof Type.ArrayInfo at) {
@@ -568,16 +573,45 @@ public class ExprTypeResolver extends TypeResolver {
 
                 e.resolvedType = te.type;
             }
-            e._isType = true;
+            //e._isType = true;
         }
         
         e._structDef = sd;
+        e._isType = e.target.resolvedType.isMetaType();
+        
+        if (e.args != null) {
+            if (sd != null) {
+                int scopeCount = 1;
+                StructDef savedCurStruct = curStruct;
+                curStruct = null;
+                if (sd.inheritances != null) {
+                    Scope inhScopes = sd.getInheriteScope();
+                    this.scopes.add(inhScopes);
+                    ++scopeCount;
+                }
+            
+                Scope scope = sd.getScope();
+                this.scopes.add(scope);
+                
+                for (Expr.CallArg t : e.args) {
+                    this.visit(t.argExpr);
+                }
+
+                for (int i=0; i<scopeCount; ++i) {
+                    popScope();
+                }
+                curStruct = savedCurStruct;
+            }
+            else {
+                for (Expr.CallArg t : e.args) {
+                    this.visit(t.argExpr);
+                }
+            }
+        }
 
         if (sd != null) {
-            if (e.target.resolvedType.isMetaType()) {
-                Type type = new Type(e.loc, sd.name);
-                type.id.resolvedDef = sd;
-                e.resolvedType = type;
+            if (e.target.resolvedType.detail instanceof MetaTypeInfo mt) {
+                e.resolvedType = mt.type;
             }
             else {
                 e.resolvedType = e.target.resolvedType;

@@ -25,13 +25,22 @@ import sric.compiler.resolve.TopLevelTypeResolver;
 public class TypeCheckTest {
     @Test
     public void test() throws IOException {
-        String file = "res/code/testOperator.sc";
+        File file = new File("res/code/testStruct.sc");
         String libPath = "res/lib";
         
-        sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file, libPath);
+        sric.compiler.Compiler compiler = sric.compiler.Compiler.makeDefault(file.getPath(), libPath);
         compiler.genCode = false;
         boolean res = compiler.run();
         assertTrue(res);
+        
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        CppGenerator generator = new CppGenerator(compiler.log, new PrintStream(stream));
+        generator.headMode = false;
+        compiler.module.walkChildren(generator);
+
+        String str = stream.toString("UTF-8");
+        String name = file.getName().substring(0, file.getName().lastIndexOf("."));
+        GoldenTest.verifyGolden(str, "typeCheck", name+".cpp");
     }
     
     @Test
@@ -48,6 +57,15 @@ public class TypeCheckTest {
             compiler.genCode = false;
             boolean res = compiler.run();
             assertTrue(res);
+            
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            CppGenerator generator = new CppGenerator(compiler.log, new PrintStream(stream));
+            generator.headMode = false;
+            compiler.module.walkChildren(generator);
+
+            String str = stream.toString("UTF-8");
+            String name = file.getName().substring(0, file.getName().lastIndexOf("."));
+            GoldenTest.verifyGolden(str, "typeCheck", name+".cpp");
         }
     }
 }

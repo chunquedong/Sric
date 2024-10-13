@@ -984,7 +984,7 @@ public class CppGenerator extends BaseGenerator {
             }
         }
         else if (e.value instanceof Long li) {
-            print(li.toString()).print("LL");
+            print(li.toString());
         }
         else if (e.value instanceof Double li) {
             print(li.toString());
@@ -1030,6 +1030,36 @@ public class CppGenerator extends BaseGenerator {
         }
     }
     
+    private void printInitBlockArgs(InitBlockExpr e, String varName) {
+        if (e.args != null) {
+            int i = 0;
+            print("{");
+            for (CallArg t : e.args) {
+                print(varName);
+                if (e.target.resolvedType != null && e.target.resolvedType.isPointerType()) {
+                    print("->");
+                }
+                else {
+                    print(".");
+                }
+                    
+                if (t.name != null) {
+                    print(t.name);
+                    print(" = ");
+                }
+                else {
+                    //cotr call
+                }
+                
+                this.visit(t.argExpr);
+                ++i;
+
+                print("; ");
+            }
+            print("}");
+        }
+    }
+    
     void printInitBlockExpr(InitBlockExpr e) {
 //        if (!e.target.isResolved()) {
 //            return;
@@ -1044,61 +1074,53 @@ public class CppGenerator extends BaseGenerator {
         
         boolean isArray = e._isArray;
         if (isArray) {
-            print(" = ");
-        }
-        else if (e._isType) {
-            print(";");
-        }
-        else if (e._storeVar != null) {
-            print(" = ");
-            this.visit(e.target);
-            print(";");
-        }
-        else {
-            print(" = ");
-        }
-        
-        if (e.args != null) {
+            if (e._storeVar != null) {
+                print(" = ");
+            }
             int i = 0;
             print("{");
-            for (CallArg t : e.args) {
-                if (isArray && i > 0) {
-                    print(", ");
-                }
-                
-                if (!isArray) {
-                    if (!isThis) {
-                        if (e._storeVar != null)
-                            print(e._storeVar.name);
-                        if (e.target.resolvedType != null && e.target.resolvedType.isPointerType()) {
-                            print("->");
-                        }
-                        else {
-                            print(".");
-                        }
+            if (e.args != null) {
+                for (CallArg t : e.args) {
+                    if (i > 0) {
+                        print(", ");
                     }
-                    else {
-                        print("this->");
-                    }
-                }
-                
-                if (t.name != null) {
-                    print(t.name);
-                    print(" = ");
-                }
-                this.visit(t.argExpr);
-                ++i;
-                
-                if (!isArray) {
-                    print("; ");
+                    this.visit(t.argExpr);
+                    ++i;
                 }
             }
             print("}");
         }
-        if (isArray) {
-            if (e.args == null) {
-                print("{}");
+        else if (e._storeVar != null) {
+            if (!e._isType) {
+                print(" = ");
+                this.visit(e.target);
             }
+            print(";");
+            
+            printInitBlockArgs(e, e._storeVar.name);
+        }
+        else if (isThis) {
+            printInitBlockArgs(e, "this");
+        }
+        else if (e.target.isResolved()) {
+            if (e._storeVar != null) {
+                print(" = ");
+            }
+            //[&]()->T{ T __t = alloc(); __t.name =1; return __t; }()
+            print("[&]()->");
+            printType(e.resolvedType);
+            print("{");
+            
+            printType(e.resolvedType);
+            print(" __t");
+            this.visit(e.target);
+            print(";");
+            
+            printInitBlockArgs(e, "__t");
+            
+            print("return __t;");
+            
+            print("}()");
         }
     }
     

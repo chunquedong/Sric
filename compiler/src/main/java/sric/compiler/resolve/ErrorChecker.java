@@ -5,6 +5,7 @@
 package sric.compiler.resolve;
 
 
+import java.util.HashMap;
 import sric.compiler.CompilePass;
 import sric.compiler.CompilerLog;
 import sric.compiler.ast.AstNode;
@@ -600,7 +601,7 @@ public class ErrorChecker extends CompilePass {
     private void resolveInitBlockExpr(Expr.InitBlockExpr e) {
         this.visit(e.target);
         
-        if (e._storeVar == null) {
+        if (e._storeVar == null && e._isType) {
             boolean ok = false;
             if (e.target instanceof Expr.IdExpr id) {
                 if (id.name.equals(TokenKind.thisKeyword.symbol)) {
@@ -609,37 +610,50 @@ public class ErrorChecker extends CompilePass {
                 }
             }
             if (!ok) {
-                err("Init block must in standalone assgin statement", e.loc);
+                err("Value type init block must in standalone assgin statement", e.loc);
             }
         }
         
+        boolean hasFuncCall = false;
         if (e.args != null) {
             for (Expr.CallArg t : e.args) {
                 this.visit(t.argExpr);
+                if (t.argExpr instanceof CallExpr) {
+                    hasFuncCall = true;
+                }
             }
         }
         if (!e.target.isResolved()) {
             return;
         }
         
-        AstNode.StructDef sd = e._structDef;
         if (e._isArray) {
             for (Expr.CallArg t : e.args) {
                 if (t.name != null) {
-                    err("Invalid name for array", t.loc);
+                    err("Invalid tag name for array", t.loc);
                 }
             }
         }
 
-        if (sd != null) {
+        AstNode.StructDef sd = e._structDef;
+        if (sd != null) {            
             if ((sd.flags & FConst.Abstract) != 0) {
                 err("It's abstract", e.target.loc);
             }
-            if (e.args != null) {
-                for (AstNode.FieldDef f : sd.fieldDefs) {
+            if (e.args != null && !hasFuncCall) {
+                
+                HashMap<String,FieldDef> fields = new HashMap<>();
+                sd.getAllFields(fields);
+                
+                for (HashMap.Entry<String,FieldDef> entry : fields.entrySet()) {
+                    AstNode.FieldDef f = entry.getValue();
                     if (f.initExpr != null) {
                         continue;
                     }
+                    if (f.fieldType.isNullablePointerType()) {
+                        continue;
+                    }
+                    
                     boolean found = false;
                     for (Expr.CallArg t : e.args) {
                         if (t.name.equals(f.name)) {
@@ -653,14 +667,7 @@ public class ErrorChecker extends CompilePass {
                 }
 
                 for (Expr.CallArg t : e.args) {
-                    boolean found = false;
-                    for (AstNode.FieldDef f : sd.fieldDefs) {
-                        if (t.name.equals(f.name)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
+                    if (!fields.containsKey(t.name)) {
                         err("Field not found:"+t.name, t.loc);
                     }
                 }

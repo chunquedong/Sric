@@ -16,6 +16,8 @@ import sric.compiler.Util;
 import sric.compiler.ast.AstNode.FileUnit;
 import sric.compiler.ast.Token;
 import sric.compiler.backend.CppGenerator;
+import sric.compiler.backend.ScLibGenerator;
+import sric.compiler.parser.DeepParser;
 import sric.compiler.parser.Parser;
 import sric.compiler.parser.Tokenizer;
 
@@ -31,11 +33,11 @@ public class ParserTest {
         
         CompilerLog log = new CompilerLog();
         FileUnit unit = new FileUnit(file);
-        Parser parser = new Parser(log, src, unit);
+        Parser parser = new DeepParser(log, src, unit);
         parser.parse();
         assertTrue(log.errors.size() == 0);
         
-        CppGenerator generator = new CppGenerator(log, System.out);
+        ScLibGenerator generator = new ScLibGenerator(log, System.out);
         unit.walkChildren(generator);
         //System.out.println(file);
     }
@@ -51,18 +53,18 @@ public class ParserTest {
         
             CompilerLog log = new CompilerLog();
             FileUnit unit = new FileUnit(file.getPath());
-            Parser parser = new Parser(log, src, unit);
+            Parser parser = new DeepParser(log, src, unit);
             parser.parse();
             
             if (log.hasError()) {
                 String name = Util.getBaseName(file.getName());
-                GoldenTest.verifyGolden(log.toString(), "parser", name+".cpp");
+                GoldenTest.verifyGolden(log.toString(), "parser", name+".sc");
                 continue;
             }
 
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            CppGenerator generator = new CppGenerator(log, new PrintStream(stream));
-            generator.headMode = true;
+            ScLibGenerator generator = new ScLibGenerator(log, new PrintStream(stream));
+            //generator.headMode = true;
             unit.walkChildren(generator);
             
             String str = stream.toString("UTF-8");
