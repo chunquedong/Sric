@@ -24,7 +24,7 @@ public class FConst {
     public static final int Protected  = 0x00001000;
     public static final int Public     = 0x00002000;
     public static final int Setter     = 0x00004000;
-    public static final int Static     = 0x00008000;
+    //public static final int Static     = 0x00008000;
     public static final int ExternC    = 0x00010000;
     public static final int Noncopyable= 0x00020000;
     public static final int Virtual    = 0x00040000;

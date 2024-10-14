@@ -58,9 +58,9 @@ public class ExprTypeResolver extends TypeResolver {
                 }
                 AstNode func = this.funcs.peek();
                 if (func instanceof FuncDef f) {
-                    if ((f.flags & FConst.Static) != 0) {
-                        err("No this in static", idExpr.loc);
-                    }
+//                    if ((f.flags & FConst.Static) != 0) {
+//                        err("No this in static", idExpr.loc);
+//                    }
                     Type self = new Type(curStruct.loc, curStruct.name);
                     self.id.resolvedDef = curStruct;
                     idExpr.resolvedType = Type.pointerType(idExpr.loc, self, Type.PointerAttr.raw, false);
@@ -165,7 +165,7 @@ public class ExprTypeResolver extends TypeResolver {
                 }
                 
                 for (FuncDef f : sd.funcDefs) {
-                    if ((f.flags & FConst.Static) != 0 || (f.flags | FConst.Override) != 0) {
+                    if (/*(f.flags & FConst.Static) != 0 || */(f.flags | FConst.Override) != 0) {
                         continue;
                     }
                     if (inhScopes.contains(f.name)) {

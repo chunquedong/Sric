@@ -161,7 +161,7 @@ public class ErrorChecker extends CompilePass {
         
         if (v.fieldType != null) {
             boolean isStatic = false;
-            if (v.parent instanceof FileUnit || (v.flags & FConst.Static) != 0) {
+            if (v.parent instanceof FileUnit) {
                 isStatic = true;
             }
             if (isStatic && !v.fieldType.isImutable) {
@@ -205,9 +205,8 @@ public class ErrorChecker extends CompilePass {
         }
         else {
             if ((v.flags & FConst.Abstract) != 0 ||
-                    (v.flags & FConst.Virtual) != 0 ||
-                    (v.flags & FConst.Static) != 0) {
-                err("Invalid flags", v.loc);
+                    (v.flags & FConst.Virtual) != 0) {
+                err("Invalid abstract or virtual flags", v.loc);
             }
         }
         
@@ -371,7 +370,7 @@ public class ErrorChecker extends CompilePass {
     
     private void verifyOperatorDef(AstNode.FuncDef f) {
         
-        if ((f.flags & FConst.Static) != 0) {
+        if (f.parent instanceof FileUnit) {
             err("Can't be static", f.loc);
         }
         

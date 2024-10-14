@@ -311,15 +311,15 @@ public class CppGenerator extends BaseGenerator {
             printLocalFieldDefAsExpr(v);
             print(";").newLine();
         }
-        else if ((v.flags & FConst.Static) != 0) {
-            printLocalFieldDefAsExpr(v);
-            print(";").newLine();
-        }
+//        else if ((v.flags & FConst.Static) != 0) {
+//            printLocalFieldDefAsExpr(v);
+//            print(";").newLine();
+//        }
     }
     
     void printLocalFieldDefAsExpr(AstNode.FieldDef v) {
         boolean isImpl = implMode();
-        boolean isStatic = (v.flags & FConst.Static) != 0;
+        boolean isStatic = false;//(v.flags & FConst.Static) != 0;
         if (v.parent instanceof FileUnit) {
             isStatic = true;
         }
@@ -401,9 +401,9 @@ public class CppGenerator extends BaseGenerator {
             if ((v.flags & FConst.Virtual) != 0 || (v.flags & FConst.Abstract) != 0) {
                 print("virtual ");
             }
-            if ((v.flags & FConst.Static) != 0) {
-                print("static ");
-            }
+//            if ((v.flags & FConst.Static) != 0) {
+//                print("static ");
+//            }
         }
         
 //        if ((v.flags & FConst.Extern) != 0) {

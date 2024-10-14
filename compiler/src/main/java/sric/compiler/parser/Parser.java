@@ -437,9 +437,9 @@ public class Parser {
                     flags = flags | (FConst.Public);
                     protection = true;
                     break;
-                case staticKeyword:
-                    flags = flags | (FConst.Static);
-                    break;
+//                case staticKeyword:
+//                    flags = flags | (FConst.Static);
+//                    break;
                 case virtualKeyword:
                     flags = flags | (FConst.Virtual);
                     break;

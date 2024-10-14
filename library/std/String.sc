@@ -33,16 +33,16 @@ extern noncopyable struct String {
     fun toLong(): Int64;
     fun toFloat(): Float32;
     fun toDouble(): Float64;
-
-    static fun fromInt(i: Int32): String;
-    static fun fromLong(i: Int64): String;
-    static fun fromDouble(f: Float64): String;
-    static fun fromFloat(f: Float): String;
-
-    /**
-    * 'printf' style format
-    */
-    static fun format(format: raw*const Int8, args: ...): String;
 }
+
+extern fun String_fromInt(i: Int32): String;
+extern fun String_fromLong(i: Int64): String;
+extern fun String_fromDouble(f: Float64): String;
+extern fun String_fromFloat(f: Float): String;
+
+/**
+* 'printf' style format
+*/
+extern fun String_format(format: raw*const Int8, args: ...): String;
 
 extern fun asStr(cstr: raw*const Int8): String;
