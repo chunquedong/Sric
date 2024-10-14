@@ -15,6 +15,7 @@
 #include <type_traits>
 
 #include "Refable.h"
+#include "common.h"
 
 namespace sric
 {
@@ -23,6 +24,22 @@ class Refable;
 
 template<typename T>
 class RefPtr;
+
+template<typename U>
+typename std::enable_if<std::is_polymorphic<U>::value, Refable*>::type  getRefable(U* pointer) {
+    void* mostTop = dynamic_cast<void*>(pointer);
+    Refable* p = (Refable*)mostTop;
+    --p;
+    return p;
+}
+
+template<typename U>
+typename std::enable_if<!std::is_polymorphic<U>::value, Refable*>::type  getRefable(U* pointer) {
+    void* mostTop = pointer;
+    Refable* p = (Refable*)mostTop;
+    --p;
+    return p;
+}
 
 template<typename T>
 class OwnPtr {
@@ -89,6 +106,10 @@ public:
 
     operator T* () { return pointer; }
 
+    //template <class U>
+    //operator RefPtr<U>() { return RefPtr<U>(this); }
+    //operator RefPtr<T>() { return RefPtr<T>(this); }
+
     T* get() const { return pointer; }
 
     bool isNull() { return pointer == nullptr; }
@@ -140,21 +161,7 @@ public:
     }
 };
 
-template<typename U>
-typename std::enable_if<std::is_polymorphic<U>::value, Refable*>::type  getRefable(U* pointer) {
-    void* mostTop = dynamic_cast<void*>(pointer);
-    Refable* p = (Refable*)mostTop;
-    --p;
-    return p;
-}
 
-template<typename U>
-typename std::enable_if<!std::is_polymorphic<U>::value, Refable*>::type  getRefable(U* pointer) {
-    void* mostTop = pointer;
-    Refable* p = (Refable*)mostTop;
-    --p;
-    return p;
-}
 
 template<typename T>
 OwnPtr<T> alloc() {
@@ -170,10 +177,10 @@ OwnPtr<T> share(OwnPtr<T> p) {
     return p.share();
 }
 
-template<typename T>
-T* ownToRaw(OwnPtr<T>& p) {
-    return p.get();
-}
+//template<typename T>
+//T* ownToRaw(OwnPtr<T>& p) {
+//    return p.get();
+//}
 
 template <class T>
 OwnPtr<T> rawToOwn(T* ptr) {
@@ -204,7 +211,8 @@ public:
     RefPtr(T* p) : pointer(p), checkCode(0), type(1) {
     }
 
-    RefPtr(OwnPtr<T>& p) : pointer(p.get()), checkCode(getRefable(pointer)->getCheckCode()), type(0) {
+    template <class U>
+    RefPtr(OwnPtr<U>& p) : pointer(p.get()), checkCode(getRefable(pointer)->getCheckCode()), type(0) {
     }
 
     template <class U>
@@ -241,10 +249,10 @@ public:
 };
 
 
-template<typename T>
-RefPtr<T> ownToRef(OwnPtr<T>& p) {
-    return RefPtr<T>(p);
-}
+//template<typename T>
+//RefPtr<T> ownToRef(OwnPtr<T>& p) {
+//    return RefPtr<T>(p);
+//}
 
 template<typename T>
 RefPtr<T> addressOf(T& p) {

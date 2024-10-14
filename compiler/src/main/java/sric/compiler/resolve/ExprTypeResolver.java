@@ -724,12 +724,12 @@ public class ExprTypeResolver extends TypeResolver {
                         Type to = te.type;
                         if (from.detail instanceof Type.PointerInfo p1 && to.detail instanceof Type.PointerInfo p2) {
                             if (p1.pointerAttr != Type.PointerAttr.raw && p2.pointerAttr == Type.PointerAttr.raw) {
-                                e.lhs.implicitTypeConvert = p1.pointerAttr.toString() + "ToRaw";
-                                //e.lhs.implicitTypeConvertTo = to;
+                                e.lhs.implicitTypeConvertTo = Type.pointerType(e.lhs.loc, from.genericArgs.get(0), p2.pointerAttr, p2.isNullable);
+                                e.lhs.isPointerConvert = true;
                             }
                             else if (p1.pointerAttr != Type.PointerAttr.ref && p2.pointerAttr == Type.PointerAttr.ref) {
-                                e.lhs.implicitTypeConvert = p1.pointerAttr.toString() + "ToRef";
-                                //e.lhs.implicitTypeConvertTo = to;
+                                e.lhs.implicitTypeConvertTo = Type.pointerType(e.lhs.loc, from.genericArgs.get(0), p2.pointerAttr, p2.isNullable);
+                                e.lhs.isPointerConvert = true;
                             }
                             else if (p1.pointerAttr != p2.pointerAttr) {
                                 err("Unknow convert", e.loc);

@@ -208,7 +208,7 @@ public class CppGenerator extends BaseGenerator {
             return;
         }
         
-        if (type.isImutable) {
+        if (type.isImutable && !type.id.name.equals(Buildin.pointerTypeName)) {
             print("const ");
         }
         
@@ -245,8 +245,14 @@ public class CppGenerator extends BaseGenerator {
                 if (pt.pointerAttr == Type.PointerAttr.raw) {
                     printType(type.genericArgs.get(0));
                     print("*");
+                    if (type.isImutable) {
+                        print(" const");
+                    }
                 }
                 else {
+                    if (type.isImutable) {
+                        print("const ");
+                    }
                     if (pt.pointerAttr == Type.PointerAttr.own) {
                         print("sric::OwnPtr");
                     }
@@ -792,8 +798,24 @@ public class CppGenerator extends BaseGenerator {
             print("(");
         }
         
-        if (v.implicitTypeConvert != null) {
-            print("sric::").print(v.implicitTypeConvert).print("(");
+        boolean convertParentheses = false;
+        if (v.implicitTypeConvertTo != null && !v.implicitTypeConvertTo.isVarArgType()) {
+            if (v.isPointerConvert) {
+                if (v.resolvedType.detail instanceof Type.PointerInfo p1 && v.implicitTypeConvertTo.detail instanceof Type.PointerInfo p2) {
+                    if (p1.pointerAttr == Type.PointerAttr.own && p2.pointerAttr == Type.PointerAttr.ref) {
+                        print("sric::RefPtr<");
+                        printType(v.implicitTypeConvertTo.genericArgs.get(0));
+                        print(" >(");
+                        convertParentheses = true;
+                    }
+                }
+            }
+            
+            if (!convertParentheses) {
+                print("(");
+                printType(v.implicitTypeConvertTo);
+                print(")");
+            }
         }
         
         if (v instanceof IdExpr e) {
@@ -904,7 +926,7 @@ public class CppGenerator extends BaseGenerator {
             err("Unkown expr:"+v, v.loc);
         }
         
-        if (v.implicitTypeConvert != null) {
+        if (convertParentheses) {
             print(")");
         }
         

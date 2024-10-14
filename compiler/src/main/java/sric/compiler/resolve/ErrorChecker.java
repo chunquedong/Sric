@@ -101,16 +101,20 @@ public class ErrorChecker extends CompilePass {
         
         if (from.detail instanceof Type.PointerInfo p1 && to.detail instanceof Type.PointerInfo p2) {
             if (p1.pointerAttr != Type.PointerAttr.raw && p2.pointerAttr == Type.PointerAttr.raw) {
-                target.implicitTypeConvert = p1.pointerAttr.toString() + "ToRaw";
-                //target.implicitTypeConvertTo = to;
+                target.implicitTypeConvertTo = to;
+                target.isPointerConvert = true;
             }
             else if (p1.pointerAttr != Type.PointerAttr.ref && p2.pointerAttr == Type.PointerAttr.ref) {
-                target.implicitTypeConvert = p1.pointerAttr.toString() + "ToRef";
-                //target.implicitTypeConvertTo = to;
+                target.implicitTypeConvertTo = to;
+                target.isPointerConvert = true;
             }
             else if (p1.pointerAttr != p2.pointerAttr) {
                 err("Unknow convert", loc);
             }
+        }
+        
+        if (!from.equals(to)) {
+            target.implicitTypeConvertTo = to;
         }
     }
     

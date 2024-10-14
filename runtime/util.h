@@ -24,21 +24,13 @@ namespace sric {
 	}
 
 	template<typename T, typename F>
-	bool ptrIs(F p) {
+	bool ptrIs(F& p) {
 		return dynamic_cast<T*>(p.get()) != nullptr;
 	}
 
-	template<typename T>
-	T* nonNullable(T* p) {
-		sc_assert(p != nullptr, "Non-Nullable");
-		return p;
-	}
+#define nonNullable(p) (sric::sc_assert(p != nullptr, "Non-Nullable"), p)
 
-	template<typename T>
-	T& nonNullable(T& p) {
-		sc_assert(!p.isNull(), "Non-Nullable");
-		return p;
-	}
+
 }
 
 inline bool isNull(void* p) {

@@ -17,7 +17,8 @@ public abstract class Expr extends AstNode {
     public Type resolvedType;
     public boolean inLeftSide = false;
     public boolean isStmt = false;
-    public String implicitTypeConvert = null;
+    public boolean isPointerConvert = false;
+    public Type implicitTypeConvertTo = null;
     
     public boolean isResolved() {
         return resolvedType != null;
