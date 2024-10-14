@@ -13,25 +13,6 @@ import sric.compiler.ast.Expr.ClosureExpr;
 import sric.compiler.ast.FConst;
 import sric.compiler.ast.SModule;
 import sric.compiler.ast.Stmt;
-import static sric.compiler.ast.Token.TokenKind.abstractKeyword;
-import static sric.compiler.ast.Token.TokenKind.asyncKeyword;
-import static sric.compiler.ast.Token.TokenKind.constKeyword;
-import static sric.compiler.ast.Token.TokenKind.constexprKeyword;
-import static sric.compiler.ast.Token.TokenKind.extensionKeyword;
-import static sric.compiler.ast.Token.TokenKind.externKeyword;
-import static sric.compiler.ast.Token.TokenKind.inlineKeyword;
-import static sric.compiler.ast.Token.TokenKind.operatorKeyword;
-import static sric.compiler.ast.Token.TokenKind.overrideKeyword;
-import static sric.compiler.ast.Token.TokenKind.packedKeyword;
-import static sric.compiler.ast.Token.TokenKind.privateKeyword;
-import static sric.compiler.ast.Token.TokenKind.protectedKeyword;
-import static sric.compiler.ast.Token.TokenKind.publicKeyword;
-import static sric.compiler.ast.Token.TokenKind.readonlyKeyword;
-import static sric.compiler.ast.Token.TokenKind.reflectKeyword;
-import static sric.compiler.ast.Token.TokenKind.staticKeyword;
-import static sric.compiler.ast.Token.TokenKind.throwKeyword;
-import static sric.compiler.ast.Token.TokenKind.unsafeKeyword;
-import static sric.compiler.ast.Token.TokenKind.virtualKeyword;
 import sric.compiler.ast.Type;
 
 /**

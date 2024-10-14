@@ -46,6 +46,7 @@ public class CppGenerator extends BaseGenerator {
     
     public boolean headMode = true;
     private SModule module;
+    private StructDef curStruct;
     
     private HashMap<TypeDef, Integer> emitState = new HashMap<>();
     
@@ -56,6 +57,29 @@ public class CppGenerator extends BaseGenerator {
     
     public CppGenerator(CompilerLog log, PrintStream writer) {
         super(log, writer);
+    }
+    
+    private void printCommentInclude(TopLevelDef type) {
+        if (((type.flags & FConst.Extern) != 0 || (type.flags & FConst.ExternC) != 0 )&& type.comment != null) {
+            for (Comment comment : type.comment.comments) {
+               if (comment.content.startsWith("#")) {
+                   print(comment.content);
+                   newLine();
+               }
+            }
+        }
+    }
+    
+    private String getSymbolName(TopLevelDef type) {
+        if ((type.flags & FConst.Extern) != 0 && type.comment != null) {
+            for (Comment comment : type.comment.comments) {
+               String key = "extern symbol:";
+               if (comment.content.startsWith(key)) {
+                   return comment.content.substring(key.length()).trim();
+               }
+            }
+        }
+        return type.name;
     }
     
     public void run(SModule module) {
@@ -78,14 +102,13 @@ public class CppGenerator extends BaseGenerator {
             /////////////////////////////////////////////////////////////
             for (FileUnit funit : module.fileUnits) {
                 for (TypeDef type : funit.typeDefs) {
-                    if ((type.flags & FConst.Extern) != 0 && type.comment != null) {
-                        for (Comment comment : type.comment.comments) {
-                           if (comment.content.startsWith("#")) {
-                               print(comment.content);
-                               newLine();
-                           }
-                        }
-                    }
+                    printCommentInclude(type);
+                }
+                for (FieldDef type : funit.fieldDefs) {
+                    printCommentInclude(type);
+                }
+                for (FuncDef type : funit.funcDefs) {
+                    printCommentInclude(type);
                 }
             }
             
@@ -107,7 +130,7 @@ public class CppGenerator extends BaseGenerator {
                         printGenericParamDefs(sd.generiParamDefs);
                     }
                     print("struct ");
-                    print(type.name).print(";").newLine();
+                    print(getSymbolName(type)).print(";").newLine();
                 }
             }
             
@@ -124,7 +147,7 @@ public class CppGenerator extends BaseGenerator {
                 for (TypeDef type : funit.typeDefs) {
                     if ((type.flags & FConst.ExternC) != 0) {
                         print("struct ");
-                        print(type.name).print(";").newLine();
+                        print(getSymbolName(type)).print(";").newLine();
                     }
                 }
                 for (FuncDef f : funit.funcDefs) {
@@ -288,8 +311,18 @@ public class CppGenerator extends BaseGenerator {
                     print("::");
                 }
             }
+            else if (id.name.equals(TokenKind.superKeyword.symbol)) {
+                printType(curStruct.inheritances.get(0));
+                return;
+            }
         }
-        print(id.name);
+        
+        if (id.resolvedDef instanceof TopLevelDef td) {
+            print(getSymbolName(td));
+        }
+        else {
+            print(id.name);
+        }
     }
 
     @Override
@@ -326,10 +359,10 @@ public class CppGenerator extends BaseGenerator {
         printType(v.fieldType);
         print(" ");
         if (isStatic && isImpl && !v.isLocalVar) {
-            print(((StructDef)v.parent).name);
+            print(getSymbolName((StructDef)v.parent));
             print("::");
         }
-        print(v.name);
+        print(getSymbolName(v));
         
         boolean init = false;
         if (v.isLocalVar) {
@@ -419,7 +452,7 @@ public class CppGenerator extends BaseGenerator {
                         print(fu.module.name).print("::");
                     }
                 }
-                print(t.name).print("::");
+                print(getSymbolName(t)).print("::");
             }
             else if (v.parent instanceof FileUnit fu) {
                 if (fu.module != null && !isEntryPoint(v)) {
@@ -457,7 +490,7 @@ public class CppGenerator extends BaseGenerator {
             }
         }
         else {
-            print(v.name);
+            print(getSymbolName(v));
         }
         
         printFuncPrototype(v.prototype, false);
@@ -567,67 +600,74 @@ public class CppGenerator extends BaseGenerator {
             this.emitState.put(v, 2);
         }
         
+                
         if (implMode()) {
+            if (v instanceof StructDef sd) {
+                curStruct =  sd;
+            }
             v.walkChildren(this);
+            curStruct =  null;
             return;
         }
-        
-        newLine();
-        
-        if (v instanceof EnumDef edef) {
-            print("enum class ");
-            print(v.name);
+        else {
+            newLine();
+
+            if (v instanceof EnumDef edef) {
+                print("enum class ");
+                print(getSymbolName(v));
+                print(" {").newLine();
+                indent();
+
+                int i = 0;
+                for (FieldDef f : edef.enumDefs) {
+                    if (i > 0) {
+                        print(",").newLine();
+                    }
+                    print(f.name);
+                    if (f.initExpr != null) {
+                        print(" = ");
+                        this.visit(f.initExpr);
+                        print(";");
+                    }
+                    ++i;
+                }
+                newLine();
+
+                unindent();
+                print("};").newLine();
+                return;
+            }
+
+            if (v instanceof StructDef sd) {
+                printGenericParamDefs(sd.generiParamDefs);
+            }
+
+            print("struct ");
+            print(getSymbolName(v));
+
+            if (v instanceof StructDef sd) {
+                if (sd.inheritances != null) {
+                    int i = 0;
+                    for (Type inh : sd.inheritances) {
+                        if (i == 0) print(" : ");
+                        else print(", ");
+                        print("public ");
+                        printType(inh);
+                        ++i;
+                    }
+                }
+            }
+
             print(" {").newLine();
             indent();
 
-            int i = 0;
-            for (FieldDef f : edef.enumDefs) {
-                if (i > 0) {
-                    print(",").newLine();
-                }
-                print(f.name);
-                if (f.initExpr != null) {
-                    print(" = ");
-                    this.visit(f.initExpr);
-                    print(";");
-                }
-                ++i;
-            }
-            newLine();
+            v.walkChildren(this);
 
             unindent();
+            newLine();
             print("};").newLine();
-            return;
+        
         }
-        
-        if (v instanceof StructDef sd) {
-            printGenericParamDefs(sd.generiParamDefs);
-        }
-        
-        print("struct ");
-        print(v.name);
-        
-        if (v instanceof StructDef sd) {
-            if (sd.inheritances != null) {
-                int i = 0;
-                for (Type inh : sd.inheritances) {
-                    if (i == 0) print(" : ");
-                    else print(", ");
-                    print("public ");
-                    printType(inh);
-                    ++i;
-                }
-            }
-        }
-        
-        print(" {").newLine();
-        indent();
-        
-        v.walkChildren(this);
-        
-        unindent();
-        newLine();
-        print("};").newLine();
     }
 
     @Override
@@ -771,7 +811,10 @@ public class CppGenerator extends BaseGenerator {
             if (isNullable) {
                 print(")");
             }
-            if (e.target.resolvedType != null && e.target.resolvedType.isPointerType()) {
+            if (e.target instanceof IdExpr ide && ide.name.equals(TokenKind.superKeyword.symbol)) {
+                print("::");
+            }
+            else if (e.target.resolvedType != null && e.target.resolvedType.isPointerType()) {
                 print("->");
             }
             else {

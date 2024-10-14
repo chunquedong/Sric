@@ -51,9 +51,11 @@ public class ExprTypeResolver extends TypeResolver {
     @Override
     protected void resolveId(Expr.IdExpr idExpr) {
         if (idExpr.namespace == null) {
-            if (idExpr.name.equals("this")) {
+            if (idExpr.name.equals(TokenKind.thisKeyword.symbol) || 
+                    idExpr.name.equals(TokenKind.superKeyword.symbol) || 
+                    idExpr.name.equals(TokenKind.itKeyword.symbol) ) {
                 if (curStruct == null) {
-                    err("Use this out of struct", idExpr.loc);
+                    err("Use this/super/it out of struct", idExpr.loc);
                     return;
                 }
                 AstNode func = this.funcs.peek();
@@ -61,13 +63,24 @@ public class ExprTypeResolver extends TypeResolver {
 //                    if ((f.flags & FConst.Static) != 0) {
 //                        err("No this in static", idExpr.loc);
 //                    }
-                    Type self = new Type(curStruct.loc, curStruct.name);
-                    self.id.resolvedDef = curStruct;
-                    idExpr.resolvedType = Type.pointerType(idExpr.loc, self, Type.PointerAttr.raw, false);
-                    idExpr.resolvedType.isImutable = (f.flags & FConst.Mutable) == 0;
+                    if (idExpr.name.equals(TokenKind.superKeyword.symbol)) {
+                        if (curStruct.inheritances == null) {
+                            err("Invalid super", idExpr.loc);
+                        }
+                        else {
+                            idExpr.resolvedType = Type.pointerType(idExpr.loc, curStruct.inheritances.get(0), Type.PointerAttr.raw, false);
+                            idExpr.resolvedType.isImutable = (f.flags & FConst.Mutable) == 0;
+                        }
+                    }
+                    else if (idExpr.name.equals(TokenKind.thisKeyword.symbol)) {
+                        Type self = new Type(curStruct.loc, curStruct.name);
+                        self.id.resolvedDef = curStruct;
+                        idExpr.resolvedType = Type.pointerType(idExpr.loc, self, Type.PointerAttr.raw, false);
+                        idExpr.resolvedType.isImutable = (f.flags & FConst.Mutable) == 0;
+                    }
                 }
                 else {
-                    err("Use this out of method", idExpr.loc);
+                    err("Use this/super/it out of struct", idExpr.loc);
                 }
                 
                 return;
