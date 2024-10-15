@@ -149,13 +149,18 @@ public abstract class Expr extends AstNode {
         public Expr falseExpr;     // result of expression if condition is false
     }
     
-    public static class InitBlockExpr extends Expr {
+    public static class ArrayBlockExpr extends Expr {
+        public Type type;
+        public ArrayList<Expr> args = null;
+        public FieldDef _storeVar;
+    }
+    
+    public static class WithBlockExpr extends Expr {
         public Expr target;
-        public ArrayList<CallArg> args = null;
+        public Block block;
         
         public FieldDef _storeVar;
         public StructDef _structDef;
-        public boolean _isArray = false;
         public boolean _isType = false;
     }
     

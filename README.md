@@ -2,15 +2,18 @@
 
 A memory safe and compiled systems programming language.
 
-Work in process ...
 
 ## Features
-- Low-level memeory access without GC.
+- Ownership based memory management without GC.
 - Memory safe and no reference limitations.
+- Low-level memeory access. 
 - Object-oriented.
 - Interoperate with existing C++ code.
 - Non-nullable pointer.
-- Modularization
+- Modularization.
+- With Block.
+- Generic Template, Closure, Operator Overloading.
+
 
 ## Design
 
@@ -23,7 +26,7 @@ var p: raw* Int;       //unsafe raw pointer
 var p: WeakPtr$<Int>;  //weak pointer
 ```
 
-### Explicit Copy and Move
+### Explicit Copy or Move
 
 Explicit move or share ownership pointer
 ```
@@ -69,12 +72,13 @@ fun main() {
 
 ### Inheritance
 
+Single inheritance
 ```
 trait I {
     virtual fun foo();
 }
 
-struct B {
+virtual struct B {
     var a: Int;
     fun bar() { ... }
 }
@@ -87,28 +91,29 @@ struct A : B, I {
 
 ```
 
-### Init Block
+### With Block
 
+The with Block is not C++ init block. It can contain any statement.
 ```
 struct A {
     var i: Int;
+    fun init() { ... }
 }
 
-var a  = A { i = 0 };
-var a: own* A = alloc$<A>() { i = 0 };
+var a  = A { .init(); .i = 0; };
+var a: own* A = alloc$<A>() { .i = 0; };
 ```
 
 
 ### Pointer Usage
 
+Always access by '.'
 ```
 var a: A;
 var b: own* A;
 a.foo();
 b.foo();
 ```
-
-no pointer arithmetic in safe mode.
 
 ### Type Cast:
 ```
@@ -142,7 +147,7 @@ var b: Bar$<Int>;
 
 ### Nullable
 
-Default non-nullable
+Non-nullable by default 
 ```
 var a: own*? B;
 var b: own* B = a!;
@@ -158,7 +163,7 @@ var p : const raw* Int;
 var p : const raw* const Int;
 ```
 
-Function params is const by default
+Function params are const by default
 ```
 struct Bar {
     var i: Int = 0;
@@ -175,9 +180,9 @@ private
 protected
 readonly
 ```
-Readonly means private write and public read
+Readonly means public read access, private write access.
 
-### Operator overload
+### Operator Overloading
 
 ```
 struct A {
@@ -256,26 +261,30 @@ fun foo(a: Int, b: Int = 0) {
 }
 
 fun main() {
-    foo(a = 10);
+    foo(a : 10);
 }
 ```
 
 ## Removed features from C++
 
-- no reference, just pointer
-- no header file
-- no implicit copying of large objects
-- no new, delete
-- define one var per statement
-- no constructor
-- no nested class, nested function
-- no class, just struct
-- no namespace, just module
-- no macro
-- no forward declarations
-- no three static
-- no friend class
-- no multiple,virtual,private inheritance
-- no i++ just ++i
-- no switch auto fallthrough
-- no template overload
+- No reference, just pointer
+- No function overload by params;
+- No header file
+- No implicit copying of large objects
+- No static member
+- No new, delete
+- No define multi var per statement
+- No constructor
+- No nested class, nested function
+- No class, just struct
+- No namespace, just module
+- No macro
+- No forward declarations
+- No three static
+- No friend class
+- No multiple inheritance
+- No virtual,private inheritance
+- No i++ just ++i
+- No switch auto fallthrough
+- No template overload
+- No pointer arithmetic in safe mode

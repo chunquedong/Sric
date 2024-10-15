@@ -473,8 +473,11 @@ public class ScLibGenerator extends BaseGenerator {
             print(":");
             this.visit(e.falseExpr);
         }
-        else if (v instanceof Expr.InitBlockExpr e) {
-            printInitBlockExpr(e);
+        else if (v instanceof Expr.WithBlockExpr e) {
+            printItBlockExpr(e);
+        }
+        else if (v instanceof Expr.ArrayBlockExpr e) {
+            printArrayBlockExpr(e);
         }
         else if (v instanceof ClosureExpr e) {
             printClosureExpr(e);
@@ -539,14 +542,21 @@ public class ScLibGenerator extends BaseGenerator {
         }
     }
     
-    void printInitBlockExpr(Expr.InitBlockExpr e) {
+    void printItBlockExpr(Expr.WithBlockExpr e) {
         this.visit(e.target);
+        this.visit(e.block);
+    }
+    
+    void printArrayBlockExpr(Expr.ArrayBlockExpr e) {
+        printType(e.type);
+        print("{");
         if (e.args != null) {
-            for (Expr.CallArg t : e.args) {
+            for (Expr t : e.args) {
                 print(",");
-                this.visit(t.argExpr);
+                this.visit(t);
             }
         }
+        print("}");
     }
     
     void printClosureExpr(ClosureExpr expr) {

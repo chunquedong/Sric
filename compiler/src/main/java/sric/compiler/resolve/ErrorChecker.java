@@ -138,9 +138,6 @@ public class ErrorChecker extends CompilePass {
     @Override
     public void visitField(AstNode.FieldDef v) {
         if (v.initExpr != null) {
-            if (v.initExpr instanceof Expr.InitBlockExpr initBlockExpr) {
-                initBlockExpr._storeVar = v;
-            }
             this.visit(v.initExpr);
         }
         
@@ -436,7 +433,8 @@ public class ErrorChecker extends CompilePass {
     
     private void verifyUnsafe(Expr target) {
         if (target instanceof IdExpr id) {
-            if (id.name.equals("this")) {
+            if (id.name.equals(TokenKind.thisKeyword.symbol) || id.name.equals(TokenKind.superKeyword.symbol)
+                    || id.name.equals(TokenKind.dot.symbol)) {
                 return;
             }
         }
@@ -579,8 +577,11 @@ public class ErrorChecker extends CompilePass {
                 }
             }
         }
-        else if (v instanceof Expr.InitBlockExpr e) {
-            resolveInitBlockExpr(e);
+        else if (v instanceof Expr.WithBlockExpr e) {
+            resolveWithBlockExpr(e);
+        }
+        else if (v instanceof Expr.ArrayBlockExpr e) {
+            resolveArrayBlockExpr(e);
         }
         else if (v instanceof Expr.ClosureExpr e) {
             this.visit(e.code);
@@ -601,28 +602,27 @@ public class ErrorChecker extends CompilePass {
         }
     }
 
-    private void resolveInitBlockExpr(Expr.InitBlockExpr e) {
+    private void resolveWithBlockExpr(Expr.WithBlockExpr e) {
         this.visit(e.target);
         
-        if (e._storeVar == null && e._isType) {
-            boolean ok = false;
-            if (e.target instanceof Expr.IdExpr id) {
-                if (id.name.equals(TokenKind.thisKeyword.symbol)) {
-                    //allow this{...} for ctor
-                    ok = true;
-                }
-            }
-            if (!ok) {
-                err("Value type init block must in standalone assgin statement", e.loc);
-            }
-        }
+//        if (e._storeVar == null && e._isType) {
+//            boolean ok = false;
+//            if (e.target instanceof Expr.IdExpr id) {
+//                ok = true;
+//            }
+//            if (!ok) {
+//                err("Value type init block must in standalone assgin statement", e.loc);
+//            }
+//        }
         
         boolean hasFuncCall = false;
-        if (e.args != null) {
-            for (Expr.CallArg t : e.args) {
-                this.visit(t.argExpr);
-                if (t.argExpr instanceof CallExpr) {
-                    hasFuncCall = true;
+        if (e.block != null) {
+            for (Stmt t : e.block.stmts) {
+                this.visit(t);
+                if (t instanceof ExprStmt exprStmt) {
+                    if (exprStmt.expr instanceof CallExpr) {
+                        hasFuncCall = true;
+                    }
                 }
             }
         }
@@ -630,20 +630,13 @@ public class ErrorChecker extends CompilePass {
             return;
         }
         
-        if (e._isArray) {
-            for (Expr.CallArg t : e.args) {
-                if (t.name != null) {
-                    err("Invalid tag name for array", t.loc);
-                }
-            }
-        }
-
         AstNode.StructDef sd = e._structDef;
         if (sd != null) {            
-            if ((sd.flags & FConst.Abstract) != 0) {
+            if (e._isType && (sd.flags & FConst.Abstract) != 0) {
                 err("It's abstract", e.target.loc);
             }
-            if (e.args != null && !hasFuncCall) {
+            
+            if (e.block != null && !hasFuncCall) {
                 
                 HashMap<String,FieldDef> fields = new HashMap<>();
                 sd.getAllFields(fields);
@@ -656,25 +649,46 @@ public class ErrorChecker extends CompilePass {
                     if (f.fieldType.isNullablePointerType()) {
                         continue;
                     }
+                    if (f.fieldType.isNum()) {
+                        continue;
+                    }
                     
                     boolean found = false;
-                    for (Expr.CallArg t : e.args) {
-                        if (t.name.equals(f.name)) {
-                            found = true;
-                            break;
+                    for (Stmt t : e.block.stmts) {
+                        if (t instanceof ExprStmt exprStmt) {
+                            if (exprStmt.expr instanceof BinaryExpr bexpr) {
+                                if (bexpr.opToken == TokenKind.assign && bexpr.lhs instanceof IdExpr idExpr) {
+                                    if (idExpr.resolvedDef == f) {
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                            }
                         }
                     }
+                    
                     if (!found) {
                         err("Field not init:"+f.name, e.loc);
                     }
                 }
 
-                for (Expr.CallArg t : e.args) {
-                    if (!fields.containsKey(t.name)) {
-                        err("Field not found:"+t.name, t.loc);
-                    }
-                }
+//                for (Expr.CallArg t : e.args) {
+//                    if (!fields.containsKey(t.name)) {
+//                        err("Field not found:"+t.name, t.loc);
+//                    }
+//                }
             }
+        }
+    }
+    
+    private void resolveArrayBlockExpr(Expr.ArrayBlockExpr e) {
+        
+        if (!e.type.id.isResolved()) {
+            return;
+        }
+        
+        for (Expr t : e.args) {
+            this.verifyTypeFit(t, e.type.genericArgs.get(0), t.loc);
         }
     }
     

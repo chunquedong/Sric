@@ -31,6 +31,8 @@ public class ExprTypeResolver extends TypeResolver {
     private ArrayDeque<AstNode> loops = new ArrayDeque<AstNode>();
     
     protected StructDef curStruct = null;
+    protected WithBlockExpr curItBlock = null;
+    protected Scope curItBlockScope = null;
     
     public ExprTypeResolver(CompilerLog log, SModule module) {
         super(log, module);
@@ -51,21 +53,40 @@ public class ExprTypeResolver extends TypeResolver {
     @Override
     protected void resolveId(Expr.IdExpr idExpr) {
         if (idExpr.namespace == null) {
-            if (idExpr.name.equals(TokenKind.thisKeyword.symbol) || 
-                    idExpr.name.equals(TokenKind.superKeyword.symbol) || 
-                    idExpr.name.equals(TokenKind.itKeyword.symbol) ) {
-                if (curStruct == null) {
-                    err("Use this/super/it out of struct", idExpr.loc);
+            if (idExpr.name.equals(TokenKind.dot.symbol)) {
+                AstNode func = this.funcs.peek();
+                if (func instanceof FuncDef f) {
+                    if (curItBlock == null) {
+                        err("Invalid '.' call", idExpr.loc);
+                        return;
+                    }
+                    //Type self = new Type(curItBlock.loc, curItBlock._structDef.name);
+                    //self.id.resolvedDef = curItBlock._structDef;
+
+                    idExpr.resolvedType = curItBlock.resolvedType;
                     return;
                 }
+                else {
+                    err("Use '.' out of struct", idExpr.loc);
+                }
+                return;
+            }
+            else if (idExpr.name.equals(TokenKind.thisKeyword.symbol) || 
+                    idExpr.name.equals(TokenKind.superKeyword.symbol) ) {
+                
                 AstNode func = this.funcs.peek();
                 if (func instanceof FuncDef f) {
 //                    if ((f.flags & FConst.Static) != 0) {
 //                        err("No this in static", idExpr.loc);
 //                    }
                     if (idExpr.name.equals(TokenKind.superKeyword.symbol)) {
+                        if (curStruct == null) {
+                            err("Use super out of struct", idExpr.loc);
+                            return;
+                        }
                         if (curStruct.inheritances == null) {
                             err("Invalid super", idExpr.loc);
+                            return;
                         }
                         else {
                             idExpr.resolvedType = Type.pointerType(idExpr.loc, curStruct.inheritances.get(0), Type.PointerAttr.raw, false);
@@ -73,6 +94,10 @@ public class ExprTypeResolver extends TypeResolver {
                         }
                     }
                     else if (idExpr.name.equals(TokenKind.thisKeyword.symbol)) {
+                        if (curStruct == null) {
+                            err("Use this out of struct", idExpr.loc);
+                            return;
+                        }
                         Type self = new Type(curStruct.loc, curStruct.name);
                         self.id.resolvedDef = curStruct;
                         idExpr.resolvedType = Type.pointerType(idExpr.loc, self, Type.PointerAttr.raw, false);
@@ -80,7 +105,7 @@ public class ExprTypeResolver extends TypeResolver {
                     }
                 }
                 else {
-                    err("Use this/super/it out of struct", idExpr.loc);
+                    err("Use this/super out of struct", idExpr.loc);
                 }
                 
                 return;
@@ -104,6 +129,15 @@ public class ExprTypeResolver extends TypeResolver {
 
     @Override
     public void visitField(FieldDef v) {
+        
+        if (v.initExpr != null) {
+            if (v.initExpr instanceof Expr.WithBlockExpr initBlockExpr) {
+                initBlockExpr._storeVar = v;
+            }
+            if (v.initExpr instanceof Expr.ArrayBlockExpr initBlockExpr) {
+                initBlockExpr._storeVar = v;
+            }
+        }
         
         if (v.fieldType != null) {
             resolveType(v.fieldType);
@@ -492,8 +526,11 @@ public class ExprTypeResolver extends TypeResolver {
             this.visit(e.falseExpr);
             e.resolvedType = e.trueExpr.resolvedType;
         }
-        else if (v instanceof Expr.InitBlockExpr e) {
-            resolveInitBlockExpr(e);
+        else if (v instanceof Expr.WithBlockExpr e) {
+            resolveWithBlockExpr(e);
+        }
+        else if (v instanceof Expr.ArrayBlockExpr e) {
+            resolveArrayBlockExpr(e);
         }
         else if (v instanceof ClosureExpr e) {
             this.funcs.push(v);
@@ -547,7 +584,7 @@ public class ExprTypeResolver extends TypeResolver {
         return null;
     }
 
-    private void resolveInitBlockExpr(Expr.InitBlockExpr e) {
+    private void resolveWithBlockExpr(Expr.WithBlockExpr e) {
         this.visit(e.target);
         if (!e.target.isResolved()) {
             return;
@@ -578,49 +615,15 @@ public class ExprTypeResolver extends TypeResolver {
             sd = getTypeStructDef(e.target.resolvedType);
         }
         else if (e.target instanceof TypeExpr te) {
-            if (te.type.detail instanceof Type.ArrayInfo at) {
-                e._isArray = true;
-                at.sizeExpr = new LiteralExpr(Long.valueOf(e.args.size()));
-                at.sizeExpr.loc = e.loc;
-                at.size = e.args.size();
-
-                e.resolvedType = te.type;
+            if (te.type.id.resolvedDef instanceof StructDef) {
+                sd = (StructDef)te.type.id.resolvedDef;
+                //e._isType = true;
             }
             //e._isType = true;
         }
         
         e._structDef = sd;
         e._isType = e.target.resolvedType.isMetaType();
-        
-        if (e.args != null) {
-            if (sd != null) {
-                int scopeCount = 1;
-                StructDef savedCurStruct = curStruct;
-                curStruct = null;
-                if (sd.inheritances != null) {
-                    Scope inhScopes = sd.getInheriteScope();
-                    this.scopes.add(inhScopes);
-                    ++scopeCount;
-                }
-            
-                Scope scope = sd.getScope();
-                this.scopes.add(scope);
-                
-                for (Expr.CallArg t : e.args) {
-                    this.visit(t.argExpr);
-                }
-
-                for (int i=0; i<scopeCount; ++i) {
-                    popScope();
-                }
-                curStruct = savedCurStruct;
-            }
-            else {
-                for (Expr.CallArg t : e.args) {
-                    this.visit(t.argExpr);
-                }
-            }
-        }
 
         if (sd != null) {
             if (e.target.resolvedType.detail instanceof MetaTypeInfo mt) {
@@ -630,8 +633,39 @@ public class ExprTypeResolver extends TypeResolver {
                 e.resolvedType = e.target.resolvedType;
             }
         }
-        else if (!e._isArray) {
-            err("Invalid init block", e.loc);
+        
+        if (e.block != null && sd != null) {
+            WithBlockExpr savedCurItBlock = curItBlock;
+            curItBlock = e;
+            
+            this.visit(e.block);
+
+            curItBlock = savedCurItBlock;
+        }
+    }
+    
+    private void resolveArrayBlockExpr(Expr.ArrayBlockExpr e) {
+        this.resolveType(e.type);
+        if (!e.type.id.isResolved()) {
+            return;
+        }
+        
+        if (e.type.detail instanceof Type.ArrayInfo at) {
+            at.sizeExpr = new LiteralExpr(Long.valueOf(e.args.size()));
+            at.sizeExpr.loc = e.loc;
+            at.size = e.args.size();
+
+            e.resolvedType = e.type;
+        }
+        else {
+            err("Invalid array", e.loc);
+            return;
+        }
+        
+        if (e.args != null) {
+            for (Expr t : e.args) {
+                this.visit(t);
+            }
         }
     }
     

@@ -212,9 +212,14 @@ public class ReferenceFinder extends CompilePass {
             this.visit(e.trueExpr);
             this.visit(e.falseExpr);
         }
-        else if (v instanceof Expr.InitBlockExpr e) {
-            for (Expr.CallArg t : e.args) {
-                this.visit(t.argExpr);
+        else if (v instanceof Expr.WithBlockExpr e) {
+            this.visit(e.target);
+            this.visit(e.block);
+        }
+        else if (v instanceof Expr.ArrayBlockExpr e) {
+            visitType(e.type);
+            for (Expr t : e.args) {
+                this.visit(t);
             }
         }
         else if (v instanceof Expr.ClosureExpr e) {

@@ -618,7 +618,7 @@ public class Parser {
             case falseKeyword:
             case thisKeyword:
             case superKeyword:
-            case itKeyword:
+            //case itKeyword:
             case nullKeyword:
                 return true;
         }

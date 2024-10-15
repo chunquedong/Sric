@@ -32,7 +32,7 @@ public class DeepParser extends Parser {
 //////////////////////////////////////////////////////////////////////////
     /**
      ** Top level for blocks which must be surrounded by braces
-     * <block> =  <stmt> | ( "{" <stmts> "}" )
+     * <block> =  "{" <stmts> "}"
      */
     @Override
     Block block() {
@@ -47,6 +47,10 @@ public class DeepParser extends Parser {
         return block;
     }
 
+    /**
+     ** Top level for blocks which must be surrounded by braces
+     * <stmtAsBlock> =  <stmt> | <block>
+     */
     private Block stmtAsBlock() {
         Stmt st = stmt();
         
@@ -808,7 +812,7 @@ public class DeepParser extends Parser {
     /**
      ** Parse args with known parens:
      **   <args> = <arg> ("," <arg>)*
-     **   <arg> = [<id> "="] <expr>
+     **   <arg> = [<id> ":"] <expr>
      */
     private ArrayList<CallArg> callArgs(TokenKind right) {
         if (curt != right) {
@@ -818,7 +822,7 @@ public class DeepParser extends Parser {
                 CallArg arg = new CallArg();
 
                 //named param
-                if (curt == TokenKind.identifier && peekt == TokenKind.assign) {
+                if (curt == TokenKind.identifier && peekt == TokenKind.colon) {
                     String name = consumeId();
                     consume();
                     arg.name = name;
@@ -966,10 +970,17 @@ public class DeepParser extends Parser {
                 break;
             case superKeyword:
             case thisKeyword:
-            case itKeyword: 
+            //case itKeyword:
             {
                 TokenKind tok = consume().kind;
                 expr = new IdExpr(tok.symbol);
+                break;
+            }
+            case dot:
+            {
+                IdExpr id = new IdExpr(TokenKind.dot.symbol);
+                //endLoc(id, loc);
+                expr = id;
                 break;
             }
             case sizeofKeyword:
@@ -989,8 +1000,10 @@ public class DeepParser extends Parser {
                 break;
             }
             case lbracket:
+                //array expr
                 if (peekt == rbracket) {
-                    expr = typeExpr();
+                    Type type = typeRef();
+                    expr = arrayBlockExpr(type);
                 }
                 break;
             case funKeyword:
@@ -1019,15 +1032,37 @@ public class DeepParser extends Parser {
      **   <initBlockExpr> = "{" <args> "}"
      */
     private Expr initBlockExpr(Expr target) {
+        //consume(TokenKind.lbrace);
+        
+        WithBlockExpr expr = new WithBlockExpr();
+        expr.target = target;
+        expr.block = block();
+
+        //consume(TokenKind.rbrace);
+
+        endLoc(expr, target.loc);
+        return expr;
+    }
+    
+    private Expr arrayBlockExpr(Type type) {
         consume(TokenKind.lbrace);
         
-        InitBlockExpr expr = new InitBlockExpr();
-        expr.target = target;
-        expr.args = callArgs(TokenKind.rbrace);
+        ArrayBlockExpr expr = new ArrayBlockExpr();
+        expr.type = type;
+        expr.args = new ArrayList<Expr>();
+        
+        while (curt != TokenKind.rbrace) {
+            Expr argExpr = expr();
+            expr.args.add(argExpr);
+            if (curt == TokenKind.rbrace) {
+                break;
+            }
+            consume(TokenKind.comma);
+        }
 
         consume(TokenKind.rbrace);
 
-        endLoc(expr, target.loc);
+        endLoc(expr, type.loc);
         return expr;
     }
 

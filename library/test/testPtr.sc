@@ -35,8 +35,8 @@ fun testNullable() {
 }
 
 fun testCompare() {
-    var a = A { i = 1 };
-    var b = A { i = 2 };
+    var a = A { .i = 1; };
+    var b = A { .i = 2; };
     if (a < &b) {
         printf("compare OK\n");
     }

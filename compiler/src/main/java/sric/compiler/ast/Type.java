@@ -245,6 +245,13 @@ public class Type extends AstNode {
             return true;
         }
         
+        if (this.resolvedAlias != null) {
+            return this.resolvedAlias.equals(target);
+        }
+        if (target.resolvedAlias != null) {
+            return this.equals(target.resolvedAlias);
+        }
+        
         if (!genericArgsEquals(target)) {
             return false;
         }

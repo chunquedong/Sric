@@ -56,4 +56,9 @@ public class Scope extends AstNode {
         }
     }
     
+    public Scope dup() {
+        Scope s = new Scope();
+        s.symbolTable = this.symbolTable;
+        return s;
+    }
 }

@@ -48,6 +48,8 @@ public class CppGenerator extends BaseGenerator {
     private SModule module;
     private StructDef curStruct;
     
+    private String curItName;
+    
     private HashMap<TypeDef, Integer> emitState = new HashMap<>();
     
     public CppGenerator(CompilerLog log, String file, boolean headMode) throws IOException {
@@ -321,6 +323,10 @@ public class CppGenerator extends BaseGenerator {
                 printType(curStruct.inheritances.get(0));
                 return;
             }
+            else if (id.name.equals(TokenKind.dot.symbol)) {
+                print(this.curItName);
+                return;
+            }
         }
         
         if (id.resolvedDef instanceof TopLevelDef td) {
@@ -382,7 +388,7 @@ public class CppGenerator extends BaseGenerator {
         }
         
         if (init && v.initExpr != null) {
-            if (v.initExpr instanceof Expr.InitBlockExpr initBlockExpr) {
+            if (v.initExpr instanceof Expr.WithBlockExpr || v.initExpr instanceof Expr.ArrayBlockExpr) {
                 print(" ");
                 this.visit(v.initExpr);
             }
@@ -791,7 +797,7 @@ public class CppGenerator extends BaseGenerator {
     public void visitExpr(Expr v) {
         boolean parentheses = true;
         if (v.isStmt || v instanceof IdExpr || v instanceof LiteralExpr || v instanceof CallExpr 
-                || v instanceof AccessExpr || v instanceof NonNullableExpr || v instanceof InitBlockExpr) {
+                || v instanceof AccessExpr || v instanceof NonNullableExpr || v instanceof WithBlockExpr || v instanceof ArrayBlockExpr) {
             parentheses = false;
         }
         else {
@@ -911,8 +917,11 @@ public class CppGenerator extends BaseGenerator {
             print(":");
             this.visit(e.falseExpr);
         }
-        else if (v instanceof InitBlockExpr e) {
-            printInitBlockExpr(e);
+        else if (v instanceof Expr.WithBlockExpr e) {
+            printWithBlockExpr(e);
+        }
+        else if (v instanceof Expr.ArrayBlockExpr e) {
+            printArrayBlockExpr(e);
         }
         else if (v instanceof ClosureExpr e) {
             printClosureExpr(e);
@@ -1095,77 +1104,40 @@ public class CppGenerator extends BaseGenerator {
         }
     }
     
-    private void printInitBlockArgs(InitBlockExpr e, String varName) {
-        if (e.args != null) {
-            int i = 0;
-            print("{");
-            for (CallArg t : e.args) {
-                print(varName);
-                if (e.target.resolvedType != null && e.target.resolvedType.isPointerType()) {
-                    print("->");
-                }
-                else {
-                    print(".");
-                }
-                    
-                if (t.name != null) {
-                    print(t.name);
-                    print(" = ");
-                }
-                else {
-                    //cotr call
-                }
-                
-                this.visit(t.argExpr);
-                ++i;
-
-                print("; ");
-            }
-            print("}");
+    private void printItBlockArgs(WithBlockExpr e, String varName) {
+        if (e.block != null) {
+            String savedName = curItName;
+            curItName = varName;
+            
+            this.visit(e.block);
+            
+            curItName = savedName;
         }
     }
     
-    void printInitBlockExpr(InitBlockExpr e) {
+    void printWithBlockExpr(WithBlockExpr e) {
 //        if (!e.target.isResolved()) {
 //            return;
 //        }
         
-        boolean isThis = false;
+        String targetId = null;
         if (e.target instanceof Expr.IdExpr id) {
-            if (id.name.equals(TokenKind.thisKeyword.symbol)) {
-                isThis = true;
+            if (id.namespace == null) {
+                targetId = id.name;
             }
         }
-        
-        boolean isArray = e._isArray;
-        if (isArray) {
-            if (e._storeVar != null) {
-                print(" = ");
-            }
-            int i = 0;
-            print("{");
-            if (e.args != null) {
-                for (CallArg t : e.args) {
-                    if (i > 0) {
-                        print(", ");
-                    }
-                    this.visit(t.argExpr);
-                    ++i;
-                }
-            }
-            print("}");
-        }
-        else if (e._storeVar != null) {
+
+        if (e._storeVar != null) {
             if (!e._isType) {
                 print(" = ");
                 this.visit(e.target);
             }
             print(";");
             
-            printInitBlockArgs(e, e._storeVar.name);
+            printItBlockArgs(e, e._storeVar.name);
         }
-        else if (isThis) {
-            printInitBlockArgs(e, "this");
+        else if (targetId != null) {
+            printItBlockArgs(e, targetId);
         }
         else if (e.target.isResolved()) {
             if (e._storeVar != null) {
@@ -1181,12 +1153,30 @@ public class CppGenerator extends BaseGenerator {
             this.visit(e.target);
             print(";");
             
-            printInitBlockArgs(e, "__t");
+            printItBlockArgs(e, "__t");
             
             print("return __t;");
             
             print("}()");
         }
+    }
+    
+    void printArrayBlockExpr(ArrayBlockExpr e) {
+        if (e._storeVar != null) {
+            print(" = ");
+        }
+        int i = 0;
+        print("{");
+        if (e.args != null) {
+            for (Expr t : e.args) {
+                if (i > 0) {
+                    print(", ");
+                }
+                this.visit(t);
+                ++i;
+            }
+        }
+        print("}");
     }
     
     void printClosureExpr(ClosureExpr expr) {
