@@ -87,19 +87,23 @@ public abstract class TypeResolver  extends CompilePass {
             err("Type inference not support for top level node", loc);
             return;
         }
-        resolveType(type);
+        resolveType(type, false);
     }
 
-    protected void resolveType(Type type) {
+    protected void resolveType(Type type, boolean asExpr) {
         resolveId(type.id);
         if (type.id.resolvedDef != null) {
             if (type.id.resolvedDef instanceof GenericParamDef gpd) {
-                type.id.resolvedType = Type.metaType(type.loc, type);
+                if (asExpr) {
+                    type.id.resolvedType = Type.metaType(type.loc, type);
+                }
                 type.resolvedAlias = gpd.bound;
             }
             else if (type.id.resolvedDef instanceof TypeDef) {
                 //ok
-                type.id.resolvedType = Type.metaType(type.loc, type);
+                if (asExpr) {
+                    type.id.resolvedType = Type.metaType(type.loc, type);
+                }
             }
             else if (type.id.resolvedDef instanceof TypeAlias ta) {
                 type.id.resolvedDef = ta.type.id.resolvedDef;
@@ -121,7 +125,7 @@ public abstract class TypeResolver  extends CompilePass {
         
         if (type.genericArgs != null) {
             for (int i=0; i<type.genericArgs.size(); ++i) {
-                resolveType(type.genericArgs.get(i));
+                resolveType(type.genericArgs.get(i), asExpr);
             }
 
             boolean genericOk = false;

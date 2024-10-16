@@ -105,8 +105,17 @@ public class ErrorChecker extends CompilePass {
         
         if (from.detail instanceof Type.PointerInfo p1 && to.detail instanceof Type.PointerInfo p2) {
             if (p1.pointerAttr != Type.PointerAttr.raw && p2.pointerAttr == Type.PointerAttr.raw) {
-                target.implicitTypeConvertTo = to;
-                target.isPointerConvert = true;
+                boolean doConvert = true;
+                if (target instanceof Expr.UnaryExpr bexpr) {
+                    if (bexpr.opToken == TokenKind.amp) {
+                        bexpr.isRawAddressOf = true;
+                        doConvert = false;
+                    }
+                }
+                if (doConvert) {
+                    target.implicitTypeConvertTo = to;
+                    target.isPointerConvert = true;
+                }
             }
             else if (p1.pointerAttr != Type.PointerAttr.ref && p2.pointerAttr == Type.PointerAttr.ref) {
                 target.implicitTypeConvertTo = to;

@@ -28,6 +28,8 @@ public abstract class Expr extends AstNode {
         public Token.TokenKind opToken;   // operator token type (Token.bang, etc)
         public Expr operand;    // operand expression
         
+        public boolean isRawAddressOf = false;
+        
         public UnaryExpr(TokenKind tok, Expr operand) {
             this.opToken = tok;
             this.operand = operand;
@@ -40,6 +42,7 @@ public abstract class Expr extends AstNode {
         public Expr rhs;           // right hand side
         
         public FuncDef resolvedOperator = null;// resolved opertor name
+        
         
         public BinaryExpr(Expr lhs, TokenKind tok, Expr rhs) {
             this.lhs = lhs;

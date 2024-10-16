@@ -883,9 +883,15 @@ public class CppGenerator extends BaseGenerator {
         }
         else if (v instanceof UnaryExpr e) {
             if (e.opToken == TokenKind.amp) {
-                print("sric::addressOf(");
-                this.visit(e.operand);
-                print(")");
+                if (e.isRawAddressOf) {
+                    print("&");
+                    this.visit(e.operand);
+                }
+                else {
+                    print("sric::addressOf(");
+                    this.visit(e.operand);
+                    print(")");
+                }
             }
             else if (e.opToken == TokenKind.moveKeyword) {
                 print("std::move(");

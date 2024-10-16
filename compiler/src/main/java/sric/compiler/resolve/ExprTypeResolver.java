@@ -140,7 +140,7 @@ public class ExprTypeResolver extends TypeResolver {
         }
         
         if (v.fieldType != null) {
-            resolveType(v.fieldType);
+            resolveType(v.fieldType, false);
         }
         if (v.initExpr != null) {
             this.visit(v.initExpr);
@@ -160,7 +160,7 @@ public class ExprTypeResolver extends TypeResolver {
     private void visitFuncPrototype(AstNode.FuncPrototype prototype, Scope scope) {
         if (prototype != null && prototype.paramDefs != null) {
             for (AstNode.ParamDef p : prototype.paramDefs) {
-                this.resolveType(p.paramType);
+                this.resolveType(p.paramType, false);
                 if (p.defualtValue != null) {
                     this.visit(p.defualtValue);
                 }
@@ -170,7 +170,7 @@ public class ExprTypeResolver extends TypeResolver {
         
         if (prototype != null) {
             if (prototype.returnType != null && prototype.returnType.isVoid()) {
-                this.resolveType(prototype.returnType);
+                this.resolveType(prototype.returnType, false);
             }
         }
     }
@@ -486,7 +486,7 @@ public class ExprTypeResolver extends TypeResolver {
             }
         }
         else if (v instanceof Expr.TypeExpr e) {
-            this.resolveType(e.type);
+            this.resolveType(e.type, true);
             e.resolvedType = Type.metaType(e.loc, e.type);
         }
         else if (v instanceof Expr.IndexExpr e) {
@@ -650,7 +650,7 @@ public class ExprTypeResolver extends TypeResolver {
     }
     
     private void resolveArrayBlockExpr(Expr.ArrayBlockExpr e) {
-        this.resolveType(e.type);
+        this.resolveType(e.type, true);
         if (!e.type.id.isResolved()) {
             return;
         }
@@ -677,7 +677,7 @@ public class ExprTypeResolver extends TypeResolver {
     private void resolveGenericInstance(Expr.GenericInstance e) {
         this.visit(e.target);
         for (Type t : e.genericArgs) {
-            this.resolveType(t);
+            this.resolveType(t, false);
         }
         if (!e.target.isResolved()) {
             return;

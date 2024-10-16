@@ -35,7 +35,7 @@ Refable::Refable() :
 Refable::~Refable()
 {
     if (!_isUnique) {
-        sc_assert(_refCount == 0);
+        sc_assert(_refCount == 0, "ref count error");
     }
     _checkCode = 0;
     _refCount = 1000000;
@@ -47,7 +47,7 @@ Refable::~Refable()
 void Refable::addRef()
 {
     _isUnique = false;
-    sc_assert(_refCount > 0 && _refCount < 1000000);
+    sc_assert(_refCount > 0 && _refCount < 1000000, "ref count error");
     ++_refCount;
 }
 
@@ -72,7 +72,7 @@ bool Refable::release()
         return true;
     }
 
-    sc_assert(_refCount > 0 && _refCount < 1000000);
+    sc_assert(_refCount > 0 && _refCount < 1000000, "ref count error");
     if ((--_refCount) <= 0)
     {
         disposeWeakRef();
@@ -108,18 +108,18 @@ WeakRefBlock::WeakRefBlock() : _weakRefCount(0), _pointer(NULL) {
     
 }
 WeakRefBlock::~WeakRefBlock() {
-    sc_assert(_weakRefCount == 0);
+    sc_assert(_weakRefCount == 0, "ref count error");
     _weakRefCount = 1000000;
     _pointer = NULL;
 }
 
 void WeakRefBlock::addRef() {
-    sc_assert(_weakRefCount < 1000000);
+    sc_assert(_weakRefCount < 1000000, "ref count error");
     ++_weakRefCount;
 }
 
 void WeakRefBlock::release() {
-    sc_assert(_weakRefCount > 0 && _weakRefCount < 1000000);
+    sc_assert(_weakRefCount > 0 && _weakRefCount < 1000000, "ref count error");
     if ((--_weakRefCount) <= 0)
     {
         std::lock_guard<std::mutex> guard(traceLock);
