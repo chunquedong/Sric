@@ -234,6 +234,15 @@ public class Parser {
                 param.name = paramName;
                 param.parent = parent;
                 param.index = gparams.size();
+                
+                if (curt == TokenKind.assign) {
+                    consume();
+                    param.bound = this.typeRef();
+                }
+                else {
+                    param.bound = Type.voidType(gloc);
+                }
+                
                 endLoc(param, gloc);
                 gparams.add(param);
                 if (curt == TokenKind.comma) {

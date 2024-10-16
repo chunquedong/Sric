@@ -25,6 +25,8 @@ public class ErrorChecker extends CompilePass {
     private SModule module;
     private AstNode.StructDef curStruct = null;
     private int inUnsafe = 0;
+    private FileUnit curUnit = null;
+    private WithBlockExpr curItBlock = null;
     
     public ErrorChecker(CompilerLog log, SModule module) {
         super(log);
@@ -38,7 +40,9 @@ public class ErrorChecker extends CompilePass {
 
     @Override
     public void visitUnit(AstNode.FileUnit v) {
+        curUnit = v;
         v.walkChildren(this);
+        curUnit = null;
     }
     
     private boolean isCopyable(Type type) {
@@ -211,6 +215,19 @@ public class ErrorChecker extends CompilePass {
             }
         }
         
+        if (v.code == null) {
+            if ((v.flags & (FConst.Abstract|FConst.Virtual|FConst.Extern| FConst.ExternC)) == 0) {
+                if (curStruct != null) {
+                    if ((curStruct.flags & (FConst.Abstract|FConst.Virtual|FConst.Extern| FConst.ExternC)) == 0) {
+                        err("Miss fun code", v.loc);
+                    }
+                }
+                else {
+                    err("Miss fun code", v.loc);
+                }
+            }
+        }
+        
         if (v.prototype.paramDefs != null) {
             boolean hasDefaultValue = false;
             boolean hasVararg = false;
@@ -257,6 +274,22 @@ public class ErrorChecker extends CompilePass {
             if (sd.inheritances != null) {
                 int i = 0;
                 for (Type inh : sd.inheritances) {
+                    if (i == 0) {
+                        if (inh.id.resolvedDef instanceof StructDef superSd) {
+                            if ((superSd.flags & FConst.Abstract) != 0 || (superSd.flags & FConst.Virtual) != 0) {
+                                //ok
+                            }
+                            else {
+                                err("Base struct must be abstract or virutal", inh.loc);
+                            }
+                        }
+                        else if (inh.id.resolvedDef instanceof TraitDef) {
+                            //ok
+                        }
+                        else {
+                            err("Invalid inheritance", inh.loc);
+                        }
+                    }
                     if (i > 0) {
                         if (inh.id.resolvedDef != null) {
                             if (!(inh.id.resolvedDef instanceof TraitDef)) {
@@ -342,6 +375,9 @@ public class ErrorChecker extends CompilePass {
             --inUnsafe;
         }
         else if (v instanceof Stmt.ReturnStmt rets) {
+            if (curItBlock != null) {
+                err("Return from with block", v.loc);
+            }
             if (rets.expr != null) {
                 this.visit(rets.expr);
             }
@@ -617,6 +653,7 @@ public class ErrorChecker extends CompilePass {
         
         boolean hasFuncCall = false;
         if (e.block != null) {
+            curItBlock = e;
             for (Stmt t : e.block.stmts) {
                 this.visit(t);
                 if (t instanceof ExprStmt exprStmt) {
@@ -625,6 +662,7 @@ public class ErrorChecker extends CompilePass {
                     }
                 }
             }
+            curItBlock = null;
         }
         if (!e.target.isResolved()) {
             return;
@@ -763,8 +801,14 @@ public class ErrorChecker extends CompilePass {
             }
         }
         else if (parent instanceof AstNode.FileUnit fu) {
-            if ((slotFlags & FConst.Private) != 0 || (slotFlags & FConst.Protected) != 0) {
+            if ((slotFlags & FConst.Protected) != 0) {
                 if (fu.module != this.module) {
+                    err("It's private or protected", loc);
+                }
+            }
+            
+            if ((slotFlags & FConst.Private) != 0) {
+                if (fu != this.curUnit) {
                     err("It's private or protected", loc);
                 }
             }

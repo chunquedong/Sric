@@ -1,8 +1,16 @@
 
-struct A$<T> {
+trait NT {
+    abstract operator fun plus(that: ref* NT): ref* NT;
+}
+
+struct A$<T = NT> {
     var i: T ;
     fun foo(): ref* T {
        return &i;
+    }
+
+    fun foo2(): T {
+        return *(i + &i);
     }
 }
 

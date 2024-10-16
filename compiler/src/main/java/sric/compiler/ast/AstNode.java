@@ -470,7 +470,7 @@ public class AstNode {
 
         @Override
         public Scope getScope() {
-            return scope;
+            return ((TypeDef)bound.id.resolvedDef).getScope();
         }
     }
     

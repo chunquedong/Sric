@@ -129,6 +129,9 @@ public class TopLevelTypeResolver extends TypeResolver {
     public void visitFunc(AstNode.FuncDef v) {
         Scope gpScope = null;
         if (v.generiParamDefs != null) {
+            for (GenericParamDef gp : v.generiParamDefs) {
+                resolveTopLevelType(gp.bound, gp.loc);
+            }
             gpScope = pushScope();
             for (GenericParamDef gp : v.generiParamDefs) {
                 gpScope.put(gp.name, gp);
@@ -153,6 +156,9 @@ public class TopLevelTypeResolver extends TypeResolver {
         Scope gpScope = null;
         if (v instanceof StructDef sd) {
             if (sd.generiParamDefs != null) {
+                for (GenericParamDef gp : sd.generiParamDefs) {
+                    resolveTopLevelType(gp.bound, gp.loc);
+                }
                 gpScope = new Scope();
                 for (GenericParamDef gp : sd.generiParamDefs) {
                     gpScope.put(gp.name, gp);

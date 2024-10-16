@@ -93,7 +93,11 @@ public abstract class TypeResolver  extends CompilePass {
     protected void resolveType(Type type) {
         resolveId(type.id);
         if (type.id.resolvedDef != null) {
-            if (type.id.resolvedDef instanceof TypeDef) {
+            if (type.id.resolvedDef instanceof GenericParamDef gpd) {
+                type.id.resolvedType = Type.metaType(type.loc, type);
+                type.resolvedAlias = gpd.bound;
+            }
+            else if (type.id.resolvedDef instanceof TypeDef) {
                 //ok
                 type.id.resolvedType = Type.metaType(type.loc, type);
             }

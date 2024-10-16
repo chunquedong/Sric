@@ -10,7 +10,7 @@ trait I {
   abstract fun foo();
 }
 
-struct B {
+virtual struct B {
   var a: Int;
   fun bar() {  }
 }

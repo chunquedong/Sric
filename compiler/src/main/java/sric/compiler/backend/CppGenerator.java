@@ -206,8 +206,13 @@ public class CppGenerator extends BaseGenerator {
         }
         
         if (type.resolvedAlias != null) {
-            printType(type.resolvedAlias);
-            return;
+            if (type.id.resolvedDef instanceof GenericParamDef) {
+                //ok
+            }
+            else {
+                printType(type.resolvedAlias);
+                return;
+            }
         }
         
         if (type.isImutable && !type.id.name.equals(Buildin.pointerTypeName)) {
@@ -612,7 +617,7 @@ public class CppGenerator extends BaseGenerator {
             this.emitState.put(v, 2);
         }
         
-                
+
         if (implMode()) {
             if (v instanceof StructDef sd) {
                 curStruct =  sd;
@@ -677,6 +682,13 @@ public class CppGenerator extends BaseGenerator {
 
             unindent();
             newLine();
+            
+            if ((v.flags & FConst.Abstract) != 0 || (v.flags & FConst.Virtual) != 0) {
+                print("virtual ~");
+                print(getSymbolName(v));
+                print("(){}");
+            }
+            
             print("};").newLine();
         
         }
@@ -796,7 +808,7 @@ public class CppGenerator extends BaseGenerator {
     @Override
     public void visitExpr(Expr v) {
         boolean parentheses = true;
-        if (v.isStmt || v instanceof IdExpr || v instanceof LiteralExpr || v instanceof CallExpr 
+        if (v.isStmt || v instanceof IdExpr || v instanceof LiteralExpr || v instanceof CallExpr || v instanceof GenericInstance 
                 || v instanceof AccessExpr || v instanceof NonNullableExpr || v instanceof WithBlockExpr || v instanceof ArrayBlockExpr) {
             parentheses = false;
         }

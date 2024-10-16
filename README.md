@@ -93,7 +93,7 @@ struct A : B, I {
 
 ### With Block
 
-The with Block is not C++ init block. It can contain any statement.
+The with Block is not C++ designated initialization. It can contain any statement.
 ```
 struct A {
     var i: Int;

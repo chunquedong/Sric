@@ -638,9 +638,14 @@ public class ExprTypeResolver extends TypeResolver {
             WithBlockExpr savedCurItBlock = curItBlock;
             curItBlock = e;
             
+            //avoid jump out from with block
+            ArrayDeque<AstNode> savedLoop = this.loops;
+            this.loops = new ArrayDeque<AstNode>();
+            
             this.visit(e.block);
 
             curItBlock = savedCurItBlock;
+            this.loops = savedLoop;
         }
     }
     
