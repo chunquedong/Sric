@@ -841,6 +841,12 @@ public class CppGenerator extends BaseGenerator {
                         print(" >(");
                         convertParentheses = true;
                     }
+                    else if (p1.pointerAttr == Type.PointerAttr.raw && p2.pointerAttr == Type.PointerAttr.ref) {
+                        print("sric::RefPtr<");
+                        printType(v.implicitTypeConvertTo.genericArgs.get(0));
+                        print(" >(");
+                        convertParentheses = true;
+                    }
                 }
             }
             
@@ -898,15 +904,15 @@ public class CppGenerator extends BaseGenerator {
         }
         else if (v instanceof UnaryExpr e) {
             if (e.opToken == TokenKind.amp) {
-                if (e._isRawAddressOf) {
+                //if (e._isRawAddressOf) {
                     print("&");
                     this.visit(e.operand);
-                }
-                else {
-                    print("sric::addressOf(");
-                    this.visit(e.operand);
-                    print(")");
-                }
+                //}
+//                else {
+//                    print("sric::addressOf(");
+//                    this.visit(e.operand);
+//                    print(")");
+//                }
             }
             else if (e.opToken == TokenKind.moveKeyword) {
                 print("std::move(");

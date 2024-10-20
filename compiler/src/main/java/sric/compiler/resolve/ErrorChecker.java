@@ -71,15 +71,26 @@ public class ErrorChecker extends CompilePass {
     }
     
     private void verifyTypeFit(Expr target, Type to, Loc loc) {
+        verifyTypeFit(target, to, loc, false);
+    }
+    private void verifyTypeFit(Expr target, Type to, Loc loc, boolean isCallArg) {
         Type from = target.resolvedType;
         if (from == null) {
             return;
         }
         
         if (!from.fit(to)) {
-            err("Type mismatch", loc);
-            //from.fit(to);
-            return;
+            boolean allowUnsafeCast = false;
+            if (isCallArg && from.detail instanceof PointerInfo f && to.detail instanceof PointerInfo t) {
+                if (f.pointerAttr == Type.PointerAttr.raw && t.pointerAttr == Type.PointerAttr.ref) {
+                    allowUnsafeCast = true;
+                }
+            }
+            if (!allowUnsafeCast) {
+                err("Type mismatch", loc);
+                //from.fit(to);
+                return;
+            }
         }
         
         AstNode resolvedDef = idResolvedDef(target);
@@ -107,12 +118,12 @@ public class ErrorChecker extends CompilePass {
         if (from.detail instanceof Type.PointerInfo p1 && to.detail instanceof Type.PointerInfo p2) {
             if (p1.pointerAttr != Type.PointerAttr.raw && p2.pointerAttr == Type.PointerAttr.raw) {
                 boolean doConvert = true;
-                if (target instanceof Expr.UnaryExpr bexpr) {
-                    if (bexpr.opToken == TokenKind.amp) {
-                        bexpr._isRawAddressOf = true;
-                        doConvert = false;
-                    }
-                }
+//                if (target instanceof Expr.UnaryExpr bexpr) {
+//                    if (bexpr.opToken == TokenKind.amp) {
+//                        bexpr._isRawAddressOf = true;
+//                        doConvert = false;
+//                    }
+//                }
                 if (doConvert) {
                     target.implicitTypeConvertTo = to;
                     target.isPointerConvert = true;
@@ -484,6 +495,12 @@ public class ErrorChecker extends CompilePass {
                 return;
             }
         }
+        else if (target instanceof Expr.UnaryExpr uexpr) {
+            if (uexpr.opToken == TokenKind.amp) {
+                return;
+            }
+        }
+        
         if (target.resolvedType != null && target.resolvedType.detail instanceof Type.PointerInfo pt) {
             if (pt.pointerAttr == Type.PointerAttr.raw) {
                 if (inUnsafe == 0) {
@@ -763,7 +780,7 @@ public class ErrorChecker extends CompilePass {
                                     err("Arg name error", t.loc);
                                 }
                             }
-                            verifyTypeFit(t.argExpr, f.prototype.paramDefs.get(i).paramType, t.loc);
+                            verifyTypeFit(t.argExpr, f.prototype.paramDefs.get(i).paramType, t.loc, true);
                             ++i;
                         }
                         if (i < f.prototype.paramDefs.size()) {
@@ -874,7 +891,7 @@ public class ErrorChecker extends CompilePass {
                     }
                     else if (e.resolvedOperator != null) {
                         Type paramType = e.resolvedOperator.prototype.paramDefs.get(0).paramType;
-                        verifyTypeFit(e.rhs, paramType, e.rhs.loc);
+                        verifyTypeFit(e.rhs, paramType, e.rhs.loc, true);
                     }
                     else if (!e.lhs.resolvedType.equals(e.rhs.resolvedType)) {
                         err("Cant compare different type", e.loc);
@@ -900,7 +917,7 @@ public class ErrorChecker extends CompilePass {
                 case slash:
                     if (e.resolvedOperator != null) {
                         Type paramType = e.resolvedOperator.prototype.paramDefs.get(0).paramType;
-                        verifyTypeFit(e.rhs, paramType, e.rhs.loc);
+                        verifyTypeFit(e.rhs, paramType, e.rhs.loc, true);
                     }
                     verifyUnsafe(e.lhs);
                     break;

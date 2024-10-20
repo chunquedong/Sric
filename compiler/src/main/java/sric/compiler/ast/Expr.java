@@ -27,9 +27,7 @@ public abstract class Expr extends AstNode {
     public static class UnaryExpr extends Expr {
         public Token.TokenKind opToken;   // operator token type (Token.bang, etc)
         public Expr operand;    // operand expression
-        
-        public boolean _isRawAddressOf = false;
-        
+                
         public UnaryExpr(TokenKind tok, Expr operand) {
             this.opToken = tok;
             this.operand = operand;

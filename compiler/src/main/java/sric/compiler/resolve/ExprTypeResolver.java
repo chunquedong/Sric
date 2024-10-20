@@ -178,19 +178,25 @@ public class ExprTypeResolver extends TypeResolver {
     @Override
     public void visitFunc(FuncDef v) {
         this.funcs.push(v);
-        preScope = new Scope();
         
         if (v.generiParamDefs != null) {
+            Scope scope = this.pushScope();
             for (GenericParamDef gp : v.generiParamDefs) {
-                preScope.put(gp.name, gp);
+                scope.put(gp.name, gp);
             }
         }
+        
+        preScope = new Scope();
 
         visitFuncPrototype(v.prototype, preScope);
         if (v.code != null) {
             this.visit(v.code);
         }
         preScope = null;
+        
+        if (v.generiParamDefs != null) {
+            this.popScope();
+        }
         
         funcs.pop();
     }
@@ -476,7 +482,7 @@ public class ExprTypeResolver extends TypeResolver {
                         if (e.operand.resolvedType.isArray()) {
                             elmentType = e.operand.resolvedType.genericArgs.get(0);
                         }
-                        e.resolvedType = Type.pointerType(e.loc, elmentType, Type.PointerAttr.ref, false);
+                        e.resolvedType = Type.pointerType(e.loc, elmentType, Type.PointerAttr.raw, false);
                         break;
                     case awaitKeyword:
                         e.resolvedType = e.operand.resolvedType;

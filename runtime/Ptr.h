@@ -177,11 +177,6 @@ OwnPtr<T> share(OwnPtr<T> p) {
     return p.share();
 }
 
-//template<typename T>
-//T* ownToRaw(OwnPtr<T>& p) {
-//    return p.get();
-//}
-
 template <class T>
 OwnPtr<T> rawToOwn(T* ptr) {
     getRefable(ptr)->addRef();
@@ -250,15 +245,24 @@ public:
     }
 };
 
+template <class T>
+OwnPtr<T> refToOwn(RefPtr<T> ptr) {
+    if (ptr.type != 0) {
+        return OwnPtr<T>();
+    }
+    getRefable(ptr.get())->addRef();
+    return OwnPtr<T>(ptr.get());
+}
 
-//template<typename T>
-//RefPtr<T> ownToRef(OwnPtr<T>& p) {
-//    return RefPtr<T>(p);
-//}
+template <class T>
+RefPtr<T> rawToRef(T* ptr) {
+    return RefPtr<T>(ptr);
+}
 
 template<typename T>
-RefPtr<T> addressOf(T& p) {
-    return RefPtr<T>(&p);
+RefPtr<T> refSafeCheck(RefPtr<T> p) {
+    sric::sc_assert(p.type != 1, "Unsafe ref");
+    return p;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
