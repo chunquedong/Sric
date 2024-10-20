@@ -147,13 +147,18 @@ public class ExprTypeResolver extends TypeResolver {
         }
 
         if (v.fieldType == null) {
-            v.fieldType = v.initExpr.resolvedType;
+            if (v.initExpr == null) {
+                err("Miss var type", v.loc);
+            }
+            else {
+                //Type inference
+                v.fieldType = v.initExpr.resolvedType;
+            }
         }
         
         if (v.isLocalVar) {
             lastScope().put(v.name, v);
         }
-        
         
     }
     
@@ -478,6 +483,9 @@ public class ExprTypeResolver extends TypeResolver {
                         break;
                     //&
                     case amp:
+                        if (e.operand instanceof Expr.LiteralExpr lexpr) {
+                            err("Invalid & for literal", e.loc);
+                        }
                         Type elmentType = e.operand.resolvedType;
                         if (e.operand.resolvedType.isArray()) {
                             elmentType = e.operand.resolvedType.genericArgs.get(0);
@@ -676,7 +684,7 @@ public class ExprTypeResolver extends TypeResolver {
         if (e.type.detail instanceof Type.ArrayInfo at) {
             at.sizeExpr = new LiteralExpr(Long.valueOf(e.args.size()));
             at.sizeExpr.loc = e.loc;
-            at.size = e.args.size();
+            //at.size = e.args.size();
 
             e.resolvedType = e.type;
         }

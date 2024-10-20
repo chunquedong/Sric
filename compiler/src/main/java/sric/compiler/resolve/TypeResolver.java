@@ -123,6 +123,27 @@ public abstract class TypeResolver  extends CompilePass {
             return;
         }
         
+        if (type.detail instanceof Type.ArrayInfo ainfo) {
+            if (ainfo.sizeExpr != null) {
+                this.visit(ainfo.sizeExpr);
+                boolean isConstexpr = false;
+                if (ainfo.sizeExpr instanceof Expr.LiteralExpr lexpr) {
+                    isConstexpr = true;
+                }
+                else if (ainfo.sizeExpr instanceof Expr.IdExpr idexpr) {
+                    if (idexpr.resolvedDef instanceof FieldDef fd) {
+                        if ((fd.flags & FConst.ConstExpr) != 0) {
+                            isConstexpr = true;
+                        }
+                    }
+                }
+
+                if (!isConstexpr) {
+                    err("Array size must be constexpr", ainfo.sizeExpr.loc);
+                }
+            }
+        }
+        
         if (type.genericArgs != null) {
             for (int i=0; i<type.genericArgs.size(); ++i) {
                 resolveType(type.genericArgs.get(i), asExpr);

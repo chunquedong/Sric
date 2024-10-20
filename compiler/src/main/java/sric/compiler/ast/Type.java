@@ -48,7 +48,7 @@ public class Type extends AstNode {
     
     public static class ArrayInfo extends TypeInfo {
         public Expr sizeExpr;
-        public int size;
+        //public int size;
     }
     
     public static class NumInfo extends TypeInfo {
@@ -268,7 +268,7 @@ public class Type extends AstNode {
         }
         else if (this.isArray()) {
             if (this.detail instanceof ArrayInfo e && target.detail instanceof ArrayInfo a) {
-                if ( (e.size != a.size))  {
+                if (e.sizeExpr != a.sizeExpr)  {
                     return false;
                 }
             }

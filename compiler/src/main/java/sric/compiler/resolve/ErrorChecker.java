@@ -166,6 +166,21 @@ public class ErrorChecker extends CompilePass {
             this.visit(v.initExpr);
         }
         
+        //check constexpr
+        if ((v.flags & FConst.ConstExpr) != 0) {
+            if (v.initExpr == null) {
+                err("Must init constExpr", v.loc);
+            }
+            else if (v.initExpr instanceof Expr.LiteralExpr) {
+                if (!(v.parent instanceof FileUnit)) {
+                    err("The constExpr must be static", v.loc);
+                }
+            }
+            else {
+                err("Invalid constExpr flags", v.loc);
+            }
+        }
+        
         if (v.fieldType == null) {
             err("Unkonw field type", v.loc);
         }
@@ -174,6 +189,7 @@ public class ErrorChecker extends CompilePass {
             verifyTypeFit(v.initExpr, v.fieldType, v.loc);
         }
         
+        //check nullable
         if (v.initExpr == null && v.fieldType != null && v.fieldType.detail instanceof Type.PointerInfo pt) {
             if (!pt.isNullable) {
                 if (v.parent instanceof AstNode.StructDef) {
@@ -185,7 +201,8 @@ public class ErrorChecker extends CompilePass {
             }
         }
         
-        if (v.fieldType != null) {
+        //check const is static
+        if (v.fieldType != null && (v.flags & FConst.ConstExpr) == 0) {
             boolean isStatic = false;
             if (v.parent instanceof FileUnit) {
                 isStatic = true;
@@ -270,6 +287,10 @@ public class ErrorChecker extends CompilePass {
         
         if ((v.flags & FConst.Readonly) != 0) {
             err("Invalid flags", v.loc);
+        }
+        
+        if ((v.flags & FConst.ConstExpr) != 0) {
+            err("Unsupport constExpr for func", v.loc);
         }
         
         if ((v.flags & FConst.Operator) != 0) {

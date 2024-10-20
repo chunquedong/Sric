@@ -356,34 +356,56 @@ public class CppGenerator extends BaseGenerator {
     @Override
     public void visitField(AstNode.FieldDef v) {
         if (v.isLocalVar) {
-            printLocalFieldDefAsExpr(v);
-            print(";").newLine();
+            if (printLocalFieldDefAsExpr(v)) {
+                print(";").newLine();
+            }
         }
         
         if (headMode && v.parent instanceof FileUnit) {
-            print("extern ");
+            if ((v.flags & FConst.ConstExpr) == 0) {
+                print("extern ");
+            }
         }
+        
         if (headMode) {
-            printLocalFieldDefAsExpr(v);
-            print(";").newLine();
+            if (printLocalFieldDefAsExpr(v)) {
+                print(";").newLine();
+            }
         }
-//        else if ((v.flags & FConst.Static) != 0) {
-//            printLocalFieldDefAsExpr(v);
-//            print(";").newLine();
-//        }
+        else if (v.parent instanceof FileUnit) {
+            if (printLocalFieldDefAsExpr(v)) {
+                print(";").newLine();
+            }
+        }
     }
     
-    void printLocalFieldDefAsExpr(AstNode.FieldDef v) {
+    boolean printLocalFieldDefAsExpr(AstNode.FieldDef v) {
         boolean isImpl = implMode();
         boolean isStatic = false;//(v.flags & FConst.Static) != 0;
         if (v.parent instanceof FileUnit) {
             isStatic = true;
         }
+        
+        boolean isConstExpr = false;
+        if ((v.flags & FConst.ConstExpr) != 0) {
+            if (isImpl) {
+                return false;
+            }
+            print("constexpr ");
+            isConstExpr = true;
+        }
+        
         printType(v.fieldType);
         print(" ");
         if (isStatic && isImpl && !v.isLocalVar) {
-            print(getSymbolName((StructDef)v.parent));
-            print("::");
+            if (v.parent instanceof StructDef) {
+                print(getSymbolName((StructDef)v.parent));
+                print("::");
+            }
+            else if (v.parent instanceof FileUnit unit) {
+                print(unit.module.name);
+                print("::");
+            }
         }
         print(getSymbolName(v));
         
@@ -396,6 +418,9 @@ public class CppGenerator extends BaseGenerator {
         
         boolean init = false;
         if (v.isLocalVar) {
+            init = true;
+        }
+        else if (isConstExpr) {
             init = true;
         }
         else if (isStatic && isImpl) {
@@ -415,6 +440,7 @@ public class CppGenerator extends BaseGenerator {
                 this.visit(v.initExpr);
             }
         }
+        return true;
     }
     
     private boolean implMode() {
@@ -1048,12 +1074,22 @@ public class CppGenerator extends BaseGenerator {
         }
         //index set operator: a[i] = b
         else if (e.opToken == TokenKind.assign && e.lhs instanceof IndexExpr iexpr) {
-            this.visit(iexpr.target);
-            print(".set(");
-            this.visit(iexpr.index);
-            print(", ");
-            this.visit(e.rhs);
-            print(")");
+            
+            if (iexpr.resolvedOperator != null) {
+                this.visit(iexpr.target);
+                print(".set(");
+                this.visit(iexpr.index);
+                print(", ");
+                this.visit(e.rhs);
+                print(")");
+            }
+            else {
+                this.visit(iexpr.target);
+                print("[");
+                this.visit(iexpr.index);
+                print("] = ");
+                this.visit(e.rhs);
+            }
         }
         else {
             if (e._refSafeCheck) {

@@ -12,6 +12,13 @@ fun testDArray() {
     }
 }
 
+var globalValue : const Int = 1;
+fun testGlobal() {
+    printf("%d\n", globalValue);
+}
+
+constexpr var arraySize : Int = 10;
+
 fun testArray() {
     var a  = []Int {1,2,3,4};
     for (var i = 0; i<4; ++i) {
@@ -26,6 +33,9 @@ fun testArray() {
             printf("%d\n", v);
         }
     }
+
+    var b: [arraySize]Int;
+    b[0] = 1;
 }
 
 fun testString() {

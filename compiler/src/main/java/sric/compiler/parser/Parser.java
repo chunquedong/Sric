@@ -734,7 +734,7 @@ public class Parser {
         // pretty trivial, but other types is tricky;  I'm not sure it is such
         // a hot idea anyways so it may just stay disabled forever
         if (field.fieldType == null) {
-            err("Type inference not supported for fields");
+            err("Type inference not supported for top-level fields");
         }
 
         endOfStmt();

@@ -121,7 +121,7 @@ public abstract class Expr extends AstNode {
             
             if (this.resolvedDef instanceof FieldDef f) {
                 if (f.parent instanceof FileUnit u) {
-                    return u.name;
+                    return u.module.name;
                 }
             }
             return null;
