@@ -31,3 +31,10 @@ fun testInherit() {
 
     printf("x is I: %d\n", b1);
 }
+
+fun testDector() {
+    var x : own* I = alloc$<C>();
+    //var x : own* I = move a;
+    x.foo();
+}
+

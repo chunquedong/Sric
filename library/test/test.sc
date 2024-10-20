@@ -26,4 +26,6 @@ fun main() {
     testPtr();
     testInherit();
     testCompare();
+    testMove();
+    testRaw();
 }

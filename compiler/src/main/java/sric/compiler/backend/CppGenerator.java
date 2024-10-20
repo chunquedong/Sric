@@ -680,7 +680,6 @@ public class CppGenerator extends BaseGenerator {
 
             v.walkChildren(this);
 
-            unindent();
             newLine();
             
             if ((v.flags & FConst.Abstract) != 0 || (v.flags & FConst.Virtual) != 0) {
@@ -688,6 +687,9 @@ public class CppGenerator extends BaseGenerator {
                 print(getSymbolName(v));
                 print("(){}");
             }
+            
+            unindent();
+            newLine();
             
             print("};").newLine();
         

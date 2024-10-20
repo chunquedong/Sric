@@ -318,7 +318,7 @@ public class Type extends AstNode {
         return true;
     }
     
-    protected boolean genericArgsFit(Type target) {
+    private boolean genericArgsFit(Type target) {
         if (this.genericArgs != null || target.genericArgs != null) {
             if (this.genericArgs == null || target.genericArgs == null) {
                 return false;
@@ -327,7 +327,25 @@ public class Type extends AstNode {
                 return false;
             }
             for (int i=0; i<this.genericArgs.size(); ++i) {
-                if (!this.genericArgs.get(i).fit(target.genericArgs.get(i))) {
+                Type from = this.genericArgs.get(i);
+                Type to = target.genericArgs.get(i);
+                boolean ok = false;
+                if (from.fit(to)) {
+                    ok = true;
+                }
+                
+                if (from.id.resolvedDef instanceof StructDef sd && to.id.resolvedDef instanceof TypeDef ttd) {
+                    if (ttd instanceof StructDef td) {
+                        if (sd.genericFrom == td.genericFrom || sd == td.genericFrom || sd.genericFrom == td) {
+                            ok = true;
+                        }
+                    }
+
+                    if (sd.isInheriteFrom(ttd)) {
+                        ok = true;
+                    }
+                }
+                if (!ok) {
                     return false;
                 }
             }

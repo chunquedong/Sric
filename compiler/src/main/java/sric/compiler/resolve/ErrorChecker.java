@@ -78,6 +78,7 @@ public class ErrorChecker extends CompilePass {
         
         if (!from.fit(to)) {
             err("Type mismatch", loc);
+            from.fit(to);
             return;
         }
         
@@ -932,6 +933,11 @@ public class ErrorChecker extends CompilePass {
                         }
                         ok = true;
                         return;
+                    }
+                    else if (e.lhs instanceof UnaryExpr lhsExpr) {
+                        if (lhsExpr.opToken == TokenKind.star) {
+                            ok = true;
+                        }
                     }
                     else {
                         err("Not assignable", e.lhs.loc);

@@ -9,6 +9,10 @@ struct A {
     }
 }
 
+struct CP {
+    var p: own*? Int;
+}
+
 fun testA(a: ref* A) {
     printf("%d\n", a.i);
 }
@@ -40,4 +44,20 @@ fun testCompare() {
     if (a < &b) {
         printf("compare OK\n");
     }
+}
+
+fun testMove() {
+    var b: CP;
+    var a = move b;
+}
+
+fun testRaw() {
+    var a = 1;
+    var p: raw* Int = &a;
+    unsafe {
+        var p1 = p + 1;
+        p1 = p1 - 1;
+        *p1 = 2;
+    }
+    printf("%d\n", a);
 }
