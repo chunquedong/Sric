@@ -45,6 +45,13 @@ namespace sric {
 		sric::sc_assert(!p.isNull(), "Non-Nullable");
 		return p;
 	}
+
+	template<typename T>
+	RefPtr<T> refSafeCheck(RefPtr<T> p) {
+		sric::sc_assert(p.type != 1, "Unsafe ref");
+		return p;
+	}
+	
 }
 
 inline bool isNull(void* p) {

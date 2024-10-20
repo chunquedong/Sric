@@ -197,6 +197,8 @@ class RefPtr {
     int32_t type;
 
     template <class U> friend class RefPtr;
+
+    template<typename T2> friend RefPtr<T2> refSafeCheck(RefPtr<T2> p);
 private:
     void onDeref() const {
         sc_assert(pointer != nullptr, "try deref null pointer");
@@ -205,7 +207,7 @@ private:
         }
     }
 public:
-    RefPtr() : pointer(nullptr), checkCode(0), type(1) {
+    RefPtr() : pointer(nullptr), checkCode(0), type(2) {
     }
 
     RefPtr(T* p) : pointer(p), checkCode(0), type(1) {

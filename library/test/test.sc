@@ -12,6 +12,22 @@ fun testDArray() {
     }
 }
 
+fun testArray() {
+    var a  = []Int {1,2,3,4};
+    for (var i = 0; i<4; ++i) {
+        var v = a[i];
+        printf("%d\n", v);
+    }
+
+    var p: raw* Int = &a;
+    for (var i = 0; i<4; ++i) {
+        unsafe {
+            var v = p[i];
+            printf("%d\n", v);
+        }
+    }
+}
+
 fun testString() {
     var cstr = "Hello";
     var str = asStr(cstr);

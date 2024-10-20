@@ -198,8 +198,12 @@ public class CppGenerator extends BaseGenerator {
             newLine();
         }
     }
-
+    
     private void printType(Type type) {
+        printType(type, true);
+    }
+
+    private void printType(Type type, boolean isRoot) {
         if (type == null) {
             print("auto");
             return;
@@ -210,7 +214,7 @@ public class CppGenerator extends BaseGenerator {
                 //ok
             }
             else {
-                printType(type.resolvedAlias);
+                printType(type.resolvedAlias, isRoot);
                 return;
             }
         }
@@ -250,7 +254,7 @@ public class CppGenerator extends BaseGenerator {
             case Buildin.pointerTypeName:
                 PointerInfo pt = (PointerInfo)type.detail;
                 if (pt.pointerAttr == Type.PointerAttr.raw) {
-                    printType(type.genericArgs.get(0));
+                    printType(type.genericArgs.get(0), false);
                     print("*");
                     if (type.isImutable) {
                         print(" const");
@@ -270,16 +274,18 @@ public class CppGenerator extends BaseGenerator {
 //                        print("sric::WeakPtr");
 //                    }
                     print("<");
-                    printType(type.genericArgs.get(0));
+                    printType(type.genericArgs.get(0), false);
                     print(">");
                 }
                 return;
             case Buildin.arrayTypeName:
                 ArrayInfo arrayType = (ArrayInfo)type.detail;
                 printType(type.genericArgs.get(0));
-                print("[");
-                this.visit(arrayType.sizeExpr);
-                print("]");
+                if (!isRoot) {
+                    print("[");
+                    this.visit(arrayType.sizeExpr);
+                    print("]");
+                }
                 return;
             case Buildin.funcTypeName:
                 FuncInfo ft = (FuncInfo)type.detail;
@@ -288,7 +294,7 @@ public class CppGenerator extends BaseGenerator {
                 print("(");
                 if (ft.prototype.paramDefs != null) {
                     for (ParamDef p : ft.prototype.paramDefs) {
-                        printType(p.paramType);
+                        printType(p.paramType, false);
                     }
                 }
                 print(")>");
@@ -304,7 +310,7 @@ public class CppGenerator extends BaseGenerator {
                 if (i > 0) {
                     print(", ");
                 }
-                printType(p);
+                printType(p, false);
                 ++i;
             }
             print(">");
@@ -380,6 +386,13 @@ public class CppGenerator extends BaseGenerator {
             print("::");
         }
         print(getSymbolName(v));
+        
+        if (v.fieldType.isArray()) {
+            ArrayInfo arrayType = (ArrayInfo)v.fieldType.detail;
+            print("[");
+            this.visit(arrayType.sizeExpr);
+            print("]");
+        }
         
         boolean init = false;
         if (v.isLocalVar) {
@@ -885,7 +898,7 @@ public class CppGenerator extends BaseGenerator {
         }
         else if (v instanceof UnaryExpr e) {
             if (e.opToken == TokenKind.amp) {
-                if (e.isRawAddressOf) {
+                if (e._isRawAddressOf) {
                     print("&");
                     this.visit(e.operand);
                 }
@@ -914,10 +927,18 @@ public class CppGenerator extends BaseGenerator {
             this.printType(e.type);
         }
         else if (v instanceof IndexExpr e) {
-            this.visit(e.target);
-            print(".get(");
-            this.visit(e.index);
-            print(")");
+            if (e.resolvedOperator != null) {
+                this.visit(e.target);
+                print(".get(");
+                this.visit(e.index);
+                print(")");
+            }
+            else {
+                this.visit(e.target);
+                print("[");
+                this.visit(e.index);
+                print("]");
+            }
         }
         else if (v instanceof GenericInstance e) {
             this.visit(e.target);
@@ -1029,7 +1050,15 @@ public class CppGenerator extends BaseGenerator {
             print(")");
         }
         else {
-            if (e.resolvedOperator !=  null) {
+            if (e._refSafeCheck) {
+                this.visit(e.lhs);
+                print(" ");
+                print(e.opToken.symbol);
+                print(" refSafeCheck(");
+                this.visit(e.rhs);
+                print(")");
+            }
+            else if (e.resolvedOperator !=  null) {
                 this.visit(e.lhs);
                 print(".").print(e.resolvedOperator.name).print("(");
                 this.visit(e.rhs);

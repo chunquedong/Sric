@@ -78,7 +78,7 @@ public class ErrorChecker extends CompilePass {
         
         if (!from.fit(to)) {
             err("Type mismatch", loc);
-            from.fit(to);
+            //from.fit(to);
             return;
         }
         
@@ -109,7 +109,7 @@ public class ErrorChecker extends CompilePass {
                 boolean doConvert = true;
                 if (target instanceof Expr.UnaryExpr bexpr) {
                     if (bexpr.opToken == TokenKind.amp) {
-                        bexpr.isRawAddressOf = true;
+                        bexpr._isRawAddressOf = true;
                         doConvert = false;
                     }
                 }
@@ -144,7 +144,7 @@ public class ErrorChecker extends CompilePass {
             return e.resolvedDef;
         }
         else if (target instanceof Expr.IndexExpr e) {
-            return e.resolvedDef;
+            return e.resolvedOperator;
         }
         return null;
     }
@@ -604,8 +604,8 @@ public class ErrorChecker extends CompilePass {
             verifyUnsafe(e.target);
             this.visit(e.index);
             //verifyInt(e.index);
-            if (e.resolvedDef != null) {
-                Type paramType = e.resolvedDef.prototype.paramDefs.get(0).paramType;
+            if (e.resolvedOperator != null) {
+                Type paramType = e.resolvedOperator.prototype.paramDefs.get(0).paramType;
                 verifyTypeFit(e.index, paramType, e.index.loc);
             }
         }
@@ -910,40 +910,36 @@ public class ErrorChecker extends CompilePass {
                 case assignStar:
                 case assignSlash:
                 case assignPercent:
-                    boolean ok = false;
+                    boolean assignable = false;
                     if (e.lhs instanceof Expr.IdExpr idExpr) {
                         if (idExpr.resolvedDef instanceof AstNode.FieldDef f) {
-                            ok = true;
-                        }
-                        else {
-                            err("Not assignable", e.lhs.loc);
+                            assignable = true;
                         }
                     }
                     else if (e.lhs instanceof Expr.AccessExpr accessExpr) {
                         if (accessExpr.resolvedDef instanceof AstNode.FieldDef f) {
-                            //if (checkProtection(f, f.parent, f.loc, true)) {
-                                ok = true;
-                            //}
+                            assignable = true;
                         }
                     }
                     else if (e.lhs instanceof Expr.IndexExpr indexExpr) {
-                        if (indexExpr.resolvedDef != null && indexExpr.resolvedDef.prototype.paramDefs.size() > 1) {
-                            Type paramType = indexExpr.resolvedDef.prototype.paramDefs.get(1).paramType;
+                        if (indexExpr.resolvedOperator != null && indexExpr.resolvedOperator.prototype.paramDefs.size() > 1) {
+                            Type paramType = indexExpr.resolvedOperator.prototype.paramDefs.get(1).paramType;
                             verifyTypeFit(e.rhs, paramType, e.rhs.loc);
                         }
-                        ok = true;
+                        assignable = true;
                         return;
                     }
                     else if (e.lhs instanceof UnaryExpr lhsExpr) {
                         if (lhsExpr.opToken == TokenKind.star) {
-                            ok = true;
+                            assignable = true;
                         }
                     }
-                    else {
-                        err("Not assignable", e.lhs.loc);
-                    }
                     
-                    if (ok) {
+                    if (assignable) {
+                        if (e.resolvedType != null && e.resolvedType.isImutable) {
+                            err("Const error", e.loc);
+                        }
+                        
                         if (curt == Token.TokenKind.assign) {
                             verifyTypeFit(e.rhs, e.lhs.resolvedType, e.loc);
                             if (e.lhs instanceof IdExpr lr && e.rhs instanceof IdExpr ri) {
@@ -953,16 +949,28 @@ public class ErrorChecker extends CompilePass {
                                     }
                                 }
                             }
+                            
+                            AstNode ldef = idResolvedDef(e.lhs);
+                            if (ldef instanceof FieldDef fd && e.rhs.resolvedType.detail instanceof Type.PointerInfo pinfo) {
+                                if (!fd.isLocalVar && pinfo.pointerAttr == Type.PointerAttr.ref) {
+                                    e._refSafeCheck = true;
+                                }
+                            }
                         }
-                        else if (!e.lhs.resolvedType.equals(e.rhs.resolvedType)) {
-                            err("Type mismatch", e.loc);
-                        }
-
-                        if (e.resolvedType != null && e.resolvedType.isImutable) {
-                            err("Const error", e.loc);
+                        else {
+                            if (e.lhs.resolvedType.isNum() && e.lhs.resolvedType.isRawPointerType()) {
+                                if (!e.lhs.resolvedType.equals(e.rhs.resolvedType)) {
+                                    err("Type mismatch", e.loc);
+                                }
+                            }
+                            else {
+                                err("Unsupport operator", e.loc);
+                            }
                         }
                     }
-                    
+                    else {
+                        err("Not assignable", e.lhs.loc);
+                    }
                     break;
                 default:
                     break;

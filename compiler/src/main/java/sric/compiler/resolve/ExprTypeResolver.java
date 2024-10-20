@@ -472,7 +472,11 @@ public class ExprTypeResolver extends TypeResolver {
                         break;
                     //&
                     case amp:
-                        e.resolvedType = Type.pointerType(e.loc, e.operand.resolvedType, Type.PointerAttr.ref, false);
+                        Type elmentType = e.operand.resolvedType;
+                        if (e.operand.resolvedType.isArray()) {
+                            elmentType = e.operand.resolvedType.genericArgs.get(0);
+                        }
+                        e.resolvedType = Type.pointerType(e.loc, elmentType, Type.PointerAttr.ref, false);
                         break;
                     case awaitKeyword:
                         e.resolvedType = e.operand.resolvedType;
@@ -497,6 +501,14 @@ public class ExprTypeResolver extends TypeResolver {
                 if (e.target.resolvedType.isArray() && e.target.resolvedType.genericArgs != null) {
                     e.resolvedType = e.target.resolvedType.genericArgs.get(0);
                 }
+                else if (e.target.resolvedType.isRawPointerType()) {
+                    if (e.target.resolvedType.genericArgs != null) {
+                        e.resolvedType = e.target.resolvedType.genericArgs.get(0);
+                    }
+                    else {
+                        err("Unknow operator []", e.loc);
+                    }
+                }
                 else {
                     String operatorName = e.inLeftSide ? Buildin.setOperator : Buildin.getOperator;
                     AstNode rdef = resoveOnTarget(e.target, operatorName, e.loc, false);
@@ -507,7 +519,7 @@ public class ExprTypeResolver extends TypeResolver {
                         if ((f.flags & FConst.Operator) == 0) {
                             err("Expected operator", e.loc);
                         }
-                        e.resolvedDef = f;
+                        e.resolvedOperator = f;
                         e.resolvedType = f.prototype.returnType;
                     }
                     else {
