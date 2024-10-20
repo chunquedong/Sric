@@ -196,7 +196,177 @@ public class CppGenerator extends BaseGenerator {
             module.walkChildren(this);
             
             newLine();
+            newLine();
+            print("//////////////////////////////////////////// reflect");
+            newLine();
+            
+            printReflection(module);
+            
+            newLine();
         }
+    }
+    
+    private void reflectionTopLevelDef(TopLevelDef node, String varName) {
+        print(varName).print(".flags = ").print(""+node.flags).print(";").newLine();
+        print(varName).print(".name = \"").print(node.name).print("\";").newLine();
+        if (node.comment != null) {
+            for (var c : node.comment.comments) {
+                if (c.type == TokenKind.cmdComment) {
+                }
+                
+                print("{sric::Comment comment;");
+                print("comment.type = ").print(c.type == TokenKind.cmdComment ? "0" : "1").print(";");
+                print("comment.content = "); printStringLiteral(c.content); print(";");
+                
+                print(varName).print(".comments.add(comment);}");
+                this.newLine();
+            }
+        }
+    }
+    
+    private void reflectParamDef(ParamDef f, String parentName) {
+        print("{");
+        print("sric::Field param;");
+        print("param.name = \"").print(f.name).print("\";");
+        print("param.fieldType = ");printStringLiteral(f.paramType.toString());print(";");
+        print("param.hasDefaultValue = ").print(f.defualtValue == null ? "0" : "1").print(";");
+        print(parentName).print(".params.add(param);");
+        print("}");
+        this.newLine();
+    }
+    
+    private void reflectFieldDef(FieldDef f, String parentName) {
+        print("{");
+        this.indent();
+        newLine();
+        print("sric::Field f;").newLine();
+        reflectionTopLevelDef(f, "f");
+        print("f.offset = ").print("0").print(";").newLine();
+        print("f.fieldType = ");printStringLiteral(f.fieldType.toString());print(";").newLine();
+        print("f.hasDefaultValue = ").print(f.initExpr == null ? "0" : "1").print(";").newLine();
+        
+        print(parentName).print(".fields.add(f);").newLine();
+        
+        this.unindent();
+        print("}");
+        newLine();
+    }
+    
+    private void reflectFuncDef(FuncDef f, String parentName) {
+        print("{");
+        this.indent();
+        newLine();
+        print("sric::Func f;").newLine();
+        reflectionTopLevelDef(f, "f");
+        print("f.pointer = \"").print("0").print("\";").newLine();
+        print("f.returnType = ");printStringLiteral(f.prototype.returnType.toString());print(";").newLine();
+
+        if (f.prototype.paramDefs != null) {
+            for (ParamDef p : f.prototype.paramDefs) {
+                reflectParamDef(p, "f");
+            }
+        }
+        
+        if (f.generiParamDefs != null) {
+            for (GenericParamDef p : f.generiParamDefs) {
+                print("f.genericParams.add(");printStringLiteral(p.name); print(");");
+                this.newLine();
+            }
+        }
+        
+        print(parentName).print(".funcs.add(f);");
+
+        this.unindent();
+        newLine();
+        print("}");
+        newLine();
+    }
+    
+    private void printReflection(SModule module) {
+        print("void registReflection_").print(module.name).print("() {").newLine();
+        this.indent();
+        
+        print("sric::Module m;").newLine();
+        print("m.name = \"").print(module.name).print("\";").newLine();
+        print("m.version = \"").print(module.version).print("\";").newLine();
+        
+        for (FileUnit funit : module.fileUnits) {
+            for (TypeDef type : funit.typeDefs) {
+                
+                if ((type.flags & FConst.Reflect) == 0 ) {
+                    continue;
+                }
+                
+                print("{");
+                this.indent();
+                newLine();
+                print("sric::Struct s;").newLine();
+                reflectionTopLevelDef(type, "s");
+                
+                if (type instanceof StructDef sd) {
+                    if (sd.generiParamDefs != null) {
+                        for (GenericParamDef p : sd.generiParamDefs) {
+                            print("s.genericParams.add(");printStringLiteral(p.name); print(");");
+                            this.newLine();
+                        }
+                    }
+                    
+                    if (sd.inheritances != null) {
+                        for (Type p : sd.inheritances) {
+                            print("s.inheritances.add(");printStringLiteral(p.toString()); print(");");
+                            this.newLine();
+                        }
+                    }
+                    
+                    for (FieldDef f : sd.fieldDefs) {
+                        reflectFieldDef(f, "s");
+                    }
+
+                    for (FuncDef f : sd.funcDefs) {
+                        reflectFuncDef(f, "s");
+                    }
+                }
+                else if (type instanceof EnumDef sd) {
+                    for (FieldDef f : sd.enumDefs) {
+                        reflectFieldDef(f, "s");
+                    }
+                }
+                else if (type instanceof TraitDef sd) {
+                    for (FuncDef f : sd.funcDefs) {
+                        reflectFuncDef(f, "s");
+                    }
+                }
+                
+                this.unindent();
+                print("}");
+                newLine();
+            }
+            
+            for (FieldDef f : funit.fieldDefs) {
+                if ((f.flags & FConst.Reflect) == 0 ) {
+                    continue;
+                }
+                reflectFieldDef(f, "m");
+            }
+            
+            for (FuncDef f : funit.funcDefs) {
+                if ((f.flags & FConst.Reflect) == 0 ) {
+                    continue;
+                }
+                reflectFuncDef(f, "m");
+            }
+            
+        }
+        
+        
+        newLine();
+        print("sric::registModule(&m);").newLine();
+        
+        this.unindent();
+        print("}");
+        newLine();
+        
+        print("SC_AUTO_REGIST_MODULE("+ module.name +");").newLine();
     }
     
     private void printType(Type type) {
@@ -1158,13 +1328,17 @@ public class CppGenerator extends BaseGenerator {
             print(li.toString());
         }
         else if (e.value instanceof String li) {
-            print("\"");
-            for (int i=0; i<li.length(); ++i) {
-                char c = li.charAt(i);
-                printChar(c);
-            }
-            print("\"");
+            printStringLiteral(li);
         }
+    }
+    
+    void printStringLiteral(String li) {
+        print("\"");
+        for (int i=0; i<li.length(); ++i) {
+            char c = li.charAt(i);
+            printChar(c);
+        }
+        print("\"");
     }
 
     void printChar(char c) {

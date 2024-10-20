@@ -44,9 +44,9 @@ public:
         data.push_back(d);
     }
 
-    void add(T& d) {
-        data.push_back(d);
-    }
+    //void add(const T& d) {
+    //    data.push_back(d);
+    //}
 
     int size() {
         return data.size();
