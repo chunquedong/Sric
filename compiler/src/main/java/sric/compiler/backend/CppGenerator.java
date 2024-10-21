@@ -235,25 +235,35 @@ public class CppGenerator extends BaseGenerator {
         this.newLine();
     }
     
-    private void reflectFieldDef(FieldDef f, String parentName) {
+    private void reflectFieldDef(FieldDef f, String parentName, boolean isEnumSlot) {
         print("{");
         this.indent();
         newLine();
         print("sric::Field f;").newLine();
         reflectionTopLevelDef(f, "f");
         
+        String moduleName = this.module.name;
         if (f.isStatic()) {
             print("f.offset = 0;").newLine();
-            print("f.pointer = &").print(this.getSymbolName(f)).print(";").newLine();
+            print("f.pointer = &");print(moduleName);print("::").print(this.getSymbolName(f)).print(";").newLine();
         }
         else {
-            print("f.offset = offsetof("); print(this.getSymbolName((TopLevelDef)f.parent));
-            print(",").print(this.getSymbolName(f)).print(";").newLine();
+            print("f.offset = offsetof("); print(moduleName);print("::").print(this.getSymbolName((TopLevelDef)f.parent));
+                print(",").print(this.getSymbolName(f)).print(");").newLine();
             print("f.pointer = nullptr;").newLine();
         }
         
         print("f.fieldType = ");printStringLiteral(f.fieldType.toString());print(";").newLine();
         print("f.hasDefaultValue = ").print(f.initExpr == null ? "0" : "1").print(";").newLine();
+        
+        if (isEnumSlot && f.initExpr != null) {
+            print("f.enumValue = ");
+            visitExpr(f.initExpr);
+            print(";");
+        }
+        else {
+            print("f.enumValue = -1;").newLine();
+        }
         
         print(parentName).print(".fields.add(f);").newLine();
         
@@ -262,13 +272,54 @@ public class CppGenerator extends BaseGenerator {
         newLine();
     }
     
+    private void printMethodWrapFunc(FuncDef f) {
+        this.printType(f.prototype.returnType);
+        print(" ").print(this.module.name).print("_").print(this.getSymbolName((TopLevelDef)f.parent)).
+                print("_").print(this.getSymbolName(f)).print("(");
+        
+        print(this.module.name).print("::").print(this.getSymbolName((TopLevelDef)f.parent)).print("* self");
+        
+        for (ParamDef p : f.prototype.paramDefs) {
+            print(", ");
+            printType(p.paramType);
+            print(" ").print(p.name);
+        }
+        print(") {").newLine();
+        this.indent();
+        
+        if (!f.prototype.returnType.isVoid()) {
+            print("return ");
+        }
+        
+        print("self->").print(this.getSymbolName(f)).print("(");
+        int i = 0;
+        for (ParamDef p : f.prototype.paramDefs) {
+            if (i>0) print(", ");
+            print(p.name);
+            ++i;
+        }
+        print(");").newLine();
+        
+        this.unindent();
+        print("}").newLine();
+    }
+    
     private void reflectFuncDef(FuncDef f, String parentName) {
         print("{");
         this.indent();
         newLine();
         print("sric::Func f;").newLine();
         reflectionTopLevelDef(f, "f");
-        print("f.pointer = &").print(this.getSymbolName(f)).print(";").newLine();
+        
+        String moduleName = this.module.name;
+        if (f.isStatic()) {
+            print("f.pointer = &");print(moduleName);print("::").print(this.getSymbolName(f)).print(";").newLine();
+        }
+        else {
+            print("f.pointer = &");print(this.module.name).print("_").print(this.getSymbolName((TopLevelDef)f.parent)).
+                print("_").print(this.getSymbolName(f)).print(";").newLine();
+        }
+
         print("f.returnType = ");printStringLiteral(f.prototype.returnType.toString());print(";").newLine();
 
         if (f.prototype.paramDefs != null) {
@@ -293,6 +344,25 @@ public class CppGenerator extends BaseGenerator {
     }
     
     private void printReflection(SModule module) {
+        //print method wrap
+        for (FileUnit funit : module.fileUnits) {
+            for (TypeDef type : funit.typeDefs) {
+                if ((type.flags & FConst.Reflect) == 0 ) {
+                    continue;
+                }
+                if (type instanceof StructDef sd) {
+                    for (FuncDef f : sd.funcDefs) {
+                        printMethodWrapFunc(f);
+                    }
+                }
+                else if (type instanceof TraitDef sd) {
+                    for (FuncDef f : sd.funcDefs) {
+                        printMethodWrapFunc(f);
+                    }
+                }
+            }
+        }
+        
         print("void registReflection_").print(module.name).print("() {").newLine();
         this.indent();
         
@@ -329,7 +399,7 @@ public class CppGenerator extends BaseGenerator {
                     }
                     
                     for (FieldDef f : sd.fieldDefs) {
-                        reflectFieldDef(f, "s");
+                        reflectFieldDef(f, "s", false);
                     }
 
                     for (FuncDef f : sd.funcDefs) {
@@ -338,7 +408,7 @@ public class CppGenerator extends BaseGenerator {
                 }
                 else if (type instanceof EnumDef sd) {
                     for (FieldDef f : sd.enumDefs) {
-                        reflectFieldDef(f, "s");
+                        reflectFieldDef(f, "s", true);
                     }
                 }
                 else if (type instanceof TraitDef sd) {
@@ -356,7 +426,7 @@ public class CppGenerator extends BaseGenerator {
                 if ((f.flags & FConst.Reflect) == 0 ) {
                     continue;
                 }
-                reflectFieldDef(f, "m");
+                reflectFieldDef(f, "m", false);
             }
             
             for (FuncDef f : funit.funcDefs) {

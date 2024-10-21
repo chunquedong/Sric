@@ -13,6 +13,7 @@ struct Field {
     readonly var pointer : raw* Void;
     readonly var fieldType : raw*const Int8;
     readonly var hasDefaultValue : Bool;
+    readonly var enumValue : Int;
 }
 
 struct Func {

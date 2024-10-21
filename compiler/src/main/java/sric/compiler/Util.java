@@ -30,11 +30,11 @@ public class Util {
     
     public static ArrayList<File> listFile(File file) {
         ArrayList<File> list = new ArrayList<File>();
-        addFile(file, list, ".sc");
+        doListFile(file, list, ".sc");
         return list;
     }
     
-    private static void addFile(File file, ArrayList<File> sources, String extName) {
+    private static void doListFile(File file, ArrayList<File> sources, String extName) {
         if (!file.isDirectory()) {
             if (file.getName().endsWith(extName)) {
                 sources.add(file);
@@ -43,7 +43,7 @@ public class Util {
         else {
             File[] list = file.listFiles();
             for (File file2 : list) {
-                addFile(file2, sources, extName);
+                doListFile(file2, sources, extName);
             }
         }
     }

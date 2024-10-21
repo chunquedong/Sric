@@ -87,7 +87,7 @@ public class ErrorChecker extends CompilePass {
                 }
             }
             if (!allowUnsafeCast) {
-                err("Type mismatch", loc);
+                err("Type mismatch:" + from.toString() + " => " + to.toString() , loc);
                 //from.fit(to);
                 return;
             }
@@ -488,6 +488,9 @@ public class ErrorChecker extends CompilePass {
 //                err("Maybe null", target.loc);
 //            }
 //        }
+        if (target.resolvedType == null) {
+            return;
+        }
         
         boolean isImutable = target.resolvedType.isImmutable;
         if (target.resolvedType.isPointerType() && target.resolvedType.genericArgs != null) {
