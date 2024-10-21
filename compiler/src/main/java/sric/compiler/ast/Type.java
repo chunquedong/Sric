@@ -23,8 +23,8 @@ public class Type extends AstNode {
         own, ref, raw
     };
     
-    public boolean explicitImutable = false;
-    public boolean isImutable = false;
+    public boolean explicitImmutable = false;
+    public boolean isImmutable = false;
     
     public TypeInfo detail = null;
     
@@ -188,7 +188,7 @@ public class Type extends AstNode {
         //pointer fit
         if (this.detail instanceof PointerInfo e && target.detail instanceof PointerInfo a) {
             
-            if (this.isImutable && !target.isImutable) {
+            if (this.isImmutable && !target.isImmutable) {
                 return false;
             }
                     
@@ -413,7 +413,7 @@ public class Type extends AstNode {
     public static Type strType(Loc loc) {
         Type type = intType(loc);
         ((NumInfo)type.detail).size = 8;
-        type.isImutable = true;
+        type.isImmutable = true;
         return pointerType(loc, type, PointerAttr.raw, false);
     }
     
@@ -477,7 +477,7 @@ public class Type extends AstNode {
         StringBuilder sb = new StringBuilder();
 
         
-        if (this.isImutable) {
+        if (this.isImmutable) {
             sb.append("const ");
         }
         
@@ -553,8 +553,8 @@ public class Type extends AstNode {
                 if (at != null) {
                     nt.id = at.id;
                     nt.detail = at.detail;
-                    if (at.isImutable) {
-                        nt.isImutable = true;
+                    if (at.isImmutable) {
+                        nt.isImmutable = true;
                     }
                 }
             }

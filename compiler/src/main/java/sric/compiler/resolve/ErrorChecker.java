@@ -172,7 +172,7 @@ public class ErrorChecker extends CompilePass {
                 err("Must init constExpr", v.loc);
             }
             else if (v.initExpr instanceof Expr.LiteralExpr) {
-                if (!(v.parent instanceof FileUnit)) {
+                if (!v.isStatic()) {
                     err("The constExpr must be static", v.loc);
                 }
             }
@@ -203,11 +203,8 @@ public class ErrorChecker extends CompilePass {
         
         //check const is static
         if (v.fieldType != null && (v.flags & FConst.ConstExpr) == 0) {
-            boolean isStatic = false;
-            if (v.parent instanceof FileUnit) {
-                isStatic = true;
-            }
-            if (isStatic && !v.fieldType.isImutable) {
+            boolean isStatic = v.isStatic();
+            if (isStatic && !v.fieldType.isImmutable) {
                 if ((v.flags & FConst.Unsafe) == 0) {
                     err("Static var must be const", v.loc);
                 }
@@ -449,7 +446,7 @@ public class ErrorChecker extends CompilePass {
     
     private void verifyOperatorDef(AstNode.FuncDef f) {
         
-        if (f.parent instanceof FileUnit) {
+        if (f.isStatic()) {
             err("Can't be static", f.loc);
         }
         
@@ -492,9 +489,9 @@ public class ErrorChecker extends CompilePass {
 //            }
 //        }
         
-        boolean isImutable = target.resolvedType.isImutable;
+        boolean isImutable = target.resolvedType.isImmutable;
         if (target.resolvedType.isPointerType() && target.resolvedType.genericArgs != null) {
-            isImutable = target.resolvedType.genericArgs.get(0).isImutable;
+            isImutable = target.resolvedType.genericArgs.get(0).isImmutable;
         }
         
         if (resolvedSlotDef instanceof AstNode.FieldDef f) {
@@ -974,7 +971,7 @@ public class ErrorChecker extends CompilePass {
                     }
                     
                     if (assignable) {
-                        if (e.resolvedType != null && e.resolvedType.isImutable) {
+                        if (e.resolvedType != null && e.resolvedType.isImmutable) {
                             err("Const error", e.loc);
                         }
                         

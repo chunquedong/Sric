@@ -826,8 +826,8 @@ public class Parser {
         }
         
         //param type default to const
-        if (!param.paramType.explicitImutable) {
-            param.paramType.isImutable = true;
+        if (!param.paramType.explicitImmutable) {
+            param.paramType.isImmutable = true;
         }
         
         if (curt == TokenKind.assign) {
@@ -923,8 +923,8 @@ public class Parser {
         }
         
         Type type = typeRef();
-        type.explicitImutable = explicitImutable;
-        type.isImutable = imutable;
+        type.explicitImmutable = explicitImutable;
+        type.isImmutable = imutable;
         return type;
     }
 

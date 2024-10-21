@@ -94,6 +94,16 @@ public class AstNode {
             nf.fieldType = this.fieldType.parameterize(typeGenericArgs);
             return nf;
         }
+        
+        public boolean isStatic() {
+            if (this.parent instanceof FileUnit) {
+                return true;
+            }
+//            if ((this.flags & FConst.Static) != 0) {
+//                return true;
+//            }
+            return false;
+        }
     }
     
     public static class StructDef extends TypeDef {
@@ -394,6 +404,16 @@ public class AstNode {
                 }
             }
             return nf;
+        }
+        
+        public boolean isStatic() {
+            if (this.parent instanceof FileUnit) {
+                return true;
+            }
+//            if ((this.flags & FConst.Static) != 0) {
+//                return true;
+//            }
+            return false;
         }
     }
 

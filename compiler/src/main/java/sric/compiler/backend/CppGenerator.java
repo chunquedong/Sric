@@ -241,7 +241,17 @@ public class CppGenerator extends BaseGenerator {
         newLine();
         print("sric::Field f;").newLine();
         reflectionTopLevelDef(f, "f");
-        print("f.offset = ").print("0").print(";").newLine();
+        
+        if (f.isStatic()) {
+            print("f.offset = 0;").newLine();
+            print("f.pointer = &").print(this.getSymbolName(f)).print(";").newLine();
+        }
+        else {
+            print("f.offset = offsetof("); print(this.getSymbolName((TopLevelDef)f.parent));
+            print(",").print(this.getSymbolName(f)).print(";").newLine();
+            print("f.pointer = nullptr;").newLine();
+        }
+        
         print("f.fieldType = ");printStringLiteral(f.fieldType.toString());print(";").newLine();
         print("f.hasDefaultValue = ").print(f.initExpr == null ? "0" : "1").print(";").newLine();
         
@@ -258,7 +268,7 @@ public class CppGenerator extends BaseGenerator {
         newLine();
         print("sric::Func f;").newLine();
         reflectionTopLevelDef(f, "f");
-        print("f.pointer = \"").print("0").print("\";").newLine();
+        print("f.pointer = &").print(this.getSymbolName(f)).print(";").newLine();
         print("f.returnType = ");printStringLiteral(f.prototype.returnType.toString());print(";").newLine();
 
         if (f.prototype.paramDefs != null) {
@@ -389,7 +399,7 @@ public class CppGenerator extends BaseGenerator {
             }
         }
         
-        if (type.isImutable && !type.id.name.equals(Buildin.pointerTypeName)) {
+        if (type.isImmutable && !type.id.name.equals(Buildin.pointerTypeName)) {
             print("const ");
         }
         
@@ -426,12 +436,12 @@ public class CppGenerator extends BaseGenerator {
                 if (pt.pointerAttr == Type.PointerAttr.raw) {
                     printType(type.genericArgs.get(0), false);
                     print("*");
-                    if (type.isImutable) {
+                    if (type.isImmutable) {
                         print(" const");
                     }
                 }
                 else {
-                    if (type.isImutable) {
+                    if (type.isImmutable) {
                         print("const ");
                     }
                     if (pt.pointerAttr == Type.PointerAttr.own) {
@@ -542,7 +552,7 @@ public class CppGenerator extends BaseGenerator {
                 print(";").newLine();
             }
         }
-        else if (v.parent instanceof FileUnit) {
+        else if (v.isStatic()) {
             if (printLocalFieldDefAsExpr(v)) {
                 print(";").newLine();
             }
@@ -551,10 +561,7 @@ public class CppGenerator extends BaseGenerator {
     
     boolean printLocalFieldDefAsExpr(AstNode.FieldDef v) {
         boolean isImpl = implMode();
-        boolean isStatic = false;//(v.flags & FConst.Static) != 0;
-        if (v.parent instanceof FileUnit) {
-            isStatic = true;
-        }
+        boolean isStatic = v.isStatic();//(v.flags & FConst.Static) != 0;
         
         boolean isConstExpr = false;
         if ((v.flags & FConst.ConstExpr) != 0) {

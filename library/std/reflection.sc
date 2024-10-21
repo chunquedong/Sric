@@ -10,6 +10,7 @@ struct Field {
     readonly var comments : DArray$<Comment>;
     readonly var name : raw*const Int8;
     readonly var offset : Int;
+    readonly var pointer : raw* Void;
     readonly var fieldType : raw*const Int8;
     readonly var hasDefaultValue : Bool;
 }
