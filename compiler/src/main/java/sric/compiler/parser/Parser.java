@@ -307,7 +307,7 @@ public class Parser {
             if ((flags & FConst.Abstract) != 0) {
                 err("Cannot use 'abstract' modifier on enum");
             }
-            flags = FConst.Enum;
+            flags = flags | FConst.Enum;
             isEnum = true;
             consume();
             

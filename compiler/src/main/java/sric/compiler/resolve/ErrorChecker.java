@@ -186,7 +186,12 @@ public class ErrorChecker extends CompilePass {
         }
         
         if (v.initExpr != null && v.fieldType != null) {
-            verifyTypeFit(v.initExpr, v.fieldType, v.loc);
+            if (v.parent instanceof EnumDef) {
+                //already checked in ExprTypeResolver
+            }
+            else {
+                verifyTypeFit(v.initExpr, v.fieldType, v.loc);
+            }
         }
         
         //check nullable
@@ -282,6 +287,12 @@ public class ErrorChecker extends CompilePass {
             }
         }
         
+        if ((v.flags & FConst.Reflect) != 0 ) {
+            if (v.generiParamDefs != null) {
+                err("Unsupport reflection for generic type", v.loc);
+            }
+        }
+        
         if ((v.flags & FConst.Readonly) != 0) {
             err("Invalid flags", v.loc);
         }
@@ -307,6 +318,7 @@ public class ErrorChecker extends CompilePass {
 
     @Override
     public void visitTypeDef(AstNode.TypeDef v) {
+
         if (v instanceof StructDef sd) {
             curStruct = sd;
             
@@ -337,6 +349,12 @@ public class ErrorChecker extends CompilePass {
                         }
                     }
                     ++i;
+                }
+            }
+            
+            if ((v.flags & FConst.Reflect) != 0 ) {
+                if (sd.generiParamDefs != null) {
+                    err("Unsupport reflection for generic type", v.loc);
                 }
             }
         }

@@ -78,6 +78,8 @@ public class AstNode {
         public Expr initExpr;         // init expression or null
         public boolean isLocalVar = false;
         
+        public int _enumValue = -1;
+        
         public FieldDef(Comments comment, String name) {
             this.comment = comment;
             this.name = name;

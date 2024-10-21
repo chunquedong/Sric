@@ -131,6 +131,10 @@ public class CppGenerator extends BaseGenerator {
                     if (type instanceof StructDef sd) {
                         printGenericParamDefs(sd.generiParamDefs);
                     }
+                    
+                    if (type instanceof EnumDef) {
+                        print("enum ");
+                    }
                     print("struct ");
                     print(getSymbolName(type)).print(";").newLine();
                 }
@@ -247,6 +251,10 @@ public class CppGenerator extends BaseGenerator {
             print("f.offset = 0;").newLine();
             print("f.pointer = &");print(moduleName);print("::").print(this.getSymbolName(f)).print(";").newLine();
         }
+        else if (isEnumSlot) {
+            print("f.offset = 0;").newLine();
+            print("f.pointer = nullptr;").newLine();
+        }
         else {
             print("f.offset = offsetof("); print(moduleName);print("::").print(this.getSymbolName((TopLevelDef)f.parent));
                 print(",").print(this.getSymbolName(f)).print(");").newLine();
@@ -256,14 +264,7 @@ public class CppGenerator extends BaseGenerator {
         print("f.fieldType = ");printStringLiteral(f.fieldType.toString());print(";").newLine();
         print("f.hasDefaultValue = ").print(f.initExpr == null ? "0" : "1").print(";").newLine();
         
-        if (isEnumSlot && f.initExpr != null) {
-            print("f.enumValue = ");
-            visitExpr(f.initExpr);
-            print(";");
-        }
-        else {
-            print("f.enumValue = -1;").newLine();
-        }
+        print("f.enumValue = ").print(""+f._enumValue).print(";").newLine();
         
         print(parentName).print(".fields.add(f);").newLine();
         
@@ -916,7 +917,7 @@ public class CppGenerator extends BaseGenerator {
             newLine();
 
             if (v instanceof EnumDef edef) {
-                print("enum class ");
+                print("enum struct ");
                 print(getSymbolName(v));
                 print(" {").newLine();
                 indent();
@@ -930,7 +931,6 @@ public class CppGenerator extends BaseGenerator {
                     if (f.initExpr != null) {
                         print(" = ");
                         this.visit(f.initExpr);
-                        print(";");
                     }
                     ++i;
                 }

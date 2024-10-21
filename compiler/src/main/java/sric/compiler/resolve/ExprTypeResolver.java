@@ -232,6 +232,25 @@ public class ExprTypeResolver extends TypeResolver {
                 }
             }
         }
+        else if (v instanceof EnumDef e) {
+            int enumValue = 0;
+            for (FieldDef f : e.enumDefs) {
+                if (f.initExpr != null) {
+                    boolean ok = false;
+                    if (f.initExpr instanceof Expr.LiteralExpr li) {
+                        if (li.value instanceof Long liv) {
+                            enumValue = liv.intValue();
+                            ok = true;
+                        }
+                    }
+                    if (!ok) {
+                        err("Enum value must int literal", v.loc);
+                    }
+                }
+                f._enumValue = enumValue;
+                ++enumValue;
+            }
+        }
         Scope scope = v.getScope();
         this.scopes.add(scope);
         v.walkChildren(this);
@@ -423,7 +442,12 @@ public class ExprTypeResolver extends TypeResolver {
                 e.resolvedType = getSlotType(e.resolvedDef);
             }
             else {
-                err("Unknow access:"+e.name, e.loc);
+                if (e.target.resolvedType != null && e.target.resolvedType.isMetaType()) {
+                    err("Can't call method on Type", e.loc);
+                }
+                else {
+                    err("Unknow access:"+e.name, e.loc);
+                }
             }
         }
         else if (v instanceof Expr.LiteralExpr e) {
